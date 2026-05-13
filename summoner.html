@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hide on bush#KR1 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+  <script src="ai-score-data.js" defer></script>
+  <script src="ai-score-engine.js" defer></script>
+  <style>
+    /* Hide demo content while loading real data so the user never sees
+       "Hide on bush" before their own profile renders. Demo mode (no URL
+       params) reveals immediately via JS. */
+    body[data-summoner-state="loading"] main { visibility: hidden; }
+    body[data-summoner-state="loading"]::after {
+      content: "검색 중...";
+      position: fixed; inset: 0; display: flex;
+      align-items: center; justify-content: center;
+      color: var(--text-secondary); font-size: 14px;
+      pointer-events: none;
+    }
+    .refresh-banner {
+      margin: var(--space-3) 0; padding: var(--space-3) var(--space-4);
+      background: var(--bg-elevated); border: 1px solid var(--border-default);
+      border-radius: var(--radius-md); color: var(--text-secondary);
+      font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: var(--space-3);
+    }
+    .refresh-banner button {
+      background: var(--bg-input); color: var(--text-primary);
+      border: 1px solid var(--border-default); border-radius: var(--radius-sm);
+      padding: 4px 10px; font-size: 12px; cursor: pointer;
+    }
+  </style>
+<body data-summoner-state="loading">
+
+<div data-slot="header" data-active="search" data-search-placeholder="다른 소환사 검색..."></div>
+
+<main class="page page-narrow">
+
+  <div class="card profile-header">
+    <div class="profile-top">
+      <div class="profile-icon-wrap">
+        <img class="profile-icon-img" data-dd-profile-icon="6" alt="Hide on bush의 프로필 아이콘" width="80" height="80">
+        <div class="profile-level">409</div>
+      </div>
+      <div class="profile-info">
+        <div class="profile-name">Hide on bush <span class="tag">#KR1</span></div>
+        <div class="profile-meta">마지막 갱신: 3분 전 · 시즌 2026 S1</div>
+        <div class="profile-actions">
+          <button class="primary" type="button">전적 갱신</button>
+          <button type="button">시즌 ▾</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="rank-cards">
+      <div class="rank-card">
+        <div>
+          <div class="rank-card-label">솔로랭크</div>
+          <div class="rank-tier tier-challenger">Challenger</div>
+          <div class="rank-lp">1,247 LP</div>
+        </div>
+        <div class="rank-record">
+          <div class="wl">312승 268패</div>
+          <div class="winrate">53.8%</div>
+        </div>
+      </div>
+      <div class="rank-card">
+        <div>
+          <div class="rank-card-label">자유랭크</div>
+          <div class="rank-tier text-tertiary">Unranked</div>
+          <div class="rank-lp">배치 0/5</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="tabs" aria-label="소환사 페이지 탭">
+    <a class="tab active" href="summoner.html">개요</a>
+    <a class="tab" href="summoner-champions.html">챔피언 통계</a>
+    <a class="tab" href="live-game.html">라이브 게임 <span class="live-dot" aria-label="진행 중"></span></a>
+    <a class="tab" href="summoner-seasons.html">시즌 기록</a>
+  </nav>
+
+  <div class="summoner-grid">
+
+    <aside class="sidebar">
+
+      <div class="card stats-summary">
+        <div class="section-title">최근 20게임</div>
+        <div class="winrate-ring-wrap">
+          <div class="winrate-ring">
+            <svg width="80" height="80" viewBox="0 0 80 80" aria-label="승률 65%">
+              <circle class="winrate-ring-track" cx="40" cy="40" r="32"/>
+              <circle class="winrate-ring-progress" cx="40" cy="40" r="32"
+                      stroke-dasharray="201.06" stroke-dashoffset="70.37"/>
+            </svg>
+            <div class="winrate-ring-text">65%</div>
+          </div>
+          <div>
+            <div class="stats-detail-row">
+              <span class="stats-detail-label">승/패</span>
+              <span class="stats-detail-value">13W 7L</span>
+            </div>
+            <div class="stats-detail-row">
+              <span class="stats-detail-label">평균 KDA</span>
+              <span class="stats-detail-value">3.45 : 1</span>
+            </div>
+            <div class="stats-detail-row">
+              <span class="stats-detail-label">킬관여</span>
+              <span class="stats-detail-value">68%</span>
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 12px; margin-top: var(--space-3);" id="lane-distribution">
+          <div class="text-tertiary uppercase" style="font-size: 11px; margin-bottom: 8px;">자주 가는 라인</div>
+          <div class="text-tertiary" style="font-size: 11px;">로딩 중...</div>
+        </div>
+      </div>
+
+      <div class="card" id="champ-stats-card">
+        <div class="section-title">자주 픽한 챔프 <span class="meta">수집 매치 기준</span></div>
+        <div id="champ-stats-list">
+          <div class="champ-list-row">
+            <div class="champ-icon" style="background:var(--bg-elevated)"></div>
+            <div class="champ-list-info">
+              <div class="champ-list-name text-tertiary">로딩 중...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">함께한 친구 <span class="meta">최근 20게임</span></div>
+        <div id="friend-list">
+          <div class="text-tertiary" style="font-size: 11px; padding: 8px;">로딩 중...</div>
+        </div>
+      </div>
+
+    </aside>
+
+    <section>
+
+      <div class="match-filters" role="tablist" aria-label="매치 큐 필터">
+        <div class="match-filter active" role="tab" aria-selected="true">전체</div>
+        <div class="match-filter" role="tab">솔랭</div>
+        <div class="match-filter" role="tab">자랭</div>
+        <div class="match-filter" role="tab">일반</div>
+        <div class="match-filter" role="tab">칼바람</div>
+      </div>
+
+      <div class="match-list">
+
+        <div class="match-session">
+          <div class="match-session-header">
+            <span>연속 플레이 · 4게임</span>
+            <span>2시간 30분 · 3승 1패</span>
+          </div>
+
+          <a class="match-card win" href="match-detail.html">
+            <div class="match-result win">
+              <div class="match-result-label">승리</div>
+              <div class="match-meta">
+                솔로랭크<br>
+                2시간 전<br>
+                28분 12초
+              </div>
+            </div>
+            <div class="match-champ-section">
+              <div class="match-champ-icon-wrap">
+                <img class="champ-icon" data-dd-champion="Azir" alt="아지르" width="48" height="48">
+                <div class="match-position-badge">미드</div>
+              </div>
+              <div class="match-spells-runes">
+                <img class="spell-icon" data-dd-spell="SummonerFlash" alt="점멸" width="18" height="18">
+                <img class="spell-icon" data-dd-spell="SummonerDot" alt="점화" width="18" height="18">
+                <img class="rune-icon" data-dd-rune-keystone="Sorcery/ArcaneComet/ArcaneComet" alt="신비로운 유성" width="18" height="18">
+                <img class="rune-icon" data-dd-rune-keystone="Inspiration/UnsealedSpellbook/UnsealedSpellbook" alt="봉인 풀린 주문서" width="18" height="18">
+              </div>
+            </div>
+            <div class="match-stats">
+              <div class="match-kda">12 / 3 / 8 <span class="match-kda-ratio">(KDA 6.67)</span></div>
+              <div class="match-substats">CS 232 (8.2/분) · 시야 28 · 딜 38,420</div>
+              <div class="match-items">
+                <img class="item-icon" data-dd-item="6655" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3157" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3089" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3020" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3135" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3116" alt="" width="22" height="22">
+                <img class="item-icon trinket" data-dd-item="3340" alt="" width="22" height="22">
+              </div>
+            </div>
+            <div class="match-score-box" data-ai-match="KR_DEMO_001">
+              <div class="match-score-label">AI Score</div>
+              <div class="match-score-value high">—</div>
+            </div>
+            <div class="match-teams">
+              <div class="match-teams-grid">
+                <div class="match-teams-col">
+                  <div class="team-label">블루팀</div>
+                  <div class="player is-self"><img class="champ-icon" data-dd-champion="Azir" alt="" width="14" height="14"><span class="player-name">Hide on bush</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Graves" alt="" width="14" height="14"><span class="player-name">Canyon</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Jax" alt="" width="14" height="14"><span class="player-name">Zeus</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Ezreal" alt="" width="14" height="14"><span class="player-name">Gumayusi</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Renata" alt="" width="14" height="14"><span class="player-name">Keria</span></div>
+                </div>
+                <div class="match-teams-col">
+                  <div class="team-label">레드팀</div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Ahri" alt="" width="14" height="14"><span class="player-name">Chovy</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Vi" alt="" width="14" height="14"><span class="player-name">Peanut</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Gangplank" alt="" width="14" height="14"><span class="player-name">Kiin</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Zeri" alt="" width="14" height="14"><span class="player-name">Peyz</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Lulu" alt="" width="14" height="14"><span class="player-name">Lehends</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="match-expand" aria-label="펼치기">▾</div>
+          </a>
+
+          <a class="match-card win" href="match-detail.html">
+            <div class="match-result win">
+              <div class="match-result-label">승리</div>
+              <div class="match-meta">
+                솔로랭크<br>
+                3시간 전<br>
+                32분 45초
+              </div>
+            </div>
+            <div class="match-champ-section">
+              <div class="match-champ-icon-wrap">
+                <img class="champ-icon" data-dd-champion="Orianna" alt="오리아나" width="48" height="48">
+                <div class="match-position-badge">미드</div>
+              </div>
+              <div class="match-spells-runes">
+                <img class="spell-icon" data-dd-spell="SummonerFlash" alt="" width="18" height="18">
+                <img class="spell-icon" data-dd-spell="SummonerTeleport" alt="" width="18" height="18">
+                <img class="rune-icon" data-dd-rune-keystone="Sorcery/PhaseRush/PhaseRush" alt="" width="18" height="18">
+                <img class="rune-icon" data-dd-rune-keystone="Resolve/Conditioning/Conditioning" alt="" width="18" height="18">
+              </div>
+            </div>
+            <div class="match-stats">
+              <div class="match-kda">8 / 4 / 14 <span class="match-kda-ratio">(KDA 5.50)</span></div>
+              <div class="match-substats">CS 198 (6.0/분) · 시야 32 · 딜 28,150</div>
+              <div class="match-items">
+                <img class="item-icon" data-dd-item="3152" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3020" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3157" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3089" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3135" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3165" alt="" width="22" height="22">
+                <img class="item-icon trinket" data-dd-item="3340" alt="" width="22" height="22">
+              </div>
+            </div>
+            <div class="match-score-box">
+              <div class="match-score-label">AI Score</div>
+              <div class="match-score-value">68</div>
+            </div>
+            <div class="match-teams">
+              <div class="match-teams-grid">
+                <div class="match-teams-col">
+                  <div class="team-label">블루팀</div>
+                  <div class="player is-self"><img class="champ-icon" data-dd-champion="Orianna" alt="" width="14" height="14"><span class="player-name">Hide on bush</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="LeeSin" alt="" width="14" height="14"><span class="player-name">JungleA</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Aatrox" alt="" width="14" height="14"><span class="player-name">TopB</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Jinx" alt="" width="14" height="14"><span class="player-name">AdcC</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Thresh" alt="" width="14" height="14"><span class="player-name">SupD</span></div>
+                </div>
+                <div class="match-teams-col">
+                  <div class="team-label">레드팀</div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Yasuo" alt="" width="14" height="14"><span class="player-name">EnemyMid</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Viego" alt="" width="14" height="14"><span class="player-name">EnemyJgl</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Renekton" alt="" width="14" height="14"><span class="player-name">EnemyTop</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Caitlyn" alt="" width="14" height="14"><span class="player-name">EnemyAdc</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Morgana" alt="" width="14" height="14"><span class="player-name">EnemySup</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="match-expand" aria-label="펼치기">▾</div>
+          </a>
+
+          <a class="match-card" href="match-detail.html">
+            <div class="match-result loss">
+              <div class="match-result-label">패배</div>
+              <div class="match-meta">
+                솔로랭크<br>
+                5시간 전<br>
+                24분 03초
+              </div>
+            </div>
+            <div class="match-champ-section">
+              <div class="match-champ-icon-wrap">
+                <img class="champ-icon" data-dd-champion="Sylas" alt="사일러스" width="48" height="48">
+                <div class="match-position-badge">미드</div>
+              </div>
+              <div class="match-spells-runes">
+                <img class="spell-icon" data-dd-spell="SummonerFlash" alt="" width="18" height="18">
+                <img class="spell-icon" data-dd-spell="SummonerDot" alt="" width="18" height="18">
+                <img class="rune-icon" data-dd-rune-keystone="Domination/Electrocute/Electrocute" alt="" width="18" height="18">
+                <img class="rune-icon" data-dd-rune-keystone="Precision/PresenceOfMind/PresenceOfMind" alt="" width="18" height="18">
+              </div>
+            </div>
+            <div class="match-stats">
+              <div class="match-kda">3 / 7 / 5 <span class="match-kda-ratio">(KDA 1.14)</span></div>
+              <div class="match-substats">CS 142 (5.9/분) · 시야 18 · 딜 18,920</div>
+              <div class="match-items">
+                <img class="item-icon" data-dd-item="6653" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3020" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3157" alt="" width="22" height="22">
+                <span class="item-icon empty" aria-hidden="true"></span>
+                <span class="item-icon empty" aria-hidden="true"></span>
+                <span class="item-icon empty" aria-hidden="true"></span>
+                <img class="item-icon trinket" data-dd-item="3340" alt="" width="22" height="22">
+              </div>
+            </div>
+            <div class="match-score-box">
+              <div class="match-score-label">AI Score</div>
+              <div class="match-score-value low">34</div>
+            </div>
+            <div class="match-teams">
+              <div class="match-teams-grid">
+                <div class="match-teams-col">
+                  <div class="team-label">블루팀</div>
+                  <div class="player is-self"><img class="champ-icon" data-dd-champion="Sylas" alt="" width="14" height="14"><span class="player-name">Hide on bush</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Sejuani" alt="" width="14" height="14"><span class="player-name">PlayerJ</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Camille" alt="" width="14" height="14"><span class="player-name">PlayerK</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Kaisa" alt="" width="14" height="14"><span class="player-name">PlayerL</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Nautilus" alt="" width="14" height="14"><span class="player-name">PlayerM</span></div>
+                </div>
+                <div class="match-teams-col">
+                  <div class="team-label">레드팀</div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Akali" alt="" width="14" height="14"><span class="player-name">PlayerN</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Khazix" alt="" width="14" height="14"><span class="player-name">PlayerO</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Fiora" alt="" width="14" height="14"><span class="player-name">PlayerP</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Lucian" alt="" width="14" height="14"><span class="player-name">PlayerQ</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Nami" alt="" width="14" height="14"><span class="player-name">PlayerR</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="match-expand" aria-label="펼치기">▾</div>
+          </a>
+
+          <a class="match-card win hardcarry" href="match-detail.html">
+            <div class="match-result win">
+              <div class="match-result-label">승리</div>
+              <div class="match-meta">
+                솔로랭크<br>
+                6시간 전<br>
+                35분 21초
+              </div>
+            </div>
+            <div class="match-champ-section">
+              <div class="match-champ-icon-wrap">
+                <img class="champ-icon" data-dd-champion="Ahri" alt="아리" width="48" height="48">
+                <div class="match-position-badge">미드</div>
+              </div>
+              <div class="match-spells-runes">
+                <img class="spell-icon" data-dd-spell="SummonerFlash" alt="" width="18" height="18">
+                <img class="spell-icon" data-dd-spell="SummonerDot" alt="" width="18" height="18">
+                <img class="rune-icon" data-dd-rune-keystone="Domination/Electrocute/Electrocute" alt="" width="18" height="18">
+                <img class="rune-icon" data-dd-rune-keystone="Sorcery/Transcendence/Transcendence" alt="" width="18" height="18">
+              </div>
+            </div>
+            <div class="match-stats">
+              <div class="match-kda">15 / 5 / 11 <span class="match-kda-ratio">(KDA 5.20)</span></div>
+              <div class="match-substats">CS 287 (8.1/분) · 시야 24 · 딜 42,180</div>
+              <div class="match-items">
+                <img class="item-icon" data-dd-item="6653" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3157" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3020" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3089" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3135" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3165" alt="" width="22" height="22">
+                <img class="item-icon trinket" data-dd-item="3340" alt="" width="22" height="22">
+              </div>
+            </div>
+            <div class="match-score-box">
+              <div class="match-score-label">AI Score</div>
+              <div class="match-score-value high">82</div>
+            </div>
+            <div class="match-teams">
+              <div class="match-teams-grid">
+                <div class="match-teams-col">
+                  <div class="team-label">블루팀</div>
+                  <div class="player is-self"><img class="champ-icon" data-dd-champion="Ahri" alt="" width="14" height="14"><span class="player-name">Hide on bush</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Diana" alt="" width="14" height="14"><span class="player-name">PlayerR</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Ornn" alt="" width="14" height="14"><span class="player-name">PlayerS</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Aphelios" alt="" width="14" height="14"><span class="player-name">PlayerT</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Braum" alt="" width="14" height="14"><span class="player-name">PlayerU</span></div>
+                </div>
+                <div class="match-teams-col">
+                  <div class="team-label">레드팀</div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Zed" alt="" width="14" height="14"><span class="player-name">PlayerV</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Elise" alt="" width="14" height="14"><span class="player-name">PlayerW</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Garen" alt="" width="14" height="14"><span class="player-name">PlayerX</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Varus" alt="" width="14" height="14"><span class="player-name">PlayerY</span></div>
+                  <div class="player"><img class="champ-icon" data-dd-champion="Leona" alt="" width="14" height="14"><span class="player-name">PlayerZ</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="match-expand" aria-label="펼치기">▾</div>
+          </a>
+        </div>
+
+      </div>
+
+      <button class="more-button" type="button">더 많은 매치 보기</button>
+
+    </section>
+  </div>
+
+</main>
+
+<div data-slot="footer"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:')
+    ? 'http://localhost:3001' : '';
+
+  // ---- AI Score (existing) ---------------------------------------------
+  function applyAiScores() {
+    if (!window.AIScoreEngine) return;
+    document.querySelectorAll('[data-ai-match]').forEach((box) => {
+      const matchId = box.dataset.aiMatch;
+      const m = window.AIScoreEngine.computeMatch(matchId);
+      if (!m) return;
+      const me = m.players.find((p) => p.isSelf);
+      if (!me) return;
+      const valEl = box.querySelector('.match-score-value');
+      if (!valEl) return;
+      valEl.textContent = String(me.score);
+      valEl.classList.remove('high', 'low');
+      if (me.score >= 65) valEl.classList.add('high');
+      else if (me.score < 45) valEl.classList.add('low');
+    });
+  }
+
+  // ---- Live profile via API --------------------------------------------
+  // URL params: ?region=kr&name=...&tag=KR1
+  // If absent, page stays as the static demo (Hide on bush#KR1).
+  function getQuery() {
+    const u = new URL(location.href);
+    return {
+      region: u.searchParams.get('region'),
+      name:   u.searchParams.get('name'),
+      tag:    u.searchParams.get('tag'),
+    };
+  }
+
+  function tierKr(t) {
+    return ({
+      IRON:'아이언', BRONZE:'브론즈', SILVER:'실버', GOLD:'골드', PLATINUM:'플래티넘',
+      EMERALD:'에메랄드', DIAMOND:'다이아몬드', MASTER:'마스터',
+      GRANDMASTER:'그랜드마스터', CHALLENGER:'챌린저',
+    })[t] || t;
+  }
+  function tierClass(t) {
+    return 'tier-' + (t || '').toLowerCase();
+  }
+
+  function applyProfile(data) {
+    // Profile name + tag
+    const nameEl = document.querySelector('.profile-name');
+    if (nameEl) {
+      nameEl.innerHTML = `${escapeHtml(data.account.gameName)} <span class="tag">#${escapeHtml(data.account.tagLine)}</span>`;
+    }
+    document.title = `${data.account.gameName}#${data.account.tagLine} — LoL Tracker`;
+
+    // Profile icon + level
+    if (data.summoner) {
+      const iconImg = document.querySelector('.profile-icon-img');
+      if (iconImg) iconImg.dataset.ddProfileIcon = String(data.summoner.profileIconId);
+      const lvlEl = document.querySelector('.profile-level');
+      if (lvlEl) lvlEl.textContent = String(data.summoner.summonerLevel);
+      const refreshedAt = data.summoner.refreshedAt
+        ? new Date(data.summoner.refreshedAt).toLocaleString('ko-KR')
+        : '방금';
+      const meta = document.querySelector('.profile-meta');
+      if (meta) meta.textContent = `마지막 갱신: ${refreshedAt} · 시즌 2026 S1`;
+    }
+
+    // Rank cards
+    const rankCards = document.querySelectorAll('.rank-cards .rank-card');
+    const solo = data.leagueEntries.find((e) => e.queueType === 'RANKED_SOLO_5x5');
+    const flex = data.leagueEntries.find((e) => e.queueType === 'RANKED_FLEX_SR');
+    if (rankCards[0]) renderRankCard(rankCards[0], '솔로랭크', solo);
+    if (rankCards[1]) renderRankCard(rankCards[1], '자유랭크', flex);
+
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  function renderRankCard(card, label, entry) {
+    const labelEl = card.querySelector('.rank-card-label');
+    const tierEl = card.querySelector('.rank-tier');
+    const lpEl = card.querySelector('.rank-lp');
+    const recordEl = card.querySelector('.rank-record');
+    if (labelEl) labelEl.textContent = label;
+    if (!entry) {
+      if (tierEl) {
+        tierEl.textContent = 'Unranked';
+        tierEl.className = 'rank-tier text-tertiary';
+      }
+      if (lpEl) lpEl.textContent = '배치 0/5';
+      if (recordEl) recordEl.innerHTML = '';
+      return;
+    }
+    if (tierEl) {
+      tierEl.textContent = `${tierKr(entry.tier)} ${entry.rank || ''}`.trim();
+      tierEl.className = 'rank-tier ' + tierClass(entry.tier);
+    }
+    if (lpEl) lpEl.textContent = `${entry.leaguePoints.toLocaleString('ko-KR')} LP`;
+    if (recordEl) {
+      recordEl.innerHTML = `
+        <div class="wl">${entry.wins}승 ${entry.losses}패</div>
+        <div class="winrate">${entry.winrate}%</div>
+      `;
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function setReady() {
+    document.body.dataset.summonerState = 'ready';
+  }
+
+  // Carry URL params (region/name/tag) into tab links so the user stays on the
+  // same summoner when switching tabs. Without this, clicking "챔피언 통계"
+  // lands on the demo page (Hide on bush).
+  function wireTabLinks() {
+    const params = new URL(location.href).searchParams;
+    const region = params.get('region');
+    const name = params.get('name');
+    const tag = params.get('tag');
+    if (!region || !name || !tag) return;
+    const qs = `?region=${encodeURIComponent(region)}&name=${encodeURIComponent(name)}&tag=${encodeURIComponent(tag)}`;
+    document.querySelectorAll('.tabs .tab').forEach((tab) => {
+      const href = tab.getAttribute('href');
+      if (!href) return;
+      // Only add params if href doesn't already include them.
+      if (href.includes('?')) return;
+      tab.setAttribute('href', href + qs);
+    });
+  }
+
+  function recordRecentSearch(account, region) {
+    if (!account || !account.gameName) return;
+    try {
+      const key = 'lol-tracker:recent-searches';
+      const raw = localStorage.getItem(key);
+      const list = raw ? JSON.parse(raw) : [];
+      const entry = {
+        gameName: account.gameName,
+        tagLine: account.tagLine,
+        region: (region || 'kr').toLowerCase(),
+        profileIconId: null, // filled below if available
+        ts: Date.now(),
+      };
+      // Drop existing entry with same identity, prepend fresh one.
+      const filtered = list.filter((e) => !(e.gameName === entry.gameName && e.tagLine === entry.tagLine && e.region === entry.region));
+      filtered.unshift(entry);
+      localStorage.setItem(key, JSON.stringify(filtered.slice(0, 8)));
+    } catch (_e) { /* localStorage unavailable / quota; non-fatal */ }
+  }
+
+  async function loadFromApi() {
+    const q = getQuery();
+    if (!q.region || !q.name || !q.tag) {
+      // No params → reveal static demo immediately.
+      setReady();
+      return false;
+    }
+    try {
+      const url = `${API_BASE}/api/summoner/${encodeURIComponent(q.region)}/${encodeURIComponent(q.name + '#' + q.tag)}`;
+      const r = await fetch(url);
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        if (r.status === 404) {
+          // Hand off to the canonical 404 page; preserve search context for retry UI.
+          location.replace(`error-404.html?missing=${encodeURIComponent(q.name + '#' + q.tag)}&region=${encodeURIComponent(q.region)}`);
+          return false;
+        }
+        setReady();
+        showError(err.error || `검색 실패 (${r.status})`);
+        return false;
+      }
+      const data = await r.json();
+      applyProfile(data);
+      recordRecentSearch(data.account, q.region);
+      setReady();
+      // Matches drive lane/friends sidebar; champ-stats uses dedicated endpoint
+      await Promise.all([
+        loadMatches(data.account.puuid),
+        loadChampStats(data.account.puuid),
+      ]);
+      // If deep-collect was just triggered (or we have very little data),
+      // poll for new matches and progressively update the sidebar.
+      if (data.deepCollectTriggered || (data.matchesAvailable ?? 0) < 200) {
+        startDeepCollectPolling(data.account.puuid, data.matchesAvailable ?? 0);
+      }
+      return true;
+    } catch (e) {
+      setReady();
+      showError('API 연결 실패: ' + e.message);
+      return false;
+    }
+  }
+
+  // ---- Deep-collect polling (auto-fires after first search of low-data puuid) -
+  let deepCollectTimer = null;
+  function stopDeepCollectPolling() {
+    if (deepCollectTimer) { clearInterval(deepCollectTimer); deepCollectTimer = null; }
+    const badge = document.getElementById('deep-collect-badge');
+    if (badge) badge.remove();
+  }
+  function showDeepCollectBadge(text, isFinal) {
+    let badge = document.getElementById('deep-collect-badge');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.id = 'deep-collect-badge';
+      badge.className = 'deep-collect-badge';
+      const card = document.getElementById('champ-stats-card');
+      if (card) card.parentElement?.insertBefore(badge, card);
+    }
+    badge.textContent = text;
+    badge.classList.toggle('final', !!isFinal);
+  }
+  function startDeepCollectPolling(puuid, baseline) {
+    if (deepCollectTimer) clearInterval(deepCollectTimer);
+    showDeepCollectBadge('전체 시즌 매치 수집 중...', false);
+    let elapsed = 0, lastCount = baseline;
+    const STEP = 8, TIMEOUT = 240;   // poll every 8s for up to 4 min
+
+    deepCollectTimer = setInterval(async () => {
+      elapsed += STEP;
+      try {
+        const r = await fetch(`${API_BASE}/api/summoner/${puuid}/match-count`);
+        if (!r.ok) return;
+        const { count } = await r.json();
+        if (count > lastCount) {
+          lastCount = count;
+          await loadChampStats(puuid);   // refresh sidebar with growing data
+          showDeepCollectBadge(`수집 중... ${count}게임 (${elapsed}초)`, false);
+        } else {
+          showDeepCollectBadge(`수집 진행 중... ${count}게임 (${elapsed}초)`, false);
+        }
+        if (count >= 200) {
+          showDeepCollectBadge(`✓ 충분히 수집됨 (${count}게임)`, true);
+          stopDeepCollectPolling();
+          setTimeout(() => { const b = document.getElementById('deep-collect-badge'); if (b) b.remove(); }, 4000);
+        }
+      } catch (_e) { /* ignore */ }
+      if (elapsed >= TIMEOUT) {
+        showDeepCollectBadge(`수집 진행중 (${lastCount}게임). 다시 와서 확인하세요.`, true);
+        stopDeepCollectPolling();
+      }
+    }, STEP * 1000);
+  }
+  window.addEventListener('pagehide', stopDeepCollectPolling);
+
+  // ---- Champ stats (sidebar) — season-wide via dedicated endpoint ---
+  async function loadChampStats(puuid) {
+    try {
+      const r = await fetch(`${API_BASE}/api/summoner/${puuid}/champion-stats?minGames=1`);
+      if (!r.ok) return;
+      const d = await r.json();
+      renderChampStats(d.rows || []);
+    } catch (_e) { /* keep loading state */ }
+  }
+
+  function renderChampStats(rows) {
+    const list = document.getElementById('champ-stats-list');
+    if (!list) return;
+    if (!rows || rows.length === 0) {
+      list.innerHTML = '<div class="champ-list-row"><div class="champ-list-info"><div class="champ-list-name text-tertiary">데이터 없음</div></div></div>';
+      return;
+    }
+    // Roll up per-championKey across lanes (rows are per (champ, lane)).
+    const byChamp = new Map();
+    for (const r of rows) {
+      const cur = byChamp.get(r.championKey) || {
+        key: r.championKey, games: 0, wins: 0, kdaSum: 0,
+      };
+      cur.games += r.games;
+      cur.wins  += r.wins;
+      cur.kdaSum += (r.avgKda || 0) * r.games;
+      byChamp.set(r.championKey, cur);
+    }
+    const ranked = Array.from(byChamp.values())
+      .sort((a, b) => b.games - a.games)
+      .slice(0, 8);
+
+    list.innerHTML = '';
+    for (const c of ranked) {
+      const wr = Math.round((c.wins / c.games) * 100);
+      const kda = (c.kdaSum / Math.max(1, c.games)).toFixed(2);
+      const wrCls = wr >= 60 ? 'high' : wr <= 40 ? 'low' : '';
+      const row = document.createElement('div');
+      row.className = 'champ-list-row';
+      row.innerHTML = `
+        <img class="champ-icon" data-dd-champion="${escapeHtml(c.key)}" alt="${escapeHtml(champKr(c.key))}" width="36" height="36">
+        <div class="champ-list-info">
+          <div class="champ-list-name">${escapeHtml(champKr(c.key))}</div>
+          <div class="champ-list-detail">${c.games}게임 · ${kda} KDA</div>
+        </div>
+        <div class="champ-list-wr ${wrCls}">${wr}%</div>
+      `;
+      list.appendChild(row);
+    }
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  // ---- Matches list dynamic render ------------------------------------
+  async function loadMatches(puuid) {
+    try {
+      const r = await fetch(`${API_BASE}/api/summoner/${puuid}/matches?count=20`);
+      if (!r.ok) return;
+      const data = await r.json();
+      renderMatches(data.matches);
+    } catch (_e) { /* keep demo */ }
+  }
+
+  function timeAgo(ms) {
+    const diff = Date.now() - ms;
+    // Negative diff = future timestamp (clock skew or mis-formatted seconds-vs-ms data) →
+    // show "방금" instead of nonsense like "-32400초 전".
+    if (diff < 0) return '방금';
+    if (diff < 60_000) return Math.round(diff / 1000) + '초 전';
+    if (diff < 3600_000) return Math.round(diff / 60_000) + '분 전';
+    if (diff < 86400_000) return Math.round(diff / 3600_000) + '시간 전';
+    return Math.round(diff / 86400_000) + '일 전';
+  }
+  function fmtDuration(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}분 ${String(s).padStart(2, '0')}초`;
+  }
+  function queueKr(qid) {
+    return ({ 420: '솔로랭크', 440: '자유랭크', 450: '칼바람', 400: '일반' })[qid] || `큐 ${qid}`;
+  }
+  function laneKr(l) { return ({ top:'탑', jungle:'정글', mid:'미드', adc:'원딜', support:'서폿' })[l] || ''; }
+
+  let DD_KEY_TO_NAME = {};        // 'Aatrox' → '아트록스' (filled lazily)
+
+  async function ensureChampNames() {
+    if (Object.keys(DD_KEY_TO_NAME).length > 0) return;
+    if (!window.DDragon || !window.DDragon.meta) return;
+    try {
+      const meta = await window.DDragon.meta();
+      DD_KEY_TO_NAME = meta.championKeyToName || {};
+    } catch (_e) { /* leave empty, fall back to keys */ }
+  }
+  function champKr(key) { return DD_KEY_TO_NAME[key] || key || ''; }
+
+  function renderMatches(matches) {
+    const list = document.querySelector('.match-list');
+    if (!list || !matches) return;
+    if (matches.length === 0) {
+      list.innerHTML = '<div class="card" style="padding: 32px; text-align: center; color: var(--text-tertiary);">아직 수집된 매치가 없습니다. "전적 갱신"을 눌러주세요.</div>';
+      renderLaneDistribution([]);
+      renderFriendList([], null);
+      return;
+    }
+    renderLaneDistribution(matches);
+    const selfPuuid = matches[0]?.participants?.find((p) => p.isSelf)?.puuid ?? null;
+    renderFriendList(matches, selfPuuid);
+    list.innerHTML = '';
+    ensureChampNames().then(() => {
+      // After names load, re-render existing cards' team labels.
+      list.querySelectorAll('.match-card[data-match-id]').forEach((card) => {
+        card.querySelectorAll('.player .player-name[data-key]').forEach((s) => {
+          s.textContent = champKr(s.dataset.key);
+        });
+      });
+    });
+    for (const m of matches) {
+      list.appendChild(renderMatchCard(m));
+    }
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  function renderLaneDistribution(matches) {
+    const wrap = document.getElementById('lane-distribution');
+    if (!wrap) return;
+    const counts = { top: 0, jungle: 0, mid: 0, adc: 0, support: 0 };
+    let total = 0;
+    for (const m of matches) {
+      const lane = m.self?.lane;
+      if (lane && counts[lane] != null) { counts[lane] += 1; total += 1; }
+    }
+    if (total === 0) {
+      wrap.innerHTML = '<div class="text-tertiary uppercase" style="font-size:11px;margin-bottom:8px;">자주 가는 라인</div><div class="text-tertiary" style="font-size:11px;">데이터 없음</div>';
+      return;
+    }
+    const sorted = Object.entries(counts).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+    let html = '<div class="text-tertiary uppercase" style="font-size:11px;margin-bottom:8px;">자주 가는 라인</div>';
+    for (const [lane, n] of sorted) {
+      const pct = Math.round((n / total) * 100);
+      html += `<div class="lane-bar-row"><span class="lane-bar-label">${laneKr(lane)}</span><div class="lane-bar-track"><div class="lane-bar-fill" style="width: ${pct}%;"></div></div><span class="lane-bar-value">${pct}%</span></div>`;
+    }
+    wrap.innerHTML = html;
+  }
+
+  function renderFriendList(matches, selfPuuid) {
+    const wrap = document.getElementById('friend-list');
+    if (!wrap) return;
+    if (!matches.length || !selfPuuid) {
+      wrap.innerHTML = '<div class="text-tertiary" style="font-size:11px;padding:8px;">데이터 없음</div>';
+      return;
+    }
+    // Build co-occurrence map: puuid → { games, wins, name, tag }.
+    const partners = new Map();
+    for (const m of matches) {
+      const myParticipant = m.participants?.find((p) => p.puuid === selfPuuid);
+      if (!myParticipant) continue;
+      for (const p of m.participants) {
+        if (p.puuid === selfPuuid) continue;
+        if (p.team !== myParticipant.team) continue;   // same-team only
+        const cur = partners.get(p.puuid) || { games: 0, wins: 0, name: '', tag: '' };
+        cur.games += 1;
+        if (m.self.win) cur.wins += 1;
+        if (!cur.name && p.gameName) { cur.name = p.gameName; cur.tag = p.tagLine || ''; }
+        partners.set(p.puuid, cur);
+      }
+    }
+    const ranked = Array.from(partners.entries())
+      .filter(([, v]) => v.games >= 2 && v.name)        // ≥2게임 + 닉네임 알려진 사람만
+      .sort((a, b) => b[1].games - a[1].games)
+      .slice(0, 5);
+    if (ranked.length === 0) {
+      wrap.innerHTML = '<div class="text-tertiary" style="font-size:11px;padding:8px;">2게임 이상 같이 한 친구 없음</div>';
+      return;
+    }
+    wrap.innerHTML = ranked.map(([, v]) => {
+      const wr = Math.round((v.wins / v.games) * 100);
+      const region = (new URL(location.href)).searchParams.get('region') || 'kr';
+      const href = `summoner.html?region=${encodeURIComponent(region)}&name=${encodeURIComponent(v.name)}&tag=${encodeURIComponent(v.tag)}`;
+      return `<a class="friend-row" href="${href}"><img class="friend-avatar profile-icon-img" data-dd-profile-icon="29" alt="" width="24" height="24"><span class="friend-name">${escapeHtml(v.name)}</span><span class="friend-stats">${v.games}G · ${wr}%</span></a>`;
+    }).join('');
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  function shortDisplay(p) {
+    // Prefer summoner name when known; fall back to champion name.
+    if (p.gameName) return p.gameName;
+    return champKr(p.championKey);
+  }
+
+  function renderMatchCard(m) {
+    const me = m.self;
+    const win = me.win;
+    const card = document.createElement('div');
+    card.className = 'match-card' + (win ? ' win' : '');
+    card.dataset.matchId = m.matchId;
+    card.style.cursor = 'pointer';
+    card.innerHTML = `
+      <div class="match-result ${win ? 'win' : 'loss'}">
+        <div class="match-result-label">${win ? '승리' : '패배'}</div>
+        <div class="match-meta">
+          ${queueKr(m.queueId)}<br>
+          ${timeAgo(m.gameCreation)}<br>
+          ${fmtDuration(m.gameDuration)}
+        </div>
+      </div>
+      <div class="match-champ-section">
+        <div class="match-champ-icon-wrap">
+          <img class="champ-icon" data-dd-champion="${me.championKey}" alt="${escapeHtml(champKr(me.championKey))}" width="48" height="48">
+          <div class="match-position-badge">${laneKr(me.lane) || me.lane}</div>
+        </div>
+      </div>
+      <div class="match-stats">
+        <div class="match-kda">${me.kills} / ${me.deaths} / ${me.assists}
+          <span class="match-kda-ratio">(KDA ${((me.kills + me.assists) / Math.max(1, me.deaths)).toFixed(2)})</span></div>
+        <div class="match-substats">CS ${me.cs} (${me.csPerMin.toFixed(1)}/분) · 시야 ${me.visionScore} · DPM ${me.dmgToChampPerMin}</div>
+        <div class="match-items">
+          ${(me.items || []).map((id, i) =>
+            id ? `<img class="item-icon${i===6?' trinket':''}" data-dd-item="${id}" alt="" width="22" height="22">`
+               : `<span class="item-icon empty" aria-hidden="true"></span>`
+          ).join('')}
+        </div>
+      </div>
+      <div class="match-score-box">
+        <div class="match-score-label">AI Score</div>
+        <div class="match-score-value ${
+          me.aiScore == null ? '' :
+          me.aiScore >= 65 ? 'high' : me.aiScore < 45 ? 'low' : ''
+        }">${me.aiScore != null ? Math.round(me.aiScore) : '—'}</div>
+      </div>
+      <div class="match-teams">
+        <div class="match-teams-grid">
+          <div class="match-teams-col">
+            <div class="team-label">블루팀</div>
+            ${(m.participants || []).filter((p) => p.team === 'blue').map((p) =>
+              `<div class="player${p.isSelf ? ' is-self' : ''}" title="${escapeHtml(champKr(p.championKey))}"><img class="champ-icon" data-dd-champion="${escapeHtml(p.championKey)}" alt="" width="14" height="14"><span class="player-name">${escapeHtml(p.gameName || champKr(p.championKey))}</span></div>`
+            ).join('')}
+          </div>
+          <div class="match-teams-col">
+            <div class="team-label">레드팀</div>
+            ${(m.participants || []).filter((p) => p.team === 'red').map((p) =>
+              `<div class="player${p.isSelf ? ' is-self' : ''}" title="${escapeHtml(champKr(p.championKey))}"><img class="champ-icon" data-dd-champion="${escapeHtml(p.championKey)}" alt="" width="14" height="14"><span class="player-name">${escapeHtml(p.gameName || champKr(p.championKey))}</span></div>`
+            ).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="match-expand" aria-label="펼치기" aria-expanded="false">▾</div>
+    `;
+
+    // Inline expand panel (lazy-rendered on first click).
+    let panel = null;
+    card.addEventListener('click', (e) => {
+      // Ignore clicks on inner anchors (none currently, but defensive).
+      if (e.target.closest('a')) return;
+      const expanded = card.classList.toggle('expanded');
+      const chev = card.querySelector('.match-expand');
+      if (chev) {
+        chev.textContent = expanded ? '▴' : '▾';
+        chev.setAttribute('aria-expanded', String(expanded));
+      }
+      if (expanded && !panel) {
+        panel = renderExpandPanel(m);
+        card.parentElement?.insertBefore(panel, card.nextSibling);
+        if (window.DDragon) window.DDragon.rewriteAll();
+      } else if (panel) {
+        panel.hidden = !expanded;
+      }
+    });
+
+    return card;
+  }
+
+  function renderExpandPanel(m) {
+    const wrap = document.createElement('div');
+    wrap.className = 'match-expand-panel-wrap card';
+    wrap.innerHTML = `
+      <div class="expand-tabs" role="tablist">
+        <button type="button" class="expand-tab active" data-tab="basic" role="tab" aria-selected="true">기본 분석</button>
+        <button type="button" class="expand-tab" data-tab="timeline" role="tab" aria-selected="false">시간대별 분석</button>
+        <button type="button" class="expand-tab" data-tab="build" role="tab" aria-selected="false">빌드</button>
+      </div>
+      <div class="expand-tab-body" data-tab="basic"></div>
+      <div class="expand-tab-body" data-tab="timeline" hidden></div>
+      <div class="expand-tab-body" data-tab="build" hidden></div>
+    `;
+
+    const blueWin = (m.bluewin === 1);
+    const blueParts = m.participants.filter((p) => p.team === 'blue');
+    const redParts  = m.participants.filter((p) => p.team === 'red');
+    const basic = wrap.querySelector('[data-tab="basic"].expand-tab-body');
+    basic.innerHTML = `
+      <div class="match-expand-panel">
+        <div class="expand-team ${blueWin ? 'win' : 'loss'}">
+          <div class="expand-team-head">블루팀 ${blueWin ? '승' : '패'}</div>
+          ${renderExpandTeam(blueParts)}
+        </div>
+        <div class="expand-team ${blueWin ? 'loss' : 'win'}">
+          <div class="expand-team-head">레드팀 ${blueWin ? '패' : '승'}</div>
+          ${renderExpandTeam(redParts)}
+        </div>
+      </div>
+    `;
+
+    // Tab wiring (lazy-load timeline tabs once)
+    const loaded = { basic: true, timeline: false, build: false };
+    let tlPromise = null;
+    async function ensureTimeline() {
+      if (tlPromise) return tlPromise;
+      tlPromise = (async () => {
+        try {
+          const r = await fetch(`${API_BASE}/api/match/${encodeURIComponent(m.matchId)}/timeline-summary`);
+          if (!r.ok) return null;
+          return await r.json();
+        } catch (_e) { return null; }
+      })();
+      return tlPromise;
+    }
+
+    wrap.querySelectorAll('.expand-tab').forEach((tabBtn) => {
+      tabBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const tab = tabBtn.dataset.tab;
+        wrap.querySelectorAll('.expand-tab').forEach((b) => {
+          b.classList.toggle('active', b.dataset.tab === tab);
+          b.setAttribute('aria-selected', String(b.dataset.tab === tab));
+        });
+        wrap.querySelectorAll('.expand-tab-body').forEach((body) => {
+          body.hidden = body.dataset.tab !== tab;
+        });
+        const body = wrap.querySelector(`.expand-tab-body[data-tab="${tab}"]`);
+        if (loaded[tab]) return;
+        if (tab === 'timeline') {
+          body.innerHTML = '<div class="text-tertiary" style="padding: 32px; text-align: center;">로딩 중...</div>';
+          const tl = await ensureTimeline();
+          if (!tl) { body.innerHTML = '<div class="text-tertiary" style="padding: 32px; text-align: center;">타임라인 데이터 없음</div>'; return; }
+          body.innerHTML = '';
+          body.appendChild(buildTimelineCharts(tl));
+          loaded.timeline = true;
+        } else if (tab === 'build') {
+          body.innerHTML = '<div class="text-tertiary" style="padding: 32px; text-align: center;">로딩 중...</div>';
+          const tl = await ensureTimeline();
+          if (!tl) { body.innerHTML = '<div class="text-tertiary" style="padding: 32px; text-align: center;">빌드 데이터 없음</div>'; return; }
+          body.innerHTML = '';
+          body.appendChild(buildBuildPanel(m, tl));
+          loaded.build = true;
+        }
+        if (window.DDragon) window.DDragon.rewriteAll();
+      });
+    });
+
+    return wrap;
+  }
+
+  // ---- Inline timeline charts ----------------------------------------
+  function buildTimelineCharts(tl) {
+    const wrap = document.createElement('div');
+    wrap.className = 'expand-timeline-stack';
+    const W = 1000, H = 220, PAD = { top: 16, right: 16, bottom: 26, left: 50 };
+    const xScale = (s) => PAD.left + (s / Math.max(1, tl.gameDuration)) * (W - PAD.left - PAD.right);
+    function svg(tag, attrs) { const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+    function fmtK(v) { return Math.abs(v) >= 1000 ? (v/1000).toFixed(1) + 'k' : String(Math.round(v)); }
+    function fmtMin(s) { return Math.round(s/60) + '분'; }
+    function gridX(s, h) {
+      const ticks = [];
+      const step = tl.gameDuration > 1800 ? 5 : 3;
+      for (let mn = 0; mn * 60 <= tl.gameDuration; mn += step) ticks.push(mn);
+      for (const mn of ticks) {
+        const x = xScale(mn * 60);
+        s.appendChild(svg('line', { class: 'chart-grid', x1: x, x2: x, y1: PAD.top, y2: h - PAD.bottom }));
+        const t = svg('text', { class: 'chart-axis-label', x: x, y: h - 8, 'text-anchor': 'middle' });
+        t.textContent = fmtMin(mn * 60);
+        s.appendChild(t);
+      }
+    }
+    function gridY(s, ticks, scale) {
+      for (const v of ticks) {
+        const y = scale(v);
+        s.appendChild(svg('line', { class: 'chart-grid', x1: PAD.left, x2: W - PAD.right, y1: y, y2: y }));
+        const t = svg('text', { class: 'chart-axis-label', x: PAD.left - 6, y: y + 4, 'text-anchor': 'end' });
+        t.textContent = fmtK(v);
+        s.appendChild(t);
+      }
+    }
+    function plot(s, frames, getY, color, yScale, width = 2.5) {
+      const pts = frames.map((f) => `${xScale(f.ts).toFixed(1)},${yScale(getY(f)).toFixed(1)}`).join(' ');
+      s.appendChild(svg('polyline', { points: pts, fill: 'none', stroke: color, 'stroke-width': String(width) }));
+    }
+    function fillArea(s, frames, getY, color, yScale, baselineY) {
+      // area between line and baseline (used for gold-diff under zero)
+      let d = `M ${xScale(frames[0].ts)} ${baselineY}`;
+      for (const f of frames) d += ` L ${xScale(f.ts)} ${yScale(getY(f))}`;
+      d += ` L ${xScale(frames[frames.length-1].ts)} ${baselineY} Z`;
+      s.appendChild(svg('path', { d, fill: color, 'fill-opacity': '0.15', stroke: 'none' }));
+    }
+
+    // ---- Chart 1: 팀 골드 (blue vs red overlay) ----
+    {
+      const card = document.createElement('div'); card.className = 'expand-chart';
+      const head = document.createElement('div'); head.className = 'expand-chart-title-row';
+      head.innerHTML = `
+        <span class="expand-chart-title">팀 누적 골드</span>
+        <span class="expand-chart-legend">
+          <span><span class="dot" style="background:var(--color-win)"></span>블루팀</span>
+          <span><span class="dot" style="background:var(--color-loss)"></span>레드팀</span>
+        </span>
+      `;
+      card.appendChild(head);
+      const s = svg('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', preserveAspectRatio: 'xMidYMid meet' });
+      const maxGold = Math.max(1, ...tl.frames.flatMap((f) => [f.blue.totalGold, f.red.totalGold]));
+      const yMax = Math.ceil(maxGold / 5000) * 5000;
+      const yScale = (v) => PAD.top + (1 - v / yMax) * (H - PAD.top - PAD.bottom);
+      gridX(s, H);
+      const yTicks = [0, yMax * 0.25, yMax * 0.5, yMax * 0.75, yMax].map((v) => Math.round(v / 1000) * 1000);
+      gridY(s, yTicks, yScale);
+      plot(s, tl.frames, (f) => f.blue.totalGold, 'var(--color-win)', yScale);
+      plot(s, tl.frames, (f) => f.red.totalGold,  'var(--color-loss)', yScale);
+      card.appendChild(s);
+      wrap.appendChild(card);
+    }
+
+    // ---- Chart 2: 골드 차이 (filled area) ----
+    {
+      const card = document.createElement('div'); card.className = 'expand-chart';
+      const head = document.createElement('div'); head.className = 'expand-chart-title-row';
+      head.innerHTML = `
+        <span class="expand-chart-title">팀 골드 차이</span>
+        <span class="expand-chart-legend"><span class="text-tertiary">블루팀 우세시 위쪽 / 레드팀 우세시 아래쪽</span></span>
+      `;
+      card.appendChild(head);
+      const s = svg('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', preserveAspectRatio: 'xMidYMid meet' });
+      const diffs = tl.frames.map((f) => f.blue.totalGold - f.red.totalGold);
+      const maxAbs = Math.max(2000, ...diffs.map(Math.abs));
+      const niceMax = Math.ceil(maxAbs / 1000) * 1000;
+      const yScale = (v) => PAD.top + (1 - (v + niceMax) / (2 * niceMax)) * (H - PAD.top - PAD.bottom);
+      gridX(s, H);
+      gridY(s, [-niceMax, -niceMax/2, 0, niceMax/2, niceMax], yScale);
+      // bold zero line
+      s.appendChild(svg('line', { x1: PAD.left, x2: W - PAD.right, y1: yScale(0), y2: yScale(0), stroke: 'var(--border-strong)', 'stroke-width': '1.5' }));
+      // Two filled regions per sign
+      // (Simpler: draw single area between line and zero with one color set by last sign;
+      //  for accurate two-color we would need to clip-segment per crossing.)
+      fillArea(s, tl.frames, (f) => f.blue.totalGold - f.red.totalGold, diffs[diffs.length-1] >= 0 ? 'var(--color-win)' : 'var(--color-loss)', yScale, yScale(0));
+      plot(s, tl.frames, (f) => f.blue.totalGold - f.red.totalGold, diffs[diffs.length-1] >= 0 ? 'var(--color-win)' : 'var(--color-loss)', yScale);
+      card.appendChild(s);
+      const meta = document.createElement('div'); meta.className = 'expand-chart-meta';
+      const last = diffs[diffs.length - 1] ?? 0;
+      meta.textContent = `최종: ${last >= 0 ? '+' : ''}${last.toLocaleString('ko-KR')}g`;
+      card.appendChild(meta);
+      wrap.appendChild(card);
+    }
+
+    // ---- Chart 3: 이벤트 타임라인 ----
+    {
+      const card = document.createElement('div'); card.className = 'expand-chart';
+      const head = document.createElement('div'); head.className = 'expand-chart-title-row';
+      head.innerHTML = `
+        <span class="expand-chart-title">이벤트 타임라인</span>
+        <span class="expand-chart-legend">
+          <span><span class="dot" style="background:var(--color-win)"></span>블루</span>
+          <span><span class="dot" style="background:var(--color-loss)"></span>레드</span>
+          <span><span class="dot" style="background:var(--color-warning)"></span>오브젝트</span>
+        </span>
+      `;
+      card.appendChild(head);
+      const eh = 130;
+      const s = svg('svg', { viewBox: `0 0 ${W} ${eh}`, width: '100%', preserveAspectRatio: 'xMidYMid meet' });
+      // 3 lanes — wider left padding so Korean labels fit
+      const LANE_PAD_L = 90;   // wider than default PAD.left so labels don't crop
+      const lanes = [
+        { y: 28, label: '킬' },
+        { y: 60, label: '오브젝트' },
+        { y: 92, label: '타워/억제기' },
+      ];
+      for (const l of lanes) {
+        s.appendChild(svg('line', { class: 'chart-grid', x1: LANE_PAD_L, x2: W - PAD.right, y1: l.y, y2: l.y }));
+        const t = svg('text', { class: 'expand-event-lane-label', x: LANE_PAD_L - 8, y: l.y + 4, 'text-anchor': 'end' });
+        t.textContent = l.label;
+        s.appendChild(t);
+      }
+      const ticks = [];
+      const step = tl.gameDuration > 1800 ? 5 : 3;
+      const xScaleEv = (sec) => LANE_PAD_L + (sec / Math.max(1, tl.gameDuration)) * (W - LANE_PAD_L - PAD.right);
+      for (let mn = 0; mn * 60 <= tl.gameDuration; mn += step) ticks.push(mn);
+      for (const mn of ticks) {
+        const x = xScaleEv(mn * 60);
+        const t = svg('text', { class: 'expand-event-time-label', x: x, y: eh - 8, 'text-anchor': 'middle' });
+        t.textContent = fmtMin(mn * 60);
+        s.appendChild(t);
+      }
+      for (const ev of tl.events) {
+        const x = xScaleEv(ev.ts);
+        let y, color, r = 4;
+        if (ev.type === 'KILL') { y = 28; color = ev.team === 'blue' ? 'var(--color-win)' : 'var(--color-loss)'; r = 3; }
+        else if (ev.type === 'TOWER' || ev.type === 'INHIBITOR') {
+          y = 92; color = ev.team === 'blue' ? 'var(--color-win)' : 'var(--color-loss)';
+          r = ev.type === 'INHIBITOR' ? 6 : 4;
+        } else {
+          y = 60; color = ev.team === 'blue' ? 'var(--color-win)' : 'var(--color-loss)';
+          r = (ev.type === 'BARON' || ev.type === 'ELDER' || ev.type === 'ATAKHAN') ? 6 : 4;
+          s.appendChild(svg('circle', { cx: x, cy: y, r: r + 2, fill: 'none', stroke: 'var(--color-warning)', 'stroke-width': '1' }));
+        }
+        s.appendChild(svg('circle', { cx: x, cy: y, r: r, fill: color }));
+      }
+      card.appendChild(s);
+      wrap.appendChild(card);
+    }
+    return wrap;
+  }
+
+  // ---- Build panel: per-player item purchase order -------------------
+  function buildBuildPanel(m, tl) {
+    const wrap = document.createElement('div');
+    wrap.className = 'expand-build-panel';
+    function fmtTs(s) { const mn = Math.floor(s / 60); const sec = s % 60; return `${mn}:${String(sec).padStart(2, '0')}`; }
+    function compact(events) {
+      const undoSet = new Set();
+      events.forEach((e, i) => {
+        if (e.type !== 'UNDO') return;
+        for (let j = i - 1; j >= 0; j--) {
+          const prior = events[j];
+          if (prior.type === 'BUY' && prior.itemId === e.itemId && (e.ts - prior.ts) < 60) { undoSet.add(j); undoSet.add(i); break; }
+        }
+      });
+      return events.filter((_, i) => !undoSet.has(i)).filter((e) => e.type === 'BUY');
+    }
+    const sorted = [...m.participants].sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
+    for (const p of sorted) {
+      const series = (tl.perPlayer || []).find((s) => s.slot === p.slot);
+      const events = series ? compact(series.itemEvents || []) : [];
+      const row = document.createElement('div');
+      row.className = 'expand-build-row' + (p.isSelf ? ' is-self' : '');
+      row.innerHTML = `
+        <div class="expand-build-name">
+          <img class="champ-icon" data-dd-champion="${escapeHtml(p.championKey)}" alt="" width="22" height="22">
+          <span>${escapeHtml(p.gameName || champKr(p.championKey))}</span>
+        </div>
+        <div class="expand-build-steps">
+          ${events.length === 0 ? '<span class="text-tertiary" style="font-size:11px;">-</span>' :
+            events.map((e) => `
+              <div class="expand-build-step">
+                <img class="item-icon" data-dd-item="${e.itemId}" alt="" width="20" height="20">
+                <span class="expand-build-time">${fmtTs(e.ts)}</span>
+              </div>
+            `).join('')}
+        </div>
+      `;
+      wrap.appendChild(row);
+    }
+    return wrap;
+  }
+
+  function renderExpandTeam(players) {
+    return `<div class="expand-team-rows">${players.map((p) => {
+      const kda = ((p.kills + p.assists) / Math.max(1, p.deaths)).toFixed(2);
+      const aiCls = p.aiScore == null ? '' : p.aiScore >= 65 ? 'high' : p.aiScore < 45 ? 'low' : '';
+      return `
+        <div class="expand-row${p.isSelf ? ' is-self' : ''}">
+          <img class="champ-icon" data-dd-champion="${escapeHtml(p.championKey)}" alt="" width="28" height="28">
+          <div class="expand-spells">
+            ${(p.spells || []).slice(0, 2).map((sid) => `<img class="spell-icon" data-dd-spell-id="${sid}" alt="" width="14" height="14">`).join('')}
+          </div>
+          <div class="expand-name">
+            <div class="expand-name-line">
+              ${p.gameName ? `<a href="summoner.html?region=kr&name=${encodeURIComponent(p.gameName)}&tag=${encodeURIComponent(p.tagLine)}">${escapeHtml(p.gameName)}</a>` : `<span class="text-tertiary">${escapeHtml(champKr(p.championKey))}</span>`}
+              ${p.tagLine ? `<span class="text-tertiary">#${escapeHtml(p.tagLine)}</span>` : ''}
+            </div>
+            <div class="expand-name-sub">${escapeHtml(champKr(p.championKey))} · ${laneKr(p.lane) || p.lane}</div>
+          </div>
+          <div class="expand-kda">${p.kills} / ${p.deaths} / ${p.assists} <span class="text-tertiary">(${kda})</span></div>
+          <div class="expand-cs">${p.cs} CS</div>
+          <div class="expand-dmg">${p.dmgToChampPerMin} DPM</div>
+          <div class="expand-vision">시야 ${p.visionScore}</div>
+          <div class="expand-items">
+            ${(p.items || []).map((id, i) => id ? `<img class="item-icon${i===6?' trinket':''}" data-dd-item="${id}" alt="" width="20" height="20">` : `<span class="item-icon empty" aria-hidden="true"></span>`).join('')}
+          </div>
+          <div class="expand-ai ${aiCls}">${p.aiScore != null ? Math.round(p.aiScore) : '—'}</div>
+        </div>
+      `;
+    }).join('')}</div>`;
+  }
+
+  function showError(msg) {
+    const meta = document.querySelector('.profile-meta');
+    if (meta) {
+      meta.textContent = msg;
+      meta.style.color = 'var(--color-loss)';
+    }
+  }
+
+  // ---- F-213 Refresh button --------------------------------------------
+  // Cooldown enforced server-side (per-PUUID + per-IP). Client mirrors the
+  // server's `cooldownRemainingMs` in a live countdown so the user never
+  // re-clicks during cooldown. Timer is cleared on page navigation.
+  let cooldownTimerId = null;
+
+  function setCooldown(btn, remainingMs, originalLabel) {
+    if (cooldownTimerId != null) clearInterval(cooldownTimerId);
+    const deadline = Date.now() + remainingMs;
+    const tick = () => {
+      const left = Math.max(0, deadline - Date.now());
+      if (left <= 0) {
+        clearInterval(cooldownTimerId);
+        cooldownTimerId = null;
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = `${Math.ceil(left / 1000)}초 후 재시도`;
+    };
+    tick();
+    cooldownTimerId = setInterval(tick, 1000);
+  }
+
+  function showRefreshBanner(text, withReload) {
+    let banner = document.querySelector('.refresh-banner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.className = 'refresh-banner';
+      const main = document.querySelector('main');
+      const tabs = document.querySelector('.tabs');
+      if (main && tabs) main.insertBefore(banner, tabs.nextSibling);
+    }
+    banner.innerHTML = `<span>${escapeHtml(text)}</span>${withReload ? '<button type="button" id="refresh-reload-btn">전체 새로고침</button>' : ''}`;
+    const reloadBtn = banner.querySelector('#refresh-reload-btn');
+    if (reloadBtn) reloadBtn.onclick = () => location.reload();
+  }
+  function hideRefreshBanner() {
+    const b = document.querySelector('.refresh-banner');
+    if (b) b.remove();
+  }
+
+  let refreshPollTimer = null;
+  function startRefreshPolling(puuid) {
+    if (refreshPollTimer) clearInterval(refreshPollTimer);
+    showRefreshBanner('갱신 요청 완료. 새 매치 도착 시 자동으로 추가됩니다.', false);
+    let elapsed = 0;
+    const STEP = 5;
+    const TIMEOUT = 90;  // poll for 90s total
+
+    // Capture current top match ID so we know what's "new".
+    const currentTop = document.querySelector('.match-card[data-match-id]')?.dataset?.matchId || null;
+
+    refreshPollTimer = setInterval(async () => {
+      elapsed += STEP;
+      try {
+        const r = await fetch(`${API_BASE}/api/summoner/${puuid}/matches?count=20`);
+        if (!r.ok) return;
+        const d = await r.json();
+        if (!d.matches || d.matches.length === 0) return;
+        const newTop = d.matches[0].matchId;
+        if (newTop && newTop !== currentTop) {
+          // New match found — re-render whole list and stop polling.
+          clearInterval(refreshPollTimer); refreshPollTimer = null;
+          renderMatches(d.matches);
+          showRefreshBanner(`✓ 새 매치 도착 (${elapsed}초)`, true);
+          setTimeout(hideRefreshBanner, 4000);
+          return;
+        }
+        showRefreshBanner(`갱신 진행중... (${elapsed}초 / 최대 ${TIMEOUT}초)`, false);
+      } catch (_e) { /* ignore */ }
+      if (elapsed >= TIMEOUT) {
+        clearInterval(refreshPollTimer); refreshPollTimer = null;
+        showRefreshBanner('갱신이 큐에 들어갔지만 아직 새 매치가 안 보입니다. 잠시 후 새로고침해주세요.', true);
+      }
+    }, STEP * 1000);
+  }
+
+  function wireRefreshButton() {
+    const btn = document.querySelector('.profile-actions button.primary');
+    if (!btn) return;
+    const originalLabel = btn.textContent || '전적 갱신';
+    btn.addEventListener('click', async () => {
+      const q = getQuery();
+      if (!q.region || !q.name || !q.tag) {
+        alert('데모 페이지는 갱신 X. URL에 ?region=kr&name=...&tag=KR1 추가 후 사용');
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = '갱신 중...';
+      try {
+        const search = await fetch(`${API_BASE}/api/summoner/${encodeURIComponent(q.region)}/${encodeURIComponent(q.name + '#' + q.tag)}`).then((r) => r.json());
+        if (!search.account) {
+          btn.disabled = false;
+          btn.textContent = originalLabel;
+          alert('소환사 못 찾음');
+          return;
+        }
+        const r = await fetch(`${API_BASE}/api/summoner/${search.account.puuid}/refresh`, { method: 'POST' });
+        if (r.status === 429) {
+          const j = await r.json().catch(() => ({}));
+          setCooldown(btn, Number(j.cooldownRemainingMs) || 60_000, originalLabel);
+        } else if (r.ok) {
+          const j = await r.json().catch(() => ({}));
+          // Don't full-reload — poll matches and silently insert new ones at top.
+          startRefreshPolling(search.account.puuid);
+          const cdMs = Number(j.cooldownMs) || 120_000;
+          setCooldown(btn, cdMs, originalLabel);
+        } else {
+          btn.disabled = false;
+          btn.textContent = originalLabel;
+          alert('갱신 실패');
+        }
+      } catch (_e) {
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+        alert('네트워크 오류');
+      }
+    });
+  }
+
+  window.addEventListener('pagehide', () => {
+    if (cooldownTimerId != null) clearInterval(cooldownTimerId);
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(async () => {
+      // tabs already wired by layout.js (centralized)
+      applyAiScores();
+      await loadFromApi();
+      wireRefreshButton();
+    }, 0);
+  });
+})();
+</script>
+
+</body>
+</html>

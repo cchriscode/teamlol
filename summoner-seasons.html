@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hide on bush#KR1 — 시즌 기록 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+  <style>
+    body[data-seasons-state="loading"] main { visibility: hidden; }
+    body[data-seasons-state="loading"]::after {
+      content: "로딩 중..."; position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary); font-size: 14px; pointer-events: none;
+    }
+  </style>
+</head>
+<body data-seasons-state="loading">
+
+<div data-slot="header" data-active="search" data-search-placeholder="다른 소환사 검색..."></div>
+
+<main class="page page-narrow">
+
+  <div class="card profile-header">
+    <div class="profile-top">
+      <div class="profile-icon-wrap">
+        <img class="profile-icon-img" data-dd-profile-icon="6" alt="Hide on bush의 프로필 아이콘" width="80" height="80">
+        <div class="profile-level">409</div>
+      </div>
+      <div class="profile-info">
+        <div class="profile-name">Hide on bush <span class="tag">#KR1</span></div>
+        <div class="profile-meta">마지막 갱신: 3분 전 · 시즌 2026 S1</div>
+        <div class="profile-actions">
+          <button class="primary" type="button">전적 갱신</button>
+          <button type="button">시즌 ▾</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="rank-cards">
+      <div class="rank-card">
+        <div>
+          <div class="rank-card-label">솔로랭크</div>
+          <div class="rank-tier tier-challenger">Challenger</div>
+          <div class="rank-lp">1,247 LP</div>
+        </div>
+        <div class="rank-record">
+          <div class="wl">312승 268패</div>
+          <div class="winrate">53.8%</div>
+        </div>
+      </div>
+      <div class="rank-card">
+        <div>
+          <div class="rank-card-label">자유랭크</div>
+          <div class="rank-tier text-tertiary">Unranked</div>
+          <div class="rank-lp">배치 0/5</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="tabs" aria-label="소환사 페이지 탭">
+    <a class="tab" href="summoner.html">개요</a>
+    <a class="tab" href="summoner-champions.html">챔피언 통계</a>
+    <a class="tab" href="live-game.html">라이브 게임 <span class="live-dot" aria-label="진행 중"></span></a>
+    <a class="tab active" href="summoner-seasons.html" aria-current="page">시즌 기록</a>
+  </nav>
+
+  <section>
+
+    <div class="card tier-progress-card">
+      <div class="section-title">
+        시즌별 티어 변화
+        <span class="meta">종료 티어 기준 · 6시즌</span>
+      </div>
+
+      <div class="chart-wrap">
+        <svg viewBox="0 0 800 260" role="img" aria-label="2024년 시즌 1부터 2026년 시즌 1까지 티어 변화 그래프">
+          <title>시즌별 종료 티어 추이</title>
+
+          <!-- Grid lines (horizontal) — one per tier band shown -->
+          <line class="chart-grid" x1="60" y1="40"  x2="780" y2="40"/>
+          <line class="chart-grid" x1="60" y1="78"  x2="780" y2="78"/>
+          <line class="chart-grid" x1="60" y1="116" x2="780" y2="116"/>
+          <line class="chart-grid" x1="60" y1="154" x2="780" y2="154"/>
+          <line class="chart-grid" x1="60" y1="192" x2="780" y2="192"/>
+          <line class="chart-grid" x1="60" y1="230" x2="780" y2="230"/>
+
+          <!-- Y-axis tier labels -->
+          <text class="chart-axis-label" x="52" y="44" text-anchor="end">CHAL</text>
+          <text class="chart-axis-label" x="52" y="82" text-anchor="end">GM</text>
+          <text class="chart-axis-label" x="52" y="120" text-anchor="end">M</text>
+          <text class="chart-axis-label" x="52" y="158" text-anchor="end">D</text>
+          <text class="chart-axis-label" x="52" y="196" text-anchor="end">E</text>
+          <text class="chart-axis-label" x="52" y="234" text-anchor="end">P</text>
+
+          <!-- Data line: 6 seasons mapped to x = 110, 244, 378, 512, 646, 780 -->
+          <!-- Y mapping: Diamond(end=158-y_offset), DiamondII(~140), Master(116), Master(116), GM(78), Chal(40) -->
+          <polyline class="chart-line blue"
+                    points="110,158 244,140 378,116 512,116 646,78 780,40"/>
+
+          <!-- Data points -->
+          <circle class="chart-point" cx="110" cy="158" r="5"/>
+          <circle class="chart-point" cx="244" cy="140" r="5"/>
+          <circle class="chart-point" cx="378" cy="116" r="5"/>
+          <circle class="chart-point" cx="512" cy="116" r="5"/>
+          <circle class="chart-point" cx="646" cy="78" r="5"/>
+          <circle class="chart-point" cx="780" cy="40" r="5"/>
+
+          <!-- Point value labels (LP) -->
+          <text class="chart-point-label" x="110" y="180">D4</text>
+          <text class="chart-point-label" x="244" y="162">D2</text>
+          <text class="chart-point-label" x="378" y="138">M 124LP</text>
+          <text class="chart-point-label" x="512" y="138">M 287LP</text>
+          <text class="chart-point-label" x="646" y="100">GM 612LP</text>
+          <text class="chart-point-label" x="780" y="62">CHAL 1247LP</text>
+
+          <!-- X-axis season labels -->
+          <text class="chart-axis-label" x="110" y="252" text-anchor="middle">2024 S1</text>
+          <text class="chart-axis-label" x="244" y="252" text-anchor="middle">2024 S2</text>
+          <text class="chart-axis-label" x="378" y="252" text-anchor="middle">2024 S3</text>
+          <text class="chart-axis-label" x="512" y="252" text-anchor="middle">2025 S1</text>
+          <text class="chart-axis-label" x="646" y="252" text-anchor="middle">2025 S2</text>
+          <text class="chart-axis-label" x="780" y="252" text-anchor="middle">2026 S1</text>
+        </svg>
+
+        <div class="chart-legend">
+          <span><span class="chart-legend-dot" style="background: var(--chart-blue);"></span>시즌 종료 티어</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">시즌별 상세</div>
+
+    <div class="season-cards-grid">
+
+      <article class="season-card">
+        <header class="season-card-header">
+          <div class="season-card-name">2026 시즌 1</div>
+          <div class="season-card-games">진행 중</div>
+        </header>
+        <div class="season-card-tier-row">
+          <div class="season-card-tier-block">
+            <div class="label">최고 티어</div>
+            <div class="value tier-challenger">Challenger 1,247 LP</div>
+          </div>
+          <div class="season-card-tier-block">
+            <div class="label">현재 티어</div>
+            <div class="value tier-challenger">Challenger 1,247 LP</div>
+          </div>
+        </div>
+        <div class="season-card-top-champs">
+          <div class="season-card-top-label">TOP 3 픽</div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Azir" alt="아지르" width="24" height="24">
+            <span class="name">아지르</span>
+            <span class="stat">82게임 · 64%</span>
+          </div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Orianna" alt="오리아나" width="24" height="24">
+            <span class="name">오리아나</span>
+            <span class="stat">54게임 · 59%</span>
+          </div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Ahri" alt="아리" width="24" height="24">
+            <span class="name">아리</span>
+            <span class="stat">38게임 · 57%</span>
+          </div>
+        </div>
+        <footer class="season-card-footer">
+          <span>312승 268패</span>
+          <span class="winrate">53.8%</span>
+        </footer>
+      </article>
+
+      <article class="season-card">
+        <header class="season-card-header">
+          <div class="season-card-name">2025 시즌 2</div>
+          <div class="season-card-games">724게임</div>
+        </header>
+        <div class="season-card-tier-row">
+          <div class="season-card-tier-block">
+            <div class="label">최고 티어</div>
+            <div class="value tier-challenger">Challenger 893 LP</div>
+          </div>
+          <div class="season-card-tier-block">
+            <div class="label">종료 티어</div>
+            <div class="value tier-grandmaster">GM 612 LP</div>
+          </div>
+        </div>
+        <div class="season-card-top-champs">
+          <div class="season-card-top-label">TOP 3 픽</div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Azir" alt="아지르" width="24" height="24">
+            <span class="name">아지르</span>
+            <span class="stat">156게임 · 58%</span>
+          </div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Sylas" alt="사일러스" width="24" height="24">
+            <span class="name">사일러스</span>
+            <span class="stat">98게임 · 54%</span>
+          </div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Syndra" alt="신드라" width="24" height="24">
+            <span class="name">신드라</span>
+            <span class="stat">71게임 · 56%</span>
+          </div>
+        </div>
+        <footer class="season-card-footer">
+          <span>389승 335패</span>
+          <span class="winrate">53.7%</span>
+        </footer>
+      </article>
+
+      <article class="season-card">
+        <header class="season-card-header">
+          <div class="season-card-name">2025 시즌 1</div>
+          <div class="season-card-games">682게임</div>
+        </header>
+        <div class="season-card-tier-row">
+          <div class="season-card-tier-block">
+            <div class="label">최고 티어</div>
+            <div class="value tier-grandmaster">GM 410 LP</div>
+          </div>
+          <div class="season-card-tier-block">
+            <div class="label">종료 티어</div>
+            <div class="value tier-master">Master 287 LP</div>
+          </div>
+        </div>
+        <div class="season-card-top-champs">
+          <div class="season-card-top-label">TOP 3 픽</div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Orianna" alt="오리아나" width="24" height="24">
+            <span class="name">오리아나</span>
+            <span class="stat">142게임 · 56%</span>
+          </div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Ahri" alt="아리" width="24" height="24">
+            <span class="name">아리</span>
+            <span class="stat">88게임 · 53%</span>
+          </div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Kassadin" alt="카사딘" width="24" height="24">
+            <span class="name">카사딘</span>
+            <span class="stat">62게임 · 60%</span>
+          </div>
+        </div>
+        <footer class="season-card-footer">
+          <span>358승 324패</span>
+          <span class="winrate">52.5%</span>
+        </footer>
+      </article>
+
+      <article class="season-card">
+        <header class="season-card-header">
+          <div class="season-card-name">2024 시즌 3</div>
+          <div class="season-card-games">541게임</div>
+        </header>
+        <div class="season-card-tier-row">
+          <div class="season-card-tier-block">
+            <div class="label">최고 티어</div>
+            <div class="value tier-master">Master 320 LP</div>
+          </div>
+          <div class="season-card-tier-block">
+            <div class="label">종료 티어</div>
+            <div class="value tier-master">Master 124 LP</div>
+          </div>
+        </div>
+        <div class="season-card-top-champs">
+          <div class="season-card-top-label">TOP 3 픽</div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Azir" alt="아지르" width="24" height="24">
+            <span class="name">아지르</span>
+            <span class="stat">112게임 · 55%</span>
+          </div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Leblanc" alt="르블랑" width="24" height="24">
+            <span class="name">르블랑</span>
+            <span class="stat">87게임 · 51%</span>
+          </div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Galio" alt="갈리오" width="24" height="24">
+            <span class="name">갈리오</span>
+            <span class="stat">54게임 · 57%</span>
+          </div>
+        </div>
+        <footer class="season-card-footer">
+          <span>278승 263패</span>
+          <span class="winrate">51.4%</span>
+        </footer>
+      </article>
+
+      <article class="season-card">
+        <header class="season-card-header">
+          <div class="season-card-name">2024 시즌 2</div>
+          <div class="season-card-games">487게임</div>
+        </header>
+        <div class="season-card-tier-row">
+          <div class="season-card-tier-block">
+            <div class="label">최고 티어</div>
+            <div class="value tier-diamond">Diamond I 71 LP</div>
+          </div>
+          <div class="season-card-tier-block">
+            <div class="label">종료 티어</div>
+            <div class="value tier-diamond">Diamond II 43 LP</div>
+          </div>
+        </div>
+        <div class="season-card-top-champs">
+          <div class="season-card-top-label">TOP 3 픽</div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Yasuo" alt="야스오" width="24" height="24">
+            <span class="name">야스오</span>
+            <span class="stat">128게임 · 49%</span>
+          </div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Sylas" alt="사일러스" width="24" height="24">
+            <span class="name">사일러스</span>
+            <span class="stat">94게임 · 52%</span>
+          </div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Diana" alt="다이애나" width="24" height="24">
+            <span class="name">다이애나</span>
+            <span class="stat">61게임 · 50%</span>
+          </div>
+        </div>
+        <footer class="season-card-footer">
+          <span>248승 239패</span>
+          <span class="winrate">50.9%</span>
+        </footer>
+      </article>
+
+      <article class="season-card">
+        <header class="season-card-header">
+          <div class="season-card-name">2024 시즌 1</div>
+          <div class="season-card-games">412게임</div>
+        </header>
+        <div class="season-card-tier-row">
+          <div class="season-card-tier-block">
+            <div class="label">최고 티어</div>
+            <div class="value tier-diamond">Diamond II 28 LP</div>
+          </div>
+          <div class="season-card-tier-block">
+            <div class="label">종료 티어</div>
+            <div class="value tier-diamond">Diamond IV 64 LP</div>
+          </div>
+        </div>
+        <div class="season-card-top-champs">
+          <div class="season-card-top-label">TOP 3 픽</div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Jayce" alt="제이스" width="24" height="24">
+            <span class="name">제이스</span>
+            <span class="stat">98게임 · 48%</span>
+          </div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Camille" alt="카밀" width="24" height="24">
+            <span class="name">카밀</span>
+            <span class="stat">76게임 · 51%</span>
+          </div>
+          <div class="season-top-champ-row">
+            <img class="champ-icon" data-dd-champion="Jax" alt="잭스" width="24" height="24">
+            <span class="name">잭스</span>
+            <span class="stat">52게임 · 53%</span>
+          </div>
+        </div>
+        <footer class="season-card-footer">
+          <span>208승 204패</span>
+          <span class="winrate">50.5%</span>
+        </footer>
+      </article>
+
+    </div>
+
+  </section>
+
+</main>
+
+<div data-slot="footer"></div>
+
+<script>
+(function () {
+  'use strict';
+  const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:')
+    ? 'http://localhost:3001' : '';
+  const params = new URL(location.href).searchParams;
+  const REGION = params.get('region');
+  const NAME = params.get('name');
+  const TAG = params.get('tag');
+
+  let ddIdToKey = null, ddKeyToName = null;
+  async function loadDd() {
+    if (ddIdToKey) return;
+    const versions = await fetch('https://ddragon.leagueoflegends.com/api/versions.json').then((r) => r.json());
+    const data = await fetch(`https://ddragon.leagueoflegends.com/cdn/${versions[0]}/data/ko_KR/champion.json`).then((r) => r.json());
+    ddIdToKey = {}; ddKeyToName = {};
+    for (const c of Object.values(data.data)) {
+      ddIdToKey[String(c.key)] = c.id;
+      ddKeyToName[c.id] = c.name;
+    }
+  }
+
+  async function resolvePuuid() {
+    if (!REGION || !NAME || !TAG) return null;
+    const r = await fetch(`${API_BASE}/api/summoner/${encodeURIComponent(REGION)}/${encodeURIComponent(NAME + '#' + TAG)}`);
+    if (!r.ok) return null;
+    return (await r.json()).account.puuid;
+  }
+
+  async function loadSeasons(puuid) {
+    const r = await fetch(`${API_BASE}/api/summoner/${puuid}/seasons`);
+    if (!r.ok) return null;
+    return (await r.json()).patches;
+  }
+
+  function fmtDate(ms) {
+    if (!ms) return '—';
+    const d = new Date(Number(ms));
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function setReady() { document.body.dataset.seasonsState = 'ready'; }
+
+  // Replace the static "rank history" SVG block with a simple
+  // "patch별 평균 AI Score" chart we can actually compute.
+  function renderPatchChart(patches) {
+    const wrap = document.querySelector('.card .chart-wrap, .chart-wrap');
+    if (!wrap) return;
+    if (!patches || patches.length === 0) { wrap.innerHTML = '<div class="text-tertiary" style="padding:32px;text-align:center;">데이터 없음</div>'; return; }
+    const W = 800, H = 220, PAD = { top: 20, right: 20, bottom: 30, left: 50 };
+    const xs = patches.slice().reverse(); // oldest → newest left to right
+    const xScale = (i) => PAD.left + (i / Math.max(1, xs.length - 1)) * (W - PAD.left - PAD.right);
+    const max = Math.max(60, ...xs.map((p) => p.avgAiScore));
+    const min = Math.min(40, ...xs.map((p) => p.avgAiScore));
+    const yScale = (v) => PAD.top + (1 - (v - min) / Math.max(1, max - min)) * (H - PAD.top - PAD.bottom);
+    function el(tag, attrs) { const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', height: '220', 'aria-label': '패치별 평균 AI Score' });
+    // grid lines
+    [50, 60, 70, 80].forEach((v) => {
+      if (v < min || v > max) return;
+      svg.appendChild(el('line', { class: 'chart-grid', x1: PAD.left, x2: W - PAD.right, y1: yScale(v), y2: yScale(v) }));
+      const t = el('text', { class: 'chart-axis-label', x: 4, y: yScale(v) + 4 }); t.textContent = String(v); svg.appendChild(t);
+    });
+    // line
+    const pts = xs.map((p, i) => `${xScale(i).toFixed(1)},${yScale(p.avgAiScore).toFixed(1)}`).join(' ');
+    svg.appendChild(el('polyline', { points: pts, fill: 'none', stroke: 'var(--color-win)', 'stroke-width': '2' }));
+    // dots + labels
+    xs.forEach((p, i) => {
+      svg.appendChild(el('circle', { cx: xScale(i), cy: yScale(p.avgAiScore), r: 4, fill: 'var(--color-win)' }));
+      const tx = el('text', { class: 'chart-axis-label', x: xScale(i), y: H - 8, 'text-anchor': 'middle' });
+      tx.textContent = p.patch;
+      svg.appendChild(tx);
+    });
+    wrap.innerHTML = '';
+    wrap.appendChild(svg);
+  }
+
+  function render(patches) {
+    renderPatchChart(patches);
+    const grid = document.querySelector('.season-cards-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    if (!patches || patches.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'grid-column: 1 / -1; padding: 32px; text-align: center; color: var(--text-tertiary);';
+      empty.textContent = '아직 수집된 본인 매치가 없습니다.';
+      grid.appendChild(empty);
+      return;
+    }
+    for (const p of patches) {
+      const article = document.createElement('article');
+      article.className = 'season-card';
+      const wrCls = p.winrate >= 55 ? 'text-positive' : p.winrate <= 45 ? 'text-loss' : '';
+      article.innerHTML = `
+        <header class="season-card-header">
+          <div class="season-card-name">패치 ${p.patch}</div>
+          <div class="season-card-period text-tertiary" style="font-size:11px;">${fmtDate(p.firstAt)} ~ ${fmtDate(p.lastAt)}</div>
+        </header>
+        <div style="padding: var(--space-3) 0; display: flex; gap: var(--space-4); font-size: 13px;">
+          <div><div class="text-tertiary" style="font-size:10px;">게임</div><div class="fw-semibold">${p.games}판</div></div>
+          <div><div class="text-tertiary" style="font-size:10px;">승률</div><div class="fw-semibold ${wrCls}">${p.winrate}%</div></div>
+          <div><div class="text-tertiary" style="font-size:10px;">평균 AI</div><div class="fw-semibold">${p.avgAiScore.toFixed(1)}</div></div>
+        </div>
+        <div class="text-tertiary" style="font-size:10px; margin-bottom:6px;">자주 픽한 챔프</div>
+        <div style="display: flex; gap: var(--space-2);">
+          ${p.topChampions.map((c) => {
+            const name = ddKeyToName?.[c.championKey] ?? c.championKey;
+            return `<div style="text-align:center;">
+              <img class="champ-icon" data-dd-champion="${c.championKey}" alt="${name}" width="32" height="32">
+              <div style="font-size:10px; margin-top:2px;">${c.games}판 · ${Math.round(c.wins / c.games * 100)}%</div>
+            </div>`;
+          }).join('')}
+        </div>
+      `;
+      grid.appendChild(article);
+    }
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (!REGION || !NAME || !TAG) {
+      // Demo mode — show static cards so users can see the layout.
+      setReady();
+      return;
+    }
+    await loadDd();
+    const puuid = await resolvePuuid();
+    if (!puuid) { setReady(); return; }
+    const patches = await loadSeasons(puuid);
+    render(patches);
+    setReady();
+  });
+})();
+</script>
+
+</body>
+</html>

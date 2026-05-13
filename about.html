@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>서비스 소개 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+</head>
+<body>
+
+<div data-slot="header" data-active=""></div>
+
+<main class="page page-narrow">
+  <h1 class="page-title">서비스 소개</h1>
+  <p class="page-subtitle" style="margin-bottom: var(--space-5);">LoL Tracker</p>
+
+  <div class="card card-padded">
+    <h2 style="font-size: 16px; font-weight: 600; margin-bottom: var(--space-2);">이 서비스는</h2>
+    <p style="color: var(--text-secondary); margin-bottom: var(--space-5); line-height: 1.7;">
+      LoL Tracker는 리그 오브 레전드 전적 검색에 챔프 셀렉트 단계의 픽 추천을 더한 비공식 통계 서비스입니다.
+      소환사 전적, 매치 분석, 챔피언 통계 같은 기본 기능은 물론, 우리팀과 적팀의 픽 정보를 입력하면
+      자기 라인에 적합한 챔프를 카운터·시너지·메타·마스터리 4개 축으로 점수화해 추천합니다.
+      게임 시작 전 1분이 가장 중요한 LoL의 특성을 반영해, '검색이 끝난 뒤'가 아닌 '검색이 필요한 그 순간'에
+      가치를 주는 것을 목표로 만들었습니다.
+    </p>
+
+    <h2 style="font-size: 16px; font-weight: 600; margin-bottom: var(--space-2);">주요 기능</h2>
+    <ul style="color: var(--text-secondary); margin-bottom: var(--space-5); padding-left: var(--space-5); line-height: 1.9;">
+      <li>소환사 전적 검색 — Riot ID 기준 (이름#태그)</li>
+      <li>매치 상세 분석 — 스코어보드, 빌드, 데미지 분포, 골드/경험치 그래프</li>
+      <li>챔피언 티어표 — 라인·티어·패치별 승률·픽률·밴률</li>
+      <li>챔피언 상세 — 빌드, 룬, 스킬 빌드 순서, 카운터 정보</li>
+      <li>라이브 게임 — 진행 중인 게임의 양 팀 정보와 승률 예측</li>
+      <li>픽 추천 (BETA) — 챔프 셀렉트 단계의 픽 추천</li>
+      <li>멀티서치 — 5명까지 동시 검색</li>
+      <li>랭킹 — 서버별 챌린저·그랜드마스터·마스터 리더보드</li>
+    </ul>
+
+    <h2 style="font-size: 16px; font-weight: 600; margin-bottom: var(--space-2);">데이터 출처</h2>
+    <p style="color: var(--text-secondary); margin-bottom: var(--space-5); line-height: 1.7;">
+      모든 게임 데이터는 Riot Games API를 통해 수집되며, 챔피언·아이템·룬 이미지는 Data Dragon CDN에서
+      직접 제공됩니다. 챔피언 티어와 픽 추천 점수는 자체 알고리즘으로 일정 주기마다 집계됩니다.
+    </p>
+
+    <h2 style="font-size: 16px; font-weight: 600; margin-bottom: var(--space-2);">만든 사람</h2>
+    <p style="color: var(--text-secondary); line-height: 1.7;">
+      개인 프로젝트로 만들어졌습니다. 버그 제보, 기능 제안, 협업 문의는
+      <a href="mailto:contact@example.com" style="color: var(--color-win);">contact@example.com</a>으로
+      보내주시면 확인 후 회신 드립니다.
+    </p>
+  </div>
+</main>
+
+<div data-slot="footer"></div>
+
+</body>
+</html>

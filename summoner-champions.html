@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hide on bush#KR1 — 챔피언 통계 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+  <style>
+    body[data-page-state="loading"] main { visibility: hidden; }
+    body[data-page-state="loading"]::after {
+      content: "로딩 중..."; position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary); font-size: 14px; pointer-events: none;
+    }
+  </style>
+</head>
+<body data-page-state="loading">
+
+<div data-slot="header" data-active="search" data-search-placeholder="다른 소환사 검색..."></div>
+
+<main class="page page-narrow">
+
+  <div class="card profile-header">
+    <div class="profile-top">
+      <div class="profile-icon-wrap">
+        <img class="profile-icon-img" data-dd-profile-icon="6" alt="Hide on bush의 프로필 아이콘" width="80" height="80">
+        <div class="profile-level">409</div>
+      </div>
+      <div class="profile-info">
+        <div class="profile-name">Hide on bush <span class="tag">#KR1</span></div>
+        <div class="profile-meta">마지막 갱신: 3분 전 · 시즌 2026 S1</div>
+        <div class="profile-actions">
+          <button class="primary" type="button">전적 갱신</button>
+          <button type="button">시즌 ▾</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="rank-cards">
+      <div class="rank-card">
+        <div>
+          <div class="rank-card-label">솔로랭크</div>
+          <div class="rank-tier tier-challenger">Challenger</div>
+          <div class="rank-lp">1,247 LP</div>
+        </div>
+        <div class="rank-record">
+          <div class="wl">312승 268패</div>
+          <div class="winrate">53.8%</div>
+        </div>
+      </div>
+      <div class="rank-card">
+        <div>
+          <div class="rank-card-label">자유랭크</div>
+          <div class="rank-tier text-tertiary">Unranked</div>
+          <div class="rank-lp">배치 0/5</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="tabs" aria-label="소환사 페이지 탭">
+    <a class="tab" href="summoner.html">개요</a>
+    <a class="tab active" href="summoner-champions.html" aria-current="page">챔피언 통계</a>
+    <a class="tab" href="live-game.html">라이브 게임 <span class="live-dot" aria-label="진행 중"></span></a>
+    <a class="tab" href="summoner-seasons.html">시즌 기록</a>
+  </nav>
+
+  <div class="summoner-grid">
+
+    <aside class="sidebar">
+
+      <div class="card stats-summary">
+        <div class="section-title">최근 20게임</div>
+        <div class="winrate-ring-wrap">
+          <div class="winrate-ring">
+            <svg width="80" height="80" viewBox="0 0 80 80" aria-label="승률 65%">
+              <circle class="winrate-ring-track" cx="40" cy="40" r="32"/>
+              <circle class="winrate-ring-progress" cx="40" cy="40" r="32"
+                      stroke-dasharray="201.06" stroke-dashoffset="70.37"/>
+            </svg>
+            <div class="winrate-ring-text">65%</div>
+          </div>
+          <div>
+            <div class="stats-detail-row">
+              <span class="stats-detail-label">승/패</span>
+              <span class="stats-detail-value">13W 7L</span>
+            </div>
+            <div class="stats-detail-row">
+              <span class="stats-detail-label">평균 KDA</span>
+              <span class="stats-detail-value">3.45 : 1</span>
+            </div>
+            <div class="stats-detail-row">
+              <span class="stats-detail-label">킬관여</span>
+              <span class="stats-detail-value">68%</span>
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 12px; margin-top: var(--space-3);">
+          <div class="text-tertiary uppercase" style="font-size: 11px; margin-bottom: 8px;">자주 가는 라인</div>
+          <div class="lane-bar-row">
+            <span class="lane-bar-label">미드</span>
+            <div class="lane-bar-track"><div class="lane-bar-fill" style="width: 80%;"></div></div>
+            <span class="lane-bar-value">80%</span>
+          </div>
+          <div class="lane-bar-row">
+            <span class="lane-bar-label">탑</span>
+            <div class="lane-bar-track"><div class="lane-bar-fill" style="width: 15%;"></div></div>
+            <span class="lane-bar-value">15%</span>
+          </div>
+          <div class="lane-bar-row">
+            <span class="lane-bar-label">정글</span>
+            <div class="lane-bar-track"><div class="lane-bar-fill" style="width: 5%;"></div></div>
+            <span class="lane-bar-value">5%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">자주 픽한 챔프</div>
+        <div class="champ-list-row">
+          <img class="champ-icon" data-dd-champion="Azir" alt="아지르" width="32" height="32">
+          <div class="champ-list-info">
+            <div class="champ-list-name">아지르</div>
+            <div class="champ-list-detail">8게임 · 6승 2패 · 4.2 KDA</div>
+          </div>
+          <div class="champ-list-wr high">75%</div>
+        </div>
+        <div class="champ-list-row">
+          <img class="champ-icon" data-dd-champion="Orianna" alt="오리아나" width="32" height="32">
+          <div class="champ-list-info">
+            <div class="champ-list-name">오리아나</div>
+            <div class="champ-list-detail">5게임 · 3승 2패 · 3.1 KDA</div>
+          </div>
+          <div class="champ-list-wr">60%</div>
+        </div>
+        <div class="champ-list-row">
+          <img class="champ-icon" data-dd-champion="Sylas" alt="사일러스" width="32" height="32">
+          <div class="champ-list-info">
+            <div class="champ-list-name">사일러스</div>
+            <div class="champ-list-detail">4게임 · 2승 2패 · 2.8 KDA</div>
+          </div>
+          <div class="champ-list-wr">50%</div>
+        </div>
+        <div class="champ-list-row">
+          <img class="champ-icon" data-dd-champion="Ahri" alt="아리" width="32" height="32">
+          <div class="champ-list-info">
+            <div class="champ-list-name">아리</div>
+            <div class="champ-list-detail">3게임 · 2승 1패 · 3.5 KDA</div>
+          </div>
+          <div class="champ-list-wr high">67%</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">함께한 친구</div>
+        <a class="friend-row" href="summoner.html">
+          <img class="friend-avatar profile-icon-img" data-dd-profile-icon="4895" alt="" width="24" height="24">
+          <span class="friend-name">Keria</span>
+          <span class="friend-stats">5G · 80%</span>
+        </a>
+        <a class="friend-row" href="summoner.html">
+          <img class="friend-avatar profile-icon-img" data-dd-profile-icon="3768" alt="" width="24" height="24">
+          <span class="friend-name">Gumayusi</span>
+          <span class="friend-stats">3G · 67%</span>
+        </a>
+        <a class="friend-row" href="summoner.html">
+          <img class="friend-avatar profile-icon-img" data-dd-profile-icon="1626" alt="" width="24" height="24">
+          <span class="friend-name">Zeus</span>
+          <span class="friend-stats">3G · 100%</span>
+        </a>
+      </div>
+
+    </aside>
+
+    <section>
+
+      <div class="filters" role="group" aria-label="포지션 필터">
+        <div class="filter-row">
+          <span class="filter-label">포지션</span>
+          <button class="filter-chip active" type="button">전체</button>
+          <button class="filter-chip" type="button">탑</button>
+          <button class="filter-chip" type="button">정글</button>
+          <button class="filter-chip" type="button">미드</button>
+          <button class="filter-chip" type="button">원딜</button>
+          <button class="filter-chip" type="button">서폿</button>
+          <div class="filter-divider" aria-hidden="true"></div>
+          <button class="filter-chip" type="button">칼바람</button>
+          <span class="filter-meta">최근 시즌 580게임 기준</span>
+        </div>
+      </div>
+
+      <div class="data-table">
+
+        <div class="data-table-header champ-stats-grid">
+          <div>챔피언</div>
+          <div class="text-right"><span class="sortable">게임수 (W-L)<span class="sort-indicator">▾</span></span></div>
+          <div class="text-right"><span class="sortable active">승률<span class="sort-indicator">▾</span></span></div>
+          <div class="text-right"><span class="sortable">KDA<span class="sort-indicator">▾</span></span></div>
+          <div class="text-right col-cs"><span class="sortable">CS/분<span class="sort-indicator">▾</span></span></div>
+          <div class="text-right col-gold"><span class="sortable">골드/분<span class="sort-indicator">▾</span></span></div>
+          <div class="text-right"><span class="sortable">DMG%<span class="sort-indicator">▾</span></span></div>
+          <div class="text-right col-gd15"><span class="sortable">GD@15<span class="sort-indicator">▾</span></span></div>
+          <div class="text-right"><span class="sortable">AI Score<span class="sort-indicator">▾</span></span></div>
+        </div>
+
+        <a class="data-table-row champ-stats-grid" href="champion-detail.html">
+          <div class="champ-cell">
+            <img class="champ-icon" data-dd-champion="Azir" alt="아지르" width="32" height="32">
+            <div>
+              <div class="champ-cell-name">아지르</div>
+              <div class="text-tertiary" style="font-size: 11px;">미드</div>
+            </div>
+          </div>
+          <div class="stat-cell primary">128 <span class="text-tertiary" style="font-size: 11px;">(82-46)</span></div>
+          <div class="stat-cell primary">64.1%</div>
+          <div class="stat-cell">4.21</div>
+          <div class="stat-cell col-cs">8.4</div>
+          <div class="stat-cell col-gold">412</div>
+          <div class="dmg-pct-cell">
+            <div class="lane-bar-track" aria-hidden="true"><div class="lane-bar-fill" style="width: 32%;"></div></div>
+            <span class="stat-cell primary">31.8%</span>
+          </div>
+          <div class="gd-cell col-gd15"><span class="gd-arrow text-positive">▲</span><span class="text-positive">+482</span></div>
+          <div class="ps-score">82.4</div>
+        </a>
+
+        <a class="data-table-row champ-stats-grid" href="champion-detail.html">
+          <div class="champ-cell">
+            <img class="champ-icon" data-dd-champion="Orianna" alt="오리아나" width="32" height="32">
+            <div>
+              <div class="champ-cell-name">오리아나</div>
+              <div class="text-tertiary" style="font-size: 11px;">미드</div>
+            </div>
+          </div>
+          <div class="stat-cell primary">76 <span class="text-tertiary" style="font-size: 11px;">(45-31)</span></div>
+          <div class="stat-cell primary">59.2%</div>
+          <div class="stat-cell">3.45</div>
+          <div class="stat-cell col-cs">7.9</div>
+          <div class="stat-cell col-gold">389</div>
+          <div class="dmg-pct-cell">
+            <div class="lane-bar-track" aria-hidden="true"><div class="lane-bar-fill" style="width: 28%;"></div></div>
+            <span class="stat-cell primary">28.4%</span>
+          </div>
+          <div class="gd-cell col-gd15"><span class="gd-arrow text-positive">▲</span><span class="text-positive">+318</span></div>
+          <div class="ps-score mid">74.8</div>
+        </a>
+
+        <a class="data-table-row champ-stats-grid" href="champion-detail.html">
+          <div class="champ-cell">
+            <img class="champ-icon" data-dd-champion="Ahri" alt="아리" width="32" height="32">
+            <div>
+              <div class="champ-cell-name">아리</div>
+              <div class="text-tertiary" style="font-size: 11px;">미드</div>
+            </div>
+          </div>
+          <div class="stat-cell primary">54 <span class="text-tertiary" style="font-size: 11px;">(31-23)</span></div>
+          <div class="stat-cell primary">57.4%</div>
+          <div class="stat-cell">3.82</div>
+          <div class="stat-cell col-cs">8.1</div>
+          <div class="stat-cell col-gold">395</div>
+          <div class="dmg-pct-cell">
+            <div class="lane-bar-track" aria-hidden="true"><div class="lane-bar-fill" style="width: 30%;"></div></div>
+            <span class="stat-cell primary">30.1%</span>
+          </div>
+          <div class="gd-cell col-gd15"><span class="gd-arrow text-positive">▲</span><span class="text-positive">+241</span></div>
+          <div class="ps-score mid">71.2</div>
+        </a>
+
+        <a class="data-table-row champ-stats-grid" href="champion-detail.html">
+          <div class="champ-cell">
+            <img class="champ-icon" data-dd-champion="Syndra" alt="신드라" width="32" height="32">
+            <div>
+              <div class="champ-cell-name">신드라</div>
+              <div class="text-tertiary" style="font-size: 11px;">미드</div>
+            </div>
+          </div>
+          <div class="stat-cell primary">48 <span class="text-tertiary" style="font-size: 11px;">(28-20)</span></div>
+          <div class="stat-cell primary">58.3%</div>
+          <div class="stat-cell">3.62</div>
+          <div class="stat-cell col-cs">8.2</div>
+          <div class="stat-cell col-gold">401</div>
+          <div class="dmg-pct-cell">
+            <div class="lane-bar-track" aria-hidden="true"><div class="lane-bar-fill" style="width: 33%;"></div></div>
+            <span class="stat-cell primary">33.2%</span>
+          </div>
+          <div class="gd-cell col-gd15"><span class="gd-arrow text-positive">▲</span><span class="text-positive">+412</span></div>
+          <div class="ps-score mid">73.5</div>
+        </a>
+
+        <a class="data-table-row champ-stats-grid" href="champion-detail.html">
+          <div class="champ-cell">
+            <img class="champ-icon" data-dd-champion="Sylas" alt="사일러스" width="32" height="32">
+            <div>
+              <div class="champ-cell-name">사일러스</div>
+              <div class="text-tertiary" style="font-size: 11px;">미드</div>
+            </div>
+          </div>
+          <div class="stat-cell primary">42 <span class="text-tertiary" style="font-size: 11px;">(22-20)</span></div>
+          <div class="stat-cell primary">52.4%</div>
+          <div class="stat-cell">2.91</div>
+          <div class="stat-cell col-cs">7.4</div>
+          <div class="stat-cell col-gold">372</div>
+          <div class="dmg-pct-cell">
+            <div class="lane-bar-track" aria-hidden="true"><div class="lane-bar-fill" style="width: 26%;"></div></div>
+            <span class="stat-cell primary">26.8%</span>
+          </div>
+          <div class="gd-cell col-gd15"><span class="gd-arrow text-negative">▼</span><span class="text-negative">−128</span></div>
+          <div class="ps-score low">62.3</div>
+        </a>
+
+        <a class="data-table-row champ-stats-grid" href="champion-detail.html">
+          <div class="champ-cell">
+            <img class="champ-icon" data-dd-champion="Leblanc" alt="르블랑" width="32" height="32">
+            <div>
+              <div class="champ-cell-name">르블랑</div>
+              <div class="text-tertiary" style="font-size: 11px;">미드</div>
+            </div>
+          </div>
+          <div class="stat-cell primary">38 <span class="text-tertiary" style="font-size: 11px;">(20-18)</span></div>
+          <div class="stat-cell primary">52.6%</div>
+          <div class="stat-cell">3.18</div>
+          <div class="stat-cell col-cs">7.6</div>
+          <div class="stat-cell col-gold">381</div>
+          <div class="dmg-pct-cell">
+            <div class="lane-bar-track" aria-hidden="true"><div class="lane-bar-fill" style="width: 29%;"></div></div>
+            <span class="stat-cell primary">29.4%</span>
+          </div>
+          <div class="gd-cell col-gd15"><span class="gd-arrow text-positive">▲</span><span class="text-positive">+185</span></div>
+          <div class="ps-score low">65.9</div>
+        </a>
+
+        <a class="data-table-row champ-stats-grid" href="champion-detail.html">
+          <div class="champ-cell">
+            <img class="champ-icon" data-dd-champion="Galio" alt="갈리오" width="32" height="32">
+            <div>
+              <div class="champ-cell-name">갈리오</div>
+              <div class="text-tertiary" style="font-size: 11px;">미드</div>
+            </div>
+          </div>
+          <div class="stat-cell primary">31 <span class="text-tertiary" style="font-size: 11px;">(18-13)</span></div>
+          <div class="stat-cell primary">58.1%</div>
+          <div class="stat-cell">3.74</div>
+          <div class="stat-cell col-cs">6.8</div>
+          <div class="stat-cell col-gold">352</div>
+          <div class="dmg-pct-cell">
+            <div class="lane-bar-track" aria-hidden="true"><div class="lane-bar-fill" style="width: 22%;"></div></div>
+            <span class="stat-cell primary">22.3%</span>
+          </div>
+          <div class="gd-cell col-gd15"><span class="gd-arrow text-positive">▲</span><span class="text-positive">+97</span></div>
+          <div class="ps-score low">68.4</div>
+        </a>
+
+        <a class="data-table-row champ-stats-grid" href="champion-detail.html">
+          <div class="champ-cell">
+            <img class="champ-icon" data-dd-champion="Kassadin" alt="카사딘" width="32" height="32">
+            <div>
+              <div class="champ-cell-name">카사딘</div>
+              <div class="text-tertiary" style="font-size: 11px;">미드</div>
+            </div>
+          </div>
+          <div class="stat-cell primary">28 <span class="text-tertiary" style="font-size: 11px;">(17-11)</span></div>
+          <div class="stat-cell primary">60.7%</div>
+          <div class="stat-cell">3.51</div>
+          <div class="stat-cell col-cs">7.8</div>
+          <div class="stat-cell col-gold">387</div>
+          <div class="dmg-pct-cell">
+            <div class="lane-bar-track" aria-hidden="true"><div class="lane-bar-fill" style="width: 31%;"></div></div>
+            <span class="stat-cell primary">31.0%</span>
+          </div>
+          <div class="gd-cell col-gd15"><span class="gd-arrow text-negative">▼</span><span class="text-negative">−62</span></div>
+          <div class="ps-score low">69.7</div>
+        </a>
+
+        <a class="data-table-row champ-stats-grid" href="champion-detail.html">
+          <div class="champ-cell">
+            <img class="champ-icon" data-dd-champion="Yasuo" alt="야스오" width="32" height="32">
+            <div>
+              <div class="champ-cell-name">야스오</div>
+              <div class="text-tertiary" style="font-size: 11px;">미드</div>
+            </div>
+          </div>
+          <div class="stat-cell primary">22 <span class="text-tertiary" style="font-size: 11px;">(11-11)</span></div>
+          <div class="stat-cell primary">50.0%</div>
+          <div class="stat-cell">2.48</div>
+          <div class="stat-cell col-cs">8.7</div>
+          <div class="stat-cell col-gold">412</div>
+          <div class="dmg-pct-cell">
+            <div class="lane-bar-track" aria-hidden="true"><div class="lane-bar-fill" style="width: 34%;"></div></div>
+            <span class="stat-cell primary">34.1%</span>
+          </div>
+          <div class="gd-cell col-gd15"><span class="gd-arrow text-positive">▲</span><span class="text-positive">+204</span></div>
+          <div class="ps-score low">59.2</div>
+        </a>
+
+        <a class="data-table-row champ-stats-grid" href="champion-detail.html">
+          <div class="champ-cell">
+            <img class="champ-icon" data-dd-champion="Jayce" alt="제이스" width="32" height="32">
+            <div>
+              <div class="champ-cell-name">제이스</div>
+              <div class="text-tertiary" style="font-size: 11px;">탑</div>
+            </div>
+          </div>
+          <div class="stat-cell primary">18 <span class="text-tertiary" style="font-size: 11px;">(10-8)</span></div>
+          <div class="stat-cell primary">55.6%</div>
+          <div class="stat-cell">3.02</div>
+          <div class="stat-cell col-cs">7.5</div>
+          <div class="stat-cell col-gold">368</div>
+          <div class="dmg-pct-cell">
+            <div class="lane-bar-track" aria-hidden="true"><div class="lane-bar-fill" style="width: 27%;"></div></div>
+            <span class="stat-cell primary">27.6%</span>
+          </div>
+          <div class="gd-cell col-gd15"><span class="gd-arrow text-positive">▲</span><span class="text-positive">+342</span></div>
+          <div class="ps-score low">66.1</div>
+        </a>
+
+        <a class="data-table-row champ-stats-grid" href="champion-detail.html">
+          <div class="champ-cell">
+            <img class="champ-icon" data-dd-champion="Diana" alt="다이애나" width="32" height="32">
+            <div>
+              <div class="champ-cell-name">다이애나</div>
+              <div class="text-tertiary" style="font-size: 11px;">정글</div>
+            </div>
+          </div>
+          <div class="stat-cell primary">14 <span class="text-tertiary" style="font-size: 11px;">(7-7)</span></div>
+          <div class="stat-cell primary">50.0%</div>
+          <div class="stat-cell">2.74</div>
+          <div class="stat-cell col-cs">5.2</div>
+          <div class="stat-cell col-gold">328</div>
+          <div class="dmg-pct-cell">
+            <div class="lane-bar-track" aria-hidden="true"><div class="lane-bar-fill" style="width: 24%;"></div></div>
+            <span class="stat-cell primary">24.5%</span>
+          </div>
+          <div class="gd-cell col-gd15"><span class="gd-arrow text-negative">▼</span><span class="text-negative">−218</span></div>
+          <div class="ps-score low">58.7</div>
+        </a>
+
+        <a class="data-table-row champ-stats-grid" href="champion-detail.html">
+          <div class="champ-cell">
+            <img class="champ-icon" data-dd-champion="Anivia" alt="애니비아" width="32" height="32">
+            <div>
+              <div class="champ-cell-name">애니비아</div>
+              <div class="text-tertiary" style="font-size: 11px;">미드</div>
+            </div>
+          </div>
+          <div class="stat-cell primary">11 <span class="text-tertiary" style="font-size: 11px;">(6-5)</span></div>
+          <div class="stat-cell primary">54.5%</div>
+          <div class="stat-cell">3.36</div>
+          <div class="stat-cell col-cs">7.1</div>
+          <div class="stat-cell col-gold">358</div>
+          <div class="dmg-pct-cell">
+            <div class="lane-bar-track" aria-hidden="true"><div class="lane-bar-fill" style="width: 28%;"></div></div>
+            <span class="stat-cell primary">28.9%</span>
+          </div>
+          <div class="gd-cell col-gd15"><span class="gd-arrow text-positive">▲</span><span class="text-positive">+167</span></div>
+          <div class="ps-score low">63.4</div>
+        </a>
+
+        <div class="table-footer">
+          시즌 누적 24개 챔프 중 12개 표시
+          <nav class="pagination" aria-label="페이지">
+            <button class="page-btn active" type="button">1</button>
+            <button class="page-btn" type="button">2</button>
+            <button class="page-btn" type="button" aria-label="다음 페이지">›</button>
+          </nav>
+        </div>
+
+      </div>
+
+    </section>
+  </div>
+
+</main>
+
+<div data-slot="footer"></div>
+
+<script>
+(function () {
+  'use strict';
+  const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:')
+    ? 'http://localhost:3001' : '';
+  const params = new URL(location.href).searchParams;
+  const REGION = params.get('region');
+  const NAME = params.get('name');
+  const TAG = params.get('tag');
+
+  let ddIdToKey = null, ddKeyToName = null;
+  async function loadDd() {
+    if (ddIdToKey) return;
+    const versions = await fetch('https://ddragon.leagueoflegends.com/api/versions.json').then((r) => r.json());
+    const data = await fetch(`https://ddragon.leagueoflegends.com/cdn/${versions[0]}/data/ko_KR/champion.json`).then((r) => r.json());
+    ddIdToKey = {}; ddKeyToName = {};
+    for (const c of Object.values(data.data)) {
+      ddIdToKey[String(c.key)] = c.id;
+      ddKeyToName[c.id] = c.name;
+    }
+  }
+
+  async function resolvePuuid() {
+    if (!REGION || !NAME || !TAG) return null;
+    const r = await fetch(`${API_BASE}/api/summoner/${encodeURIComponent(REGION)}/${encodeURIComponent(NAME + '#' + TAG)}`);
+    if (!r.ok) return null;
+    return (await r.json()).account.puuid;
+  }
+
+  function laneKr(l) { return ({ top:'탑', jungle:'정글', mid:'미드', adc:'원딜', support:'서폿' })[l] || l; }
+
+  async function loadStats(puuid) {
+    const r = await fetch(`${API_BASE}/api/summoner/${puuid}/champion-stats?minGames=1`);
+    if (!r.ok) return null;
+    return (await r.json()).rows;
+  }
+
+  function render(rows) {
+    const table = document.querySelector('.data-table');
+    if (!table) return;
+    const header = table.querySelector('.data-table-header');
+    table.querySelectorAll('.data-table-row').forEach((el) => el.remove());
+    if (!rows || rows.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'table-footer';
+      empty.style.cssText = 'padding: 32px; text-align: center; color: var(--text-tertiary);';
+      empty.textContent = '아직 수집된 본인 매치가 없습니다. /summoner 페이지에서 "전적 갱신"을 먼저 눌러주세요.';
+      table.appendChild(empty);
+      return;
+    }
+    for (const r of rows) {
+      const key = r.championKey;
+      const name = ddKeyToName?.[key] ?? key;
+      const wrCls = r.winrate >= 55 ? 'text-positive' : r.winrate <= 45 ? 'text-loss' : '';
+      const gdSign = r.csDiffAt14 >= 0 ? '+' : '';
+      const a = document.createElement('a');
+      a.className = 'data-table-row champ-stats-grid';
+      a.href = `champion-detail.html?key=${key}&lane=${r.lane}`;
+      a.innerHTML = `
+        <div class="champ-cell">
+          <img class="champ-icon" data-dd-champion="${key}" alt="${name}" width="32" height="32">
+          <div>
+            <div class="champ-cell-name">${name}</div>
+            <div class="text-tertiary" style="font-size:11px;">${laneKr(r.lane)}</div>
+          </div>
+        </div>
+        <div class="stat-cell primary">${r.games} <span class="text-tertiary">(${r.wins}W ${r.games - r.wins}L)</span></div>
+        <div class="stat-cell ${wrCls}">${r.winrate}%</div>
+        <div class="stat-cell">${r.avgKda}</div>
+        <div class="stat-cell">${r.cspm.toFixed(1)}</div>
+        <div class="stat-cell">${r.goldPerMin}</div>
+        <div class="stat-cell">${r.dmgPerMin}</div>
+        <div class="stat-cell">${gdSign}${r.csDiffAt14.toFixed(1)}</div>
+        <div class="stat-cell">${r.avgAiScore.toFixed(1)}</div>
+      `;
+      table.appendChild(a);
+    }
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  function setReady() { document.body.dataset.pageState = 'ready'; }
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (!REGION || !NAME || !TAG) { setReady(); return; }
+    await loadDd();
+    const puuid = await resolvePuuid();
+    if (!puuid) { setReady(); return; }
+    const rows = await loadStats(puuid);
+    render(rows);
+    setReady();
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>매치 상세 — Hide on bush#KR1 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+  <script src="ai-score-data.js" defer></script>
+  <script src="ai-score-engine.js" defer></script>
+  <style>
+    /* Hide static demo (Hide on bush / Faker) when a live ?id= match is loading. */
+    body[data-match-state="loading"] main { visibility: hidden; }
+    body[data-match-state="loading"]::after {
+      content: "매치 로딩 중...";
+      position: fixed; inset: 0; display: flex;
+      align-items: center; justify-content: center;
+      color: var(--text-secondary); font-size: 14px;
+      pointer-events: none;
+    }
+  </style>
+<body data-match-state="demo">
+
+<div data-slot="header" data-active="search" data-search-placeholder="다른 소환사 검색..."></div>
+
+<main class="page page-narrow">
+
+  <div class="card profile-header">
+    <div class="profile-top">
+      <div class="profile-icon-wrap">
+        <img class="profile-icon-img" data-dd-profile-icon="6" alt="Hide on bush의 프로필 아이콘" width="80" height="80">
+        <div class="profile-level">409</div>
+      </div>
+      <div class="profile-info">
+        <div class="profile-name">Hide on bush <span class="tag">#KR1</span></div>
+        <div class="profile-meta">마지막 갱신: 3분 전 · 시즌 2026 S1</div>
+        <div class="profile-actions">
+          <a class="ghost" href="summoner.html" style="display: inline-flex; padding: 6px 14px; border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: 12px;">← 매치 리스트로</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="tabs" aria-label="소환사 페이지 탭">
+    <a class="tab active" href="summoner.html" aria-current="page">개요</a>
+    <a class="tab" href="summoner-champions.html">챔피언 통계</a>
+    <a class="tab" href="live-game.html">라이브 게임</a>
+    <a class="tab" href="summoner-seasons.html">시즌 기록</a>
+  </nav>
+
+  <div class="match-list">
+
+    <div class="match-card win expanded" style="cursor: default;">
+      <div class="match-result win">
+        <div class="match-result-label">승리</div>
+        <div class="match-meta">
+          솔로랭크<br>
+          2시간 전<br>
+          28분 12초
+        </div>
+      </div>
+      <div class="match-champ-section">
+        <div class="match-champ-icon-wrap">
+          <img class="champ-icon" data-dd-champion="Azir" alt="아지르" width="48" height="48">
+          <div class="match-position-badge">미드</div>
+        </div>
+        <div class="match-spells-runes">
+          <img class="spell-icon" data-dd-spell="SummonerFlash" alt="점멸" width="18" height="18">
+          <img class="spell-icon" data-dd-spell="SummonerDot" alt="점화" width="18" height="18">
+          <img class="rune-icon" data-dd-rune-keystone="Sorcery/ArcaneComet/ArcaneComet" alt="신비로운 유성" width="18" height="18">
+          <img class="rune-icon" data-dd-rune-keystone="Inspiration/UnsealedSpellbook/UnsealedSpellbook" alt="" width="18" height="18">
+        </div>
+      </div>
+      <div class="match-stats">
+        <div class="match-kda">12 / 3 / 8 <span class="match-kda-ratio">(KDA 6.67)</span></div>
+        <div class="match-substats">CS 232 (8.2/분) · 시야 28 · 딜 38,420</div>
+        <div class="match-items">
+          <img class="item-icon" data-dd-item="6655" alt="" width="22" height="22">
+          <img class="item-icon" data-dd-item="3157" alt="" width="22" height="22">
+          <img class="item-icon" data-dd-item="3089" alt="" width="22" height="22">
+          <img class="item-icon" data-dd-item="3020" alt="" width="22" height="22">
+          <img class="item-icon" data-dd-item="3135" alt="" width="22" height="22">
+          <img class="item-icon" data-dd-item="3116" alt="" width="22" height="22">
+          <img class="item-icon trinket" data-dd-item="3340" alt="" width="22" height="22">
+        </div>
+      </div>
+      <div class="match-score-box" data-ai-match="KR_DEMO_001">
+        <div class="match-score-label">AI Score</div>
+        <div class="match-score-value high">—</div>
+      </div>
+      <div class="match-teams">
+        <div class="match-teams-grid">
+          <div class="match-teams-col">
+            <div class="team-label">블루팀</div>
+            <div class="player is-self"><img class="champ-icon" data-dd-champion="Azir" alt="" width="14" height="14"><span class="player-name">Hide on bush</span></div>
+            <div class="player"><img class="champ-icon" data-dd-champion="Graves" alt="" width="14" height="14"><span class="player-name">Canyon</span></div>
+            <div class="player"><img class="champ-icon" data-dd-champion="Jax" alt="" width="14" height="14"><span class="player-name">Zeus</span></div>
+            <div class="player"><img class="champ-icon" data-dd-champion="Ezreal" alt="" width="14" height="14"><span class="player-name">Gumayusi</span></div>
+            <div class="player"><img class="champ-icon" data-dd-champion="Renata" alt="" width="14" height="14"><span class="player-name">Keria</span></div>
+          </div>
+          <div class="match-teams-col">
+            <div class="team-label">레드팀</div>
+            <div class="player"><img class="champ-icon" data-dd-champion="Ahri" alt="" width="14" height="14"><span class="player-name">Chovy</span></div>
+            <div class="player"><img class="champ-icon" data-dd-champion="Vi" alt="" width="14" height="14"><span class="player-name">Peanut</span></div>
+            <div class="player"><img class="champ-icon" data-dd-champion="Gangplank" alt="" width="14" height="14"><span class="player-name">Kiin</span></div>
+            <div class="player"><img class="champ-icon" data-dd-champion="Zeri" alt="" width="14" height="14"><span class="player-name">Peyz</span></div>
+            <div class="player"><img class="champ-icon" data-dd-champion="Lulu" alt="" width="14" height="14"><span class="player-name">Lehends</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="match-expand" aria-label="접기">▾</div>
+    </div>
+
+    <section class="match-detail" aria-label="매치 상세">
+
+      <div class="match-detail-tabs" role="tablist">
+        <div class="match-detail-tab active" role="tab" aria-selected="true">종합</div>
+        <div class="match-detail-tab" role="tab">빌드</div>
+        <div class="match-detail-tab" role="tab">그래프</div>
+        <div class="match-detail-tab" role="tab">룬</div>
+        <div class="match-detail-tab" role="tab">AI Score 분해</div>
+      </div>
+
+      <div role="tabpanel">
+
+        <table class="scoreboard">
+          <thead>
+            <tr>
+              <th>플레이어</th>
+              <th>KDA</th>
+              <th>딜</th>
+              <th>받은 딜</th>
+              <th>CS</th>
+              <th>시야</th>
+              <th>골드</th>
+              <th>아이템</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="team-blue is-self">
+              <td>
+                <div class="player-cell">
+                  <img class="champ-icon" data-dd-champion="Azir" alt="" width="24" height="24">
+                  <div>
+                    <div>Hide on bush</div>
+                    <div class="text-tertiary" style="font-size: 10px;">미드 · 14</div>
+                  </div>
+                </div>
+              </td>
+              <td>12 / 3 / 8</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill" style="width: 95%;"></span></span>38,420</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill taken" style="width: 60%;"></span></span>22,150</td>
+              <td>232</td>
+              <td>28</td>
+              <td>14,820</td>
+              <td>
+                <div class="items-cell">
+                  <img class="item-icon" data-dd-item="6655" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3157" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3089" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3020" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3135" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3116" alt="" width="18" height="18">
+                </div>
+              </td>
+            </tr>
+            <tr class="team-blue">
+              <td>
+                <div class="player-cell">
+                  <img class="champ-icon" data-dd-champion="Graves" alt="" width="24" height="24">
+                  <div>
+                    <div>Canyon</div>
+                    <div class="text-tertiary" style="font-size: 10px;">정글 · 14</div>
+                  </div>
+                </div>
+              </td>
+              <td>5 / 4 / 11</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill" style="width: 65%;"></span></span>26,180</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill taken" style="width: 75%;"></span></span>27,420</td>
+              <td>178</td>
+              <td>22</td>
+              <td>13,250</td>
+              <td>
+                <div class="items-cell">
+                  <img class="item-icon" data-dd-item="6630" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3071" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3047" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3074" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3033" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3193" alt="" width="18" height="18">
+                </div>
+              </td>
+            </tr>
+            <tr class="team-blue">
+              <td>
+                <div class="player-cell">
+                  <img class="champ-icon" data-dd-champion="Jax" alt="" width="24" height="24">
+                  <div>
+                    <div>Zeus</div>
+                    <div class="text-tertiary" style="font-size: 10px;">탑 · 14</div>
+                  </div>
+                </div>
+              </td>
+              <td>7 / 5 / 6</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill" style="width: 70%;"></span></span>28,510</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill taken" style="width: 95%;"></span></span>34,800</td>
+              <td>198</td>
+              <td>18</td>
+              <td>13,420</td>
+              <td>
+                <div class="items-cell">
+                  <img class="item-icon" data-dd-item="6630" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3074" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3071" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3111" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3193" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3033" alt="" width="18" height="18">
+                </div>
+              </td>
+            </tr>
+            <tr class="team-blue">
+              <td>
+                <div class="player-cell">
+                  <img class="champ-icon" data-dd-champion="Ezreal" alt="" width="24" height="24">
+                  <div>
+                    <div>Gumayusi</div>
+                    <div class="text-tertiary" style="font-size: 10px;">원딜 · 14</div>
+                  </div>
+                </div>
+              </td>
+              <td>9 / 2 / 7</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill" style="width: 80%;"></span></span>32,180</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill taken" style="width: 45%;"></span></span>16,720</td>
+              <td>241</td>
+              <td>15</td>
+              <td>14,080</td>
+              <td>
+                <div class="items-cell">
+                  <img class="item-icon" data-dd-item="3078" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3094" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3033" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3036" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3047" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3026" alt="" width="18" height="18">
+                </div>
+              </td>
+            </tr>
+            <tr class="team-blue">
+              <td>
+                <div class="player-cell">
+                  <img class="champ-icon" data-dd-champion="Renata" alt="" width="24" height="24">
+                  <div>
+                    <div>Keria</div>
+                    <div class="text-tertiary" style="font-size: 10px;">서폿 · 14</div>
+                  </div>
+                </div>
+              </td>
+              <td>2 / 4 / 18</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill" style="width: 25%;"></span></span>10,820</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill taken" style="width: 55%;"></span></span>20,180</td>
+              <td>32</td>
+              <td>62</td>
+              <td>9,810</td>
+              <td>
+                <div class="items-cell">
+                  <img class="item-icon" data-dd-item="3853" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3190" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3107" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3011" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3009" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="2065" alt="" width="18" height="18">
+                </div>
+              </td>
+            </tr>
+
+            <tr class="team-red">
+              <td>
+                <div class="player-cell">
+                  <img class="champ-icon" data-dd-champion="Ahri" alt="" width="24" height="24">
+                  <div>
+                    <div>Chovy</div>
+                    <div class="text-tertiary" style="font-size: 10px;">미드 · 13</div>
+                  </div>
+                </div>
+              </td>
+              <td>5 / 8 / 4</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill" style="width: 60%;"></span></span>24,310</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill taken" style="width: 70%;"></span></span>25,840</td>
+              <td>198</td>
+              <td>24</td>
+              <td>11,920</td>
+              <td>
+                <div class="items-cell">
+                  <img class="item-icon" data-dd-item="6653" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3020" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3157" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3135" alt="" width="18" height="18">
+                  <span class="item-icon" style="background: var(--bg-input); width: 18px; height: 18px;"></span>
+                  <span class="item-icon" style="background: var(--bg-input); width: 18px; height: 18px;"></span>
+                </div>
+              </td>
+            </tr>
+            <tr class="team-red">
+              <td>
+                <div class="player-cell">
+                  <img class="champ-icon" data-dd-champion="Vi" alt="" width="24" height="24">
+                  <div>
+                    <div>Peanut</div>
+                    <div class="text-tertiary" style="font-size: 10px;">정글 · 13</div>
+                  </div>
+                </div>
+              </td>
+              <td>4 / 7 / 8</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill" style="width: 50%;"></span></span>20,140</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill taken" style="width: 85%;"></span></span>30,420</td>
+              <td>156</td>
+              <td>20</td>
+              <td>11,180</td>
+              <td>
+                <div class="items-cell">
+                  <img class="item-icon" data-dd-item="6662" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3047" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3193" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3742" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3071" alt="" width="18" height="18">
+                  <span class="item-icon" style="background: var(--bg-input); width: 18px; height: 18px;"></span>
+                </div>
+              </td>
+            </tr>
+            <tr class="team-red">
+              <td>
+                <div class="player-cell">
+                  <img class="champ-icon" data-dd-champion="Gangplank" alt="" width="24" height="24">
+                  <div>
+                    <div>Kiin</div>
+                    <div class="text-tertiary" style="font-size: 10px;">탑 · 13</div>
+                  </div>
+                </div>
+              </td>
+              <td>6 / 4 / 5</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill" style="width: 75%;"></span></span>30,180</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill taken" style="width: 65%;"></span></span>23,840</td>
+              <td>212</td>
+              <td>16</td>
+              <td>12,540</td>
+              <td>
+                <div class="items-cell">
+                  <img class="item-icon" data-dd-item="3078" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3071" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3111" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3068" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3193" alt="" width="18" height="18">
+                  <span class="item-icon" style="background: var(--bg-input); width: 18px; height: 18px;"></span>
+                </div>
+              </td>
+            </tr>
+            <tr class="team-red">
+              <td>
+                <div class="player-cell">
+                  <img class="champ-icon" data-dd-champion="Zeri" alt="" width="24" height="24">
+                  <div>
+                    <div>Peyz</div>
+                    <div class="text-tertiary" style="font-size: 10px;">원딜 · 13</div>
+                  </div>
+                </div>
+              </td>
+              <td>4 / 6 / 5</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill" style="width: 55%;"></span></span>22,180</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill taken" style="width: 50%;"></span></span>18,420</td>
+              <td>225</td>
+              <td>14</td>
+              <td>12,840</td>
+              <td>
+                <div class="items-cell">
+                  <img class="item-icon" data-dd-item="6672" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3094" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3006" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3046" alt="" width="18" height="18">
+                  <span class="item-icon" style="background: var(--bg-input); width: 18px; height: 18px;"></span>
+                  <span class="item-icon" style="background: var(--bg-input); width: 18px; height: 18px;"></span>
+                </div>
+              </td>
+            </tr>
+            <tr class="team-red">
+              <td>
+                <div class="player-cell">
+                  <img class="champ-icon" data-dd-champion="Lulu" alt="" width="24" height="24">
+                  <div>
+                    <div>Lehends</div>
+                    <div class="text-tertiary" style="font-size: 10px;">서폿 · 12</div>
+                  </div>
+                </div>
+              </td>
+              <td>1 / 6 / 12</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill" style="width: 22%;"></span></span>8,720</td>
+              <td><span class="dmg-bar-track"><span class="dmg-bar-fill taken" style="width: 48%;"></span></span>17,820</td>
+              <td>28</td>
+              <td>54</td>
+              <td>8,420</td>
+              <td>
+                <div class="items-cell">
+                  <img class="item-icon" data-dd-item="3850" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3190" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3504" alt="" width="18" height="18">
+                  <img class="item-icon" data-dd-item="3009" alt="" width="18" height="18">
+                  <span class="item-icon" style="background: var(--bg-input); width: 18px; height: 18px;"></span>
+                  <span class="item-icon" style="background: var(--bg-input); width: 18px; height: 18px;"></span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="margin-top: var(--space-5);" id="match-graphs">
+          <h3 class="section-title">시간별 흐름</h3>
+          <div class="match-graphs-grid">
+            <div class="card chart-wrap" id="chart-gold-diff">
+              <div class="chart-title">팀 골드 차이 (블루 − 레드)</div>
+              <div class="chart-canvas"></div>
+              <div class="chart-legend">
+                <span><span class="chart-legend-dot" style="background: var(--color-win);"></span>블루팀 우세</span>
+                <span><span class="chart-legend-dot" style="background: var(--color-loss);"></span>레드팀 우세</span>
+                <span class="chart-legend-meta"></span>
+              </div>
+            </div>
+            <div class="card chart-wrap" id="chart-team-gold">
+              <div class="chart-title">팀 누적 골드</div>
+              <div class="chart-canvas"></div>
+              <div class="chart-legend">
+                <span><span class="chart-legend-dot" style="background: var(--color-win);"></span>블루팀</span>
+                <span><span class="chart-legend-dot" style="background: var(--color-loss);"></span>레드팀</span>
+                <span class="chart-legend-meta"></span>
+              </div>
+            </div>
+            <div class="card chart-wrap" id="chart-level-avg">
+              <div class="chart-title">팀 평균 레벨</div>
+              <div class="chart-canvas"></div>
+              <div class="chart-legend">
+                <span><span class="chart-legend-dot" style="background: var(--color-win);"></span>블루팀</span>
+                <span><span class="chart-legend-dot" style="background: var(--color-loss);"></span>레드팀</span>
+                <span class="chart-legend-meta"></span>
+              </div>
+            </div>
+            <div class="card chart-wrap" id="chart-events">
+              <div class="chart-title">킬 + 오브젝트 타임라인</div>
+              <div class="chart-canvas"></div>
+              <div class="chart-legend">
+                <span><span class="chart-legend-dot" style="background: var(--text-secondary);"></span>킬</span>
+                <span><span class="chart-legend-dot" style="background: var(--color-warning);"></span>드래곤/바론</span>
+                <span><span class="chart-legend-dot" style="background: var(--text-tertiary);"></span>타워</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: var(--space-5);">
+          <h3 class="section-title">빌드 타임라인</h3>
+          <div class="card" id="build-timeline-card" style="padding: var(--space-4);">
+            <div class="text-tertiary" style="font-size:12px;padding:8px;">로딩 중...</div>
+          </div>
+        </div>
+
+        <div style="margin-top: var(--space-5);">
+          <h3 class="section-title">
+            <span>AI Score 분해 <span class="tier-badge tier-master" style="margin-left:6px">차별화</span></span>
+            <span class="meta">cohort: 다이아+ Azir mid · 승</span>
+          </h3>
+          <div class="card" id="ai-detail-card" style="padding: var(--space-4);"></div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <a class="match-card win" href="match-detail.html">
+      <div class="match-result win">
+        <div class="match-result-label">승리</div>
+        <div class="match-meta">
+          솔로랭크<br>
+          3시간 전<br>
+          32분 45초
+        </div>
+      </div>
+      <div class="match-champ-section">
+        <div class="match-champ-icon-wrap">
+          <img class="champ-icon" data-dd-champion="Orianna" alt="오리아나" width="48" height="48">
+          <div class="match-position-badge">미드</div>
+        </div>
+        <div class="match-spells-runes">
+          <img class="spell-icon" data-dd-spell="SummonerFlash" alt="" width="18" height="18">
+          <img class="spell-icon" data-dd-spell="SummonerTeleport" alt="" width="18" height="18">
+          <img class="rune-icon" data-dd-rune-keystone="Sorcery/PhaseRush/PhaseRush" alt="" width="18" height="18">
+          <img class="rune-icon" data-dd-rune-keystone="Resolve/Conditioning/Conditioning" alt="" width="18" height="18">
+        </div>
+      </div>
+      <div class="match-stats">
+        <div class="match-kda">8 / 4 / 14 <span class="match-kda-ratio">(KDA 5.50)</span></div>
+        <div class="match-substats">CS 198 (6.0/분) · 시야 32 · 딜 28,150</div>
+        <div class="match-items">
+          <img class="item-icon" data-dd-item="3152" alt="" width="22" height="22">
+          <img class="item-icon" data-dd-item="3020" alt="" width="22" height="22">
+          <img class="item-icon" data-dd-item="3157" alt="" width="22" height="22">
+          <img class="item-icon" data-dd-item="3089" alt="" width="22" height="22">
+          <img class="item-icon" data-dd-item="3135" alt="" width="22" height="22">
+          <img class="item-icon" data-dd-item="3165" alt="" width="22" height="22">
+          <img class="item-icon trinket" data-dd-item="3340" alt="" width="22" height="22">
+        </div>
+      </div>
+      <div class="match-score-box">
+        <div class="match-score-label">AI Score</div>
+        <div class="match-score-value">68</div>
+      </div>
+      <div class="match-teams">
+        <div class="match-teams-grid">
+          <div class="match-teams-col">
+            <div class="team-label">블루팀</div>
+            <div class="player is-self"><img class="champ-icon" data-dd-champion="Orianna" alt="" width="14" height="14"><span class="player-name">Hide on bush</span></div>
+          </div>
+          <div class="match-teams-col">
+            <div class="team-label">레드팀</div>
+            <div class="player"><img class="champ-icon" data-dd-champion="Yasuo" alt="" width="14" height="14"><span class="player-name">EnemyMid</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="match-expand" aria-label="펼치기">▾</div>
+    </a>
+
+  </div>
+
+</main>
+
+<div data-slot="footer"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  function el(tag, attrs, kids) {
+    const e = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach((k) => {
+      if (k === 'class') e.className = attrs[k];
+      else if (k === 'html') e.innerHTML = attrs[k];
+      else e.setAttribute(k, attrs[k]);
+    });
+    (kids || []).forEach((c) => {
+      if (c == null) return;
+      e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    });
+    return e;
+  }
+
+  function renderAiBoxes() {
+    document.querySelectorAll('[data-ai-match]').forEach((box) => {
+      const m = window.AIScoreEngine.computeMatch(box.dataset.aiMatch);
+      if (!m) return;
+      const me = m.players.find((p) => p.isSelf);
+      if (!me) return;
+      const valEl = box.querySelector('.match-score-value');
+      if (!valEl) return;
+      valEl.textContent = String(me.score);
+      valEl.classList.remove('high', 'low');
+      if (me.score >= 65) valEl.classList.add('high');
+      else if (me.score < 45) valEl.classList.add('low');
+    });
+  }
+
+  function renderAiDetail() {
+    const wrap = document.getElementById('ai-detail-card');
+    if (!wrap) return;
+    const m = window.AIScoreEngine.computeMatch('KR_DEMO_001');
+    if (!m) return;
+    const me = m.players.find((p) => p.isSelf);
+    if (!me) return;
+    wrap.innerHTML = '';
+
+    // Top: total + letter + MVP/ACE
+    const head = el('div', { class: 'bot-duo-vs', style: 'grid-template-columns: auto 1fr auto; align-items: center; margin-bottom: var(--space-4);' }, [
+      el('div', { class: 'match-score-box', style: 'min-width: 120px;' }, [
+        el('div', { class: 'match-score-label' }, ['종합 AI Score']),
+        el('div', { class: 'match-score-value ' + (me.score >= 65 ? 'high' : me.score < 45 ? 'low' : '') }, [String(me.score)]),
+      ]),
+      el('div', {}, [
+        el('div', { class: 'tier-badge ' + me.letterClass, style: 'padding: 4px 14px; font-size: 14px; font-weight: 700; letter-spacing: 0.06em;' }, [me.letter]),
+        el('div', { class: 'text-tertiary', style: 'font-size: 11px; margin-top: 4px;' }, [
+          me.label === 'MVP' ? '★ MVP — 승팀 1위' : me.label === 'ACE' ? '☆ ACE — 패팀 1위' : '같은 챔프·라인·티어 평균 대비',
+        ]),
+      ]),
+    ]);
+    wrap.appendChild(head);
+
+    // Phase decomposition
+    if (me.phaseBreakdown) {
+      const pb = me.phaseBreakdown;
+      const phaseRow = el('div', {}, [
+        el('div', { class: 'text-tertiary uppercase', style: 'font-size: 10px; margin-bottom: 6px;' }, ['페이즈 분해']),
+        el('div', { style: 'display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-2); margin-bottom: var(--space-4);' }, [
+          phaseTile('라이닝 (0~14분)', pb.laning),
+          phaseTile('미드 (14~25분)', pb.midgame),
+          phaseTile('후반 (25분~)', pb.late),
+        ]),
+      ]);
+      wrap.appendChild(phaseRow);
+    }
+
+    // Component breakdown bars
+    const compHead = el('div', { class: 'text-tertiary uppercase', style: 'font-size: 10px; margin-bottom: 6px;' }, ['컴포넌트 기여 (z-score × 라인 가중치)']);
+    wrap.appendChild(compHead);
+    me.breakdown.forEach((c) => {
+      const isNeg = c.contribution < 0;
+      const widthPct = Math.min(100, Math.abs(c.contribution) * 4);
+      const row = el('div', { class: 'comp-row ' + (isNeg ? 'gap' : '') }, [
+        el('div', { class: 'comp-label' }, [c.label]),
+        el('div', { class: 'comp-bar-track' }, [
+          el('div', { class: 'comp-bar-fill', style: 'width: ' + widthPct + '%;' }, []),
+        ]),
+        el('div', { class: 'comp-value' }, [
+          (c.z >= 0 ? 'z+' : 'z') + c.z.toFixed(2),
+          ' · ',
+          (c.contribution >= 0 ? '+' : '') + c.contribution.toFixed(1) + '점',
+        ]),
+      ]);
+      wrap.appendChild(row);
+    });
+
+    // Match-wide MVP/ACE annotations
+    const mvp = m.players.find((p) => p.label === 'MVP');
+    const ace = m.players.find((p) => p.label === 'ACE');
+    const annot = el('div', { class: 'comp-gap-list', style: 'margin-top: var(--space-3);' }, [
+      mvp ? el('div', { class: 'comp-gap-item' }, [
+        el('span', { class: 'severity-dot low', style: 'background: var(--color-warning);' }, []),
+        `MVP: ${mvp.summonerName} (${mvp.champion}) ${mvp.score}점`,
+      ]) : null,
+      ace ? el('div', { class: 'comp-gap-item' }, [
+        el('span', { class: 'severity-dot low', style: 'background: var(--color-loss);' }, []),
+        `ACE (캐리한 패배): ${ace.summonerName} (${ace.champion}) ${ace.score}점`,
+      ]) : null,
+    ]);
+    wrap.appendChild(annot);
+  }
+
+  function phaseTile(label, score) {
+    const s = score == null ? 50 : Math.round(score * 10) / 10;
+    const cls = s >= 65 ? 'high' : s < 45 ? 'low' : '';
+    return el('div', { class: 'match-score-box', style: 'padding: var(--space-3) var(--space-2);' }, [
+      el('div', { class: 'match-score-label' }, [label]),
+      el('div', { class: 'match-score-value ' + cls }, [String(s)]),
+    ]);
+  }
+
+  // ---- Live data: load real match by URL ?id= --------------------------
+  const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:')
+    ? 'http://localhost:3001' : '';
+  const matchIdFromUrl = new URL(location.href).searchParams.get('id');
+
+  async function loadLiveMatch(matchId) {
+    try {
+      const r = await fetch(`${API_BASE}/api/match/${encodeURIComponent(matchId)}`);
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (_e) { return null; }
+  }
+
+  function laneKr(l) { return ({ top:'탑', jungle:'정글', mid:'미드', adc:'원딜', support:'서폿' })[l] || l; }
+
+  function applyLiveMatch(m) {
+    // Header: result + duration
+    const sub = document.querySelector('.profile-meta');
+    if (sub) sub.textContent = `매치 ${m.matchId} · 패치 ${m.patch} · ${Math.round(m.gameDuration / 60)}분 ${m.gameDuration % 60}초`;
+
+    // Replace the AI Score detail card with live-data variant
+    const wrap = document.getElementById('ai-detail-card');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    const me = m.participants[0]; // arbitrary highlight; in real flow use ?puuid
+    const blueWin = m.bluewin === 1;
+    wrap.appendChild(el('div', { class: 'section-title' }, [
+      el('span', {}, [`${blueWin ? '블루팀 승' : '레드팀 승'} · ${Math.round(m.gameDuration / 60)}분`]),
+      el('span', { class: 'meta' }, [m.matchId]),
+    ]));
+
+    // Compact scoreboard table — per-participant row.
+    const table = el('table', { class: 'scoreboard', style: 'width:100%;' }, []);
+    const head = el('thead', {}, [el('tr', {}, [
+      el('th', {}, ['플레이어']), el('th', {}, ['KDA']), el('th', {}, ['CS']),
+      el('th', {}, ['DPM']), el('th', {}, ['시야']), el('th', {}, ['AI Score']),
+    ])]);
+    table.appendChild(head);
+    const tbody = el('tbody', {}, []);
+    for (const p of m.participants) {
+      const tr = el('tr', { class: `team-${p.team}` }, [
+        el('td', {}, [
+          el('div', { class: 'player-cell' }, [
+            (() => { const img = el('img', { class: 'champ-icon', alt: p.championKey, width: '24', height: '24' }, []); img.dataset.ddChampion = p.championKey; return img; })(),
+            el('div', {}, [
+              el('div', {}, [`${p.championKey} (${laneKr(p.lane)})`]),
+              el('div', { class: 'text-tertiary', style: 'font-size: 10px;' }, [p.win ? 'W' : 'L']),
+            ]),
+          ]),
+        ]),
+        el('td', {}, [`${p.k}/${p.d}/${p.a}`]),
+        el('td', {}, [String(p.cs)]),
+        el('td', {}, [String(Math.round(p.dmgToChampPerMin))]),
+        el('td', {}, [String(p.visionScore)]),
+        el('td', {}, [p.aiScore != null ? String(p.aiScore) : '—']),
+      ]);
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  // Hold the loaded match so timeline rendering can cross-reference participants.
+  let liveMatch = null;
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (matchIdFromUrl) {
+      // Hide static demo (Faker) until live match data swaps in.
+      document.body.dataset.matchState = 'loading';
+      const m = await loadLiveMatch(matchIdFromUrl);
+      if (m) {
+        liveMatch = m;
+        applyLiveMatch(m);
+        document.body.dataset.matchState = 'ready';
+        loadAndRenderTimeline(matchIdFromUrl);
+        return;
+      }
+      // API failed — reveal demo with a notice so user isn't confused.
+      document.body.dataset.matchState = 'ready';
+      const sub = document.querySelector('.profile-meta');
+      if (sub) {
+        sub.textContent = `매치 로드 실패: ${matchIdFromUrl}`;
+        sub.style.color = 'var(--color-loss)';
+      }
+      return;
+    }
+    // No ?id= → demo mode.
+    document.body.dataset.matchState = 'demo';
+    setTimeout(() => {
+      if (!window.AIScoreEngine) return;
+      renderAiBoxes();
+      renderAiDetail();
+    }, 0);
+  });
+
+  // ---- Timeline graphs (live data only) -------------------------------
+  async function loadAndRenderTimeline(matchId) {
+    try {
+      const r = await fetch(`${API_BASE}/api/match/${encodeURIComponent(matchId)}/timeline-summary`);
+      if (!r.ok) return;
+      const tl = await r.json();
+      renderTimelineCharts(tl);
+      renderBuildTimeline(tl);
+    } catch (_e) { /* charts stay blank */ }
+  }
+
+  function renderBuildTimeline(tl) {
+    const card = document.getElementById('build-timeline-card');
+    if (!card) return;
+    if (!liveMatch || !liveMatch.participants) {
+      card.innerHTML = '<div class="text-tertiary" style="font-size:12px;padding:8px;">매치 정보 없음</div>';
+      return;
+    }
+    // Collapse BUY immediately followed by UNDO — same itemId & ts within ~10s.
+    function compact(events) {
+      const undoSet = new Set();
+      events.forEach((e, i) => {
+        if (e.type !== 'UNDO') return;
+        for (let j = i - 1; j >= 0; j--) {
+          const prior = events[j];
+          if (prior.type === 'BUY' && prior.itemId === e.itemId && (e.ts - prior.ts) < 60) {
+            undoSet.add(j);
+            undoSet.add(i);
+            break;
+          }
+        }
+      });
+      return events.filter((_, i) => !undoSet.has(i)).filter((e) => e.type === 'BUY');
+    }
+    function fmtTs(s) {
+      const m = Math.floor(s / 60), sec = s % 60;
+      return `${m}:${String(sec).padStart(2, '0')}`;
+    }
+    const wrap = document.createElement('div');
+    wrap.className = 'build-timeline';
+    // Sort by team (blue first) then slot.
+    const sorted = [...liveMatch.participants].sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
+    for (const p of sorted) {
+      const series = (tl.perPlayer || []).find((s) => s.slot === p.slot);
+      const events = series ? compact(series.itemEvents || []) : [];
+      const row = document.createElement('div');
+      row.className = 'build-timeline-row';
+      row.innerHTML = `
+        <div class="player-cell">
+          <img class="champ-icon" data-dd-champion="${p.championKey}" alt="" width="24" height="24">
+          <span class="${p.team === 'blue' ? 'text-positive' : 'text-loss'}">${p.championKey}</span>
+        </div>
+        ${events.map((e) => `
+          <div class="build-step">
+            <img class="item-icon" data-dd-item="${e.itemId}" alt="" width="16" height="16">
+            <span class="build-step-time">${fmtTs(e.ts)}</span>
+          </div>
+        `).join('')}
+        ${events.length === 0 ? '<div class="text-tertiary" style="font-size:11px;padding:0 8px;">아이템 데이터 없음</div>' : ''}
+      `;
+      wrap.appendChild(row);
+    }
+    card.innerHTML = '';
+    card.appendChild(wrap);
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  function renderTimelineCharts(tl) {
+    const W = 600, H = 200, PAD = { top: 12, right: 8, bottom: 22, left: 36 };
+    const minutes = Math.ceil((tl.gameDuration || 1800) / 60);
+
+    // X axis time→pixel
+    const xScale = (sec) => PAD.left + (sec / tl.gameDuration) * (W - PAD.left - PAD.right);
+
+    function fmtKAxis(v) {
+      if (Math.abs(v) >= 1000) return (v / 1000).toFixed(1) + 'k';
+      return String(v);
+    }
+    function fmtMin(sec) { return Math.round(sec / 60) + '분'; }
+    function svgEl(tag, attrs) {
+      const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      for (const k in attrs) e.setAttribute(k, attrs[k]);
+      return e;
+    }
+    function gridX(svg) {
+      const ticks = [0, 10, 20, 30, 40].filter((m) => m * 60 <= tl.gameDuration);
+      for (const m of ticks) {
+        const x = xScale(m * 60);
+        svg.appendChild(svgEl('line', { class: 'chart-grid', x1: x, x2: x, y1: PAD.top, y2: H - PAD.bottom }));
+        const t = svgEl('text', { class: 'chart-axis-label', x: x, y: H - 6, 'text-anchor': 'middle' });
+        t.textContent = fmtMin(m * 60);
+        svg.appendChild(t);
+      }
+    }
+    function gridY(svg, ticks, scale) {
+      for (const v of ticks) {
+        const y = scale(v);
+        svg.appendChild(svgEl('line', { class: 'chart-grid', x1: PAD.left, x2: W - PAD.right, y1: y, y2: y }));
+        const t = svgEl('text', { class: 'chart-axis-label', x: 4, y: y + 3 });
+        t.textContent = fmtKAxis(v);
+        svg.appendChild(t);
+      }
+    }
+    function plot(svg, frames, getY, color, scale) {
+      const pts = frames.map((f) => `${xScale(f.ts).toFixed(1)},${scale(getY(f)).toFixed(1)}`).join(' ');
+      const pl = svgEl('polyline', { points: pts, fill: 'none', stroke: color, 'stroke-width': '2' });
+      svg.appendChild(pl);
+    }
+    function newSvg(canvas) {
+      canvas.innerHTML = '';
+      const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: 'none', width: '100%', height: '200' });
+      canvas.appendChild(svg);
+      return svg;
+    }
+
+    // ---- Chart 1: gold diff (blue - red) ----
+    {
+      const card = document.getElementById('chart-gold-diff');
+      const svg = newSvg(card.querySelector('.chart-canvas'));
+      const diffs = tl.frames.map((f) => f.blue.totalGold - f.red.totalGold);
+      const maxAbs = Math.max(1000, ...diffs.map(Math.abs));
+      const yScale = (v) => PAD.top + (1 - (v + maxAbs) / (2 * maxAbs)) * (H - PAD.top - PAD.bottom);
+      gridX(svg); gridY(svg, [-maxAbs, 0, maxAbs], yScale);
+      // zero line bold
+      svg.appendChild(svgEl('line', { x1: PAD.left, x2: W - PAD.right, y1: yScale(0), y2: yScale(0), stroke: 'var(--border-strong)', 'stroke-width': '1' }));
+      // diff line: positive blue, negative red — drawn as two segments using mask is overkill.
+      // Use a single polyline; color reflects current overall side.
+      const lastDiff = diffs.length ? diffs[diffs.length - 1] : 0;
+      const color = lastDiff >= 0 ? 'var(--color-win)' : 'var(--color-loss)';
+      plot(svg, tl.frames, (f) => f.blue.totalGold - f.red.totalGold, color, yScale);
+      const meta = card.querySelector('.chart-legend-meta');
+      if (meta) {
+        const sign = lastDiff >= 0 ? '+' : '';
+        meta.textContent = `최종: ${sign}${lastDiff.toLocaleString('ko-KR')}g`;
+      }
+    }
+
+    // ---- Chart 2: team total gold ----
+    {
+      const card = document.getElementById('chart-team-gold');
+      const svg = newSvg(card.querySelector('.chart-canvas'));
+      const maxGold = Math.max(1, ...tl.frames.flatMap((f) => [f.blue.totalGold, f.red.totalGold]));
+      const yScale = (v) => PAD.top + (1 - v / maxGold) * (H - PAD.top - PAD.bottom);
+      gridX(svg);
+      gridY(svg, [maxGold * 0.25, maxGold * 0.5, maxGold * 0.75, maxGold].map((v) => Math.round(v / 1000) * 1000), yScale);
+      plot(svg, tl.frames, (f) => f.blue.totalGold, 'var(--color-win)', yScale);
+      plot(svg, tl.frames, (f) => f.red.totalGold,  'var(--color-loss)', yScale);
+      const meta = card.querySelector('.chart-legend-meta');
+      if (meta) meta.textContent = `최대 ${(maxGold/1000).toFixed(1)}k`;
+    }
+
+    // ---- Chart 3: average level ----
+    {
+      const card = document.getElementById('chart-level-avg');
+      const svg = newSvg(card.querySelector('.chart-canvas'));
+      const blueAvg = tl.frames.map((f, i) => {
+        const lvls = (tl.perPlayer || []).slice(0, 5).map((p) => p.level[i] ?? 0);
+        return lvls.reduce((s, x) => s + x, 0) / Math.max(1, lvls.length);
+      });
+      const redAvg = tl.frames.map((f, i) => {
+        const lvls = (tl.perPlayer || []).slice(5, 10).map((p) => p.level[i] ?? 0);
+        return lvls.reduce((s, x) => s + x, 0) / Math.max(1, lvls.length);
+      });
+      const yScale = (v) => PAD.top + (1 - v / 18) * (H - PAD.top - PAD.bottom);
+      gridX(svg); gridY(svg, [6, 12, 18], yScale);
+      plot(svg, tl.frames.map((f, i) => ({ ts: f.ts, lvl: blueAvg[i] })), (f) => f.lvl, 'var(--color-win)', yScale);
+      plot(svg, tl.frames.map((f, i) => ({ ts: f.ts, lvl: redAvg[i] })),  (f) => f.lvl, 'var(--color-loss)', yScale);
+      const meta = card.querySelector('.chart-legend-meta');
+      if (meta && blueAvg.length) {
+        meta.textContent = `최종 ${blueAvg[blueAvg.length-1].toFixed(1)} vs ${redAvg[redAvg.length-1].toFixed(1)}`;
+      }
+    }
+
+    // ---- Chart 4: events timeline (gantt) ----
+    {
+      const card = document.getElementById('chart-events');
+      const canvas = card.querySelector('.chart-canvas');
+      canvas.innerHTML = '';
+      const svg = svgEl('svg', { viewBox: `0 0 ${W} 80`, preserveAspectRatio: 'none', width: '100%', height: '80' });
+      // 3 lanes: kills (top), objectives (mid), towers (bottom)
+      const yKill = 20, yObj = 40, yTower = 60;
+      // Time axis
+      const ticks = [0, 10, 20, 30, 40].filter((m) => m * 60 <= tl.gameDuration);
+      for (const m of ticks) {
+        const x = xScale(m * 60);
+        const t = svgEl('text', { class: 'chart-axis-label', x: x, y: 78, 'text-anchor': 'middle' });
+        t.textContent = fmtMin(m * 60);
+        svg.appendChild(t);
+      }
+      // Lane labels
+      ['킬', '오브젝트', '타워'].forEach((label, i) => {
+        const t = svgEl('text', { class: 'chart-axis-label', x: 2, y: [yKill, yObj, yTower][i] + 3 });
+        t.textContent = label;
+        svg.appendChild(t);
+      });
+      for (const ev of tl.events) {
+        const x = xScale(ev.ts);
+        let y, color, r = 3;
+        if (ev.type === 'KILL') {
+          y = yKill;
+          color = ev.team === 'blue' ? 'var(--color-win)' : 'var(--color-loss)';
+        } else if (ev.type === 'TOWER' || ev.type === 'INHIBITOR') {
+          y = yTower;
+          color = ev.team === 'blue' ? 'var(--color-win)' : 'var(--color-loss)';
+          r = ev.type === 'INHIBITOR' ? 5 : 3;
+        } else {
+          y = yObj;
+          color = ev.team === 'blue' ? 'var(--color-warning)' : 'var(--color-loss)';
+          if (ev.type === 'BARON' || ev.type === 'ELDER' || ev.type === 'ATAKHAN') r = 5;
+        }
+        svg.appendChild(svgEl('circle', { cx: x, cy: y, r: r, fill: color }));
+      }
+      canvas.appendChild(svg);
+    }
+  }
+})();
+</script>
+
+</body>
+</html>

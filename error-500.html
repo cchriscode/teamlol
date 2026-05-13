@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>일시적인 오류 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+</head>
+<body>
+
+<div data-slot="header" data-active=""></div>
+
+<main class="page page-narrow">
+  <div class="empty-state">
+    <div class="empty-state-num">500</div>
+    <h1 class="empty-state-title">일시적인 오류가 발생했습니다</h1>
+    <p class="empty-state-message">
+      서비스에 문제가 생겼습니다. 잠시 후 다시 시도해주세요. 문제가 계속되면 문의해주세요.
+    </p>
+
+    <div class="empty-state-actions">
+      <button class="primary" type="button" onclick="location.reload()">다시 시도</button>
+      <a href="mailto:contact@example.com"><button type="button">문의하기</button></a>
+    </div>
+  </div>
+</main>
+
+<div data-slot="footer"></div>
+
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hide on bush#KR1 — 라이브 게임 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+</head>
+<body>
+
+<div data-slot="header" data-active="search" data-search-placeholder="다른 소환사 검색..."></div>
+
+<main class="page page-narrow">
+
+  <div class="card profile-header">
+    <div class="profile-top">
+      <div class="profile-icon-wrap">
+        <img class="profile-icon-img" data-dd-profile-icon="6" alt="Hide on bush의 프로필 아이콘" width="80" height="80">
+        <div class="profile-level">409</div>
+      </div>
+      <div class="profile-info">
+        <div class="profile-name">Hide on bush <span class="tag">#KR1</span></div>
+        <div class="profile-meta">
+          <span class="tier-badge tier-challenger">Challenger 1,247 LP</span>
+          마지막 갱신: 1분 전
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="tabs" aria-label="소환사 페이지 탭">
+    <a class="tab" href="summoner.html">개요</a>
+    <a class="tab" href="summoner-champions.html">챔피언 통계</a>
+    <a class="tab active" href="live-game.html" aria-current="page">라이브 게임</a>
+    <a class="tab" href="summoner-seasons.html">시즌 기록</a>
+  </nav>
+
+  <div class="card">
+    <div class="empty-state">
+      <svg width="96" height="96" viewBox="0 0 96 96" fill="none"
+           stroke="currentColor" stroke-width="2.5"
+           style="color: var(--text-quaternary); margin: 0 auto var(--space-5); display: block;"
+           aria-hidden="true">
+        <circle cx="48" cy="48" r="36"/>
+        <line x1="22" y1="22" x2="74" y2="74" stroke-linecap="round"/>
+      </svg>
+
+      <h2 class="empty-state-title">현재 게임 중이 아닙니다</h2>
+      <p class="empty-state-message">
+        Hide on bush 님은 현재 League of Legends 게임을 플레이하고 있지 않습니다.
+        게임이 시작되면 자동으로 정보가 표시됩니다.
+      </p>
+
+      <p class="text-tertiary" style="font-size: 12px; margin-bottom: var(--space-5); font-feature-settings: var(--font-mono-features);">
+        마지막 게임: 2시간 전 ·
+        <a href="match-detail.html" class="text-secondary" style="text-decoration: underline;">매치 보기 →</a>
+      </p>
+
+      <div class="empty-state-actions">
+        <button class="primary" type="button">지금 갱신</button>
+        <a href="summoner.html" class="empty-state-link"
+           style="display: inline-flex; align-items: center; padding: 6px 14px; font-size: 12px;
+                  font-weight: 500; border: 1px solid var(--border-default); border-radius: var(--radius-md);">
+          개요로 돌아가기
+        </a>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div data-slot="footer"></div>
+
+</body>
+</html>

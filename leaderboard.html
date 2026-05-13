@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>랭킹 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+</head>
+<body>
+
+<div data-slot="header" data-active="leaderboard"></div>
+
+<main class="page">
+
+  <header class="tier-page-header">
+    <div>
+      <h1 class="page-title">랭킹 · KR</h1>
+      <div class="page-subtitle">2026년 5월 10일 14:32 KST 기준 · 매 10분 갱신</div>
+    </div>
+    <div class="patch-info">
+      시즌 <span class="patch-num">2026 S1</span>
+    </div>
+  </header>
+
+  <section class="cutoff-cards" aria-label="티어 진입 LP 컷오프">
+    <div class="card cutoff-card">
+      <div>
+        <div class="cutoff-card-tier tier-challenger">챌린저 진입</div>
+        <div class="cutoff-card-meta">상위 300명</div>
+      </div>
+      <div>
+        <div class="cutoff-card-lp">872 LP</div>
+      </div>
+    </div>
+    <div class="card cutoff-card">
+      <div>
+        <div class="cutoff-card-tier tier-grandmaster">그랜드마스터 진입</div>
+        <div class="cutoff-card-meta">상위 700명</div>
+      </div>
+      <div>
+        <div class="cutoff-card-lp">541 LP</div>
+      </div>
+    </div>
+    <div class="card cutoff-card">
+      <div>
+        <div class="cutoff-card-tier tier-master">마스터 진입</div>
+        <div class="cutoff-card-meta">상위 약 1.2%</div>
+      </div>
+      <div>
+        <div class="cutoff-card-lp">200 LP</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="filters" role="group" aria-label="랭킹 필터">
+    <div class="filter-row">
+      <span class="filter-label">큐</span>
+      <button class="filter-chip active" type="button" aria-pressed="true">솔로랭크</button>
+      <button class="filter-chip" type="button" aria-pressed="false">자유랭크</button>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">티어</span>
+      <button class="filter-chip active" type="button" aria-pressed="true">챌린저</button>
+      <button class="filter-chip" type="button" aria-pressed="false">그랜드마스터</button>
+      <button class="filter-chip" type="button" aria-pressed="false">마스터</button>
+      <span class="filter-meta">총 300명 · 1~15위</span>
+    </div>
+  </div>
+
+  <div class="data-table">
+
+    <div class="data-table-header leaderboard-grid">
+      <div>순위</div>
+      <div class="change-cell">변동</div>
+      <div>닉네임</div>
+      <div>티어</div>
+      <div class="text-right">LP</div>
+      <div class="text-right">승/패</div>
+      <div class="text-right winrate-col">승률</div>
+      <div class="text-right">자주 픽한 챔프</div>
+    </div>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="1위 Hide on bush 상세 보기">
+      <div class="rank-cell">1</div>
+      <div class="change-same change-cell" aria-label="변동 없음">━</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="6" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">Hide on bush <span class="text-tertiary">#KR1</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">Faker · T1</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-challenger">Challenger</span></div>
+      <div class="stat-cell primary">1,247</div>
+      <div class="stat-cell">412 / 358</div>
+      <div class="stat-cell primary winrate-col">53.5%</div>
+      <div class="top-champs" aria-label="자주 픽한 챔프">
+        <img class="champ-icon" data-dd-champion="Azir" alt="아지르" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Orianna" alt="오리아나" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Yone" alt="요네" width="22" height="22">
+      </div>
+    </a>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="2위 Chovy 상세 보기">
+      <div class="rank-cell">2</div>
+      <div class="change-up change-cell" aria-label="2계단 상승">▲ 2</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="29" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">Chovy <span class="text-tertiary">#KR1</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">Chovy · GenG</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-challenger">Challenger</span></div>
+      <div class="stat-cell primary">1,156</div>
+      <div class="stat-cell">385 / 312</div>
+      <div class="stat-cell primary winrate-col">55.2%</div>
+      <div class="top-champs">
+        <img class="champ-icon" data-dd-champion="Ahri" alt="아리" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Akali" alt="아칼리" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Syndra" alt="신드라" width="22" height="22">
+      </div>
+    </a>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="3위 Canyon 상세 보기">
+      <div class="rank-cell">3</div>
+      <div class="change-down change-cell" aria-label="1계단 하락">▼ 1</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="3768" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">Canyon <span class="text-tertiary">#KR1</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">Canyon · GenG</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-challenger">Challenger</span></div>
+      <div class="stat-cell primary">982</div>
+      <div class="stat-cell">301 / 245</div>
+      <div class="stat-cell primary winrate-col">55.1%</div>
+      <div class="top-champs">
+        <img class="champ-icon" data-dd-champion="Graves" alt="그레이브즈" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Vi" alt="바이" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Khazix" alt="카직스" width="22" height="22">
+      </div>
+    </a>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="4위 Zeus 상세 보기">
+      <div class="rank-cell">4</div>
+      <div class="change-up change-cell" aria-label="5계단 상승">▲ 5</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="4895" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">Zeus <span class="text-tertiary">#T1</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">Zeus · Hanwha</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-challenger">Challenger</span></div>
+      <div class="stat-cell primary">934</div>
+      <div class="stat-cell">288 / 240</div>
+      <div class="stat-cell primary winrate-col">54.5%</div>
+      <div class="top-champs">
+        <img class="champ-icon" data-dd-champion="Camille" alt="카밀" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Jax" alt="잭스" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Fiora" alt="피오라" width="22" height="22">
+      </div>
+    </a>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="5위 Keria 상세 보기">
+      <div class="rank-cell">5</div>
+      <div class="change-up change-cell" aria-label="1계단 상승">▲ 1</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="588" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">Keria <span class="text-tertiary">#T1</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">Keria · T1</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-challenger">Challenger</span></div>
+      <div class="stat-cell primary">896</div>
+      <div class="stat-cell">342 / 268</div>
+      <div class="stat-cell primary winrate-col">56.1%</div>
+      <div class="top-champs">
+        <img class="champ-icon" data-dd-champion="Renata" alt="레나타" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Thresh" alt="쓰레쉬" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Lulu" alt="룰루" width="22" height="22">
+      </div>
+    </a>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="6위 Gumayusi 상세 보기">
+      <div class="rank-cell">6</div>
+      <div class="change-down change-cell" aria-label="2계단 하락">▼ 2</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="911" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">Gumayusi <span class="text-tertiary">#T1</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">Gumayusi · T1</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-challenger">Challenger</span></div>
+      <div class="stat-cell primary">874</div>
+      <div class="stat-cell">298 / 254</div>
+      <div class="stat-cell primary winrate-col">54.0%</div>
+      <div class="top-champs">
+        <img class="champ-icon" data-dd-champion="Ezreal" alt="이즈리얼" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Jhin" alt="진" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Kaisa" alt="카이사" width="22" height="22">
+      </div>
+    </a>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="7위 Oner 상세 보기">
+      <div class="rank-cell">7</div>
+      <div class="change-same change-cell" aria-label="변동 없음">━</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="1471" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">Oner <span class="text-tertiary">#T1</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">Oner · T1</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-grandmaster">Grandmaster</span></div>
+      <div class="stat-cell primary">812</div>
+      <div class="stat-cell">276 / 232</div>
+      <div class="stat-cell primary winrate-col">54.3%</div>
+      <div class="top-champs">
+        <img class="champ-icon" data-dd-champion="LeeSin" alt="리신" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Viego" alt="비에고" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Sejuani" alt="세주아니" width="22" height="22">
+      </div>
+    </a>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="8위 Doran 상세 보기">
+      <div class="rank-cell">8</div>
+      <div class="change-up change-cell" aria-label="3계단 상승">▲ 3</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="2354" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">Doran <span class="text-tertiary">#KR1</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">Doran · BRO</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-grandmaster">Grandmaster</span></div>
+      <div class="stat-cell primary">764</div>
+      <div class="stat-cell">312 / 274</div>
+      <div class="stat-cell primary winrate-col">53.2%</div>
+      <div class="top-champs">
+        <img class="champ-icon" data-dd-champion="Gangplank" alt="갱플랭크" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Jayce" alt="제이스" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Irelia" alt="이렐리아" width="22" height="22">
+      </div>
+    </a>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="9위 Peyz 상세 보기">
+      <div class="rank-cell">9</div>
+      <div class="change-down change-cell" aria-label="4계단 하락">▼ 4</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="3782" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">Peyz <span class="text-tertiary">#KR2</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">Peyz · GenG</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-grandmaster">Grandmaster</span></div>
+      <div class="stat-cell primary">732</div>
+      <div class="stat-cell">258 / 224</div>
+      <div class="stat-cell primary winrate-col">53.5%</div>
+      <div class="top-champs">
+        <img class="champ-icon" data-dd-champion="Varus" alt="바루스" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Caitlyn" alt="케이틀린" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Zeri" alt="제리" width="22" height="22">
+      </div>
+    </a>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="10위 Lehends 상세 보기">
+      <div class="rank-cell">10</div>
+      <div class="change-up change-cell" aria-label="2계단 상승">▲ 2</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="745" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">Lehends <span class="text-tertiary">#KR1</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">Lehends · Hanwha</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-grandmaster">Grandmaster</span></div>
+      <div class="stat-cell primary">698</div>
+      <div class="stat-cell">241 / 207</div>
+      <div class="stat-cell primary winrate-col">53.8%</div>
+      <div class="top-champs">
+        <img class="champ-icon" data-dd-champion="Karma" alt="카르마" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Morgana" alt="모르가나" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Nautilus" alt="노틸러스" width="22" height="22">
+      </div>
+    </a>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="11위 데프트 상세 보기">
+      <div class="rank-cell">11</div>
+      <div class="change-same change-cell" aria-label="변동 없음">━</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="1632" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">데프트 <span class="text-tertiary">#KR1</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">Deft · Free Agent</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-grandmaster">Grandmaster</span></div>
+      <div class="stat-cell primary">662</div>
+      <div class="stat-cell">221 / 198</div>
+      <div class="stat-cell primary winrate-col">52.7%</div>
+      <div class="top-champs">
+        <img class="champ-icon" data-dd-champion="Jhin" alt="진" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Ezreal" alt="이즈리얼" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Varus" alt="바루스" width="22" height="22">
+      </div>
+    </a>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="12위 Bdd 상세 보기">
+      <div class="rank-cell">12</div>
+      <div class="change-up change-cell" aria-label="6계단 상승">▲ 6</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="3057" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">Bdd <span class="text-tertiary">#KR1</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">Bdd · Nongshim</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-grandmaster">Grandmaster</span></div>
+      <div class="stat-cell primary">621</div>
+      <div class="stat-cell">198 / 174</div>
+      <div class="stat-cell primary winrate-col">53.2%</div>
+      <div class="top-champs">
+        <img class="champ-icon" data-dd-champion="Orianna" alt="오리아나" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Azir" alt="아지르" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Veigar" alt="베이가" width="22" height="22">
+      </div>
+    </a>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="13위 Kingen 상세 보기">
+      <div class="rank-cell">13</div>
+      <div class="change-down change-cell" aria-label="3계단 하락">▼ 3</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="4368" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">Kingen <span class="text-tertiary">#KR1</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">Kingen · Dplus</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-grandmaster">Grandmaster</span></div>
+      <div class="stat-cell primary">587</div>
+      <div class="stat-cell">189 / 173</div>
+      <div class="stat-cell primary winrate-col">52.2%</div>
+      <div class="top-champs">
+        <img class="champ-icon" data-dd-champion="Sion" alt="사이온" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Malphite" alt="말파이트" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Olaf" alt="올라프" width="22" height="22">
+      </div>
+    </a>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="14위 ShowMaker 상세 보기">
+      <div class="rank-cell">14</div>
+      <div class="change-up change-cell" aria-label="1계단 상승">▲ 1</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="2092" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">ShowMaker <span class="text-tertiary">#KR1</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">ShowMaker · Dplus</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-grandmaster">Grandmaster</span></div>
+      <div class="stat-cell primary">562</div>
+      <div class="stat-cell">214 / 192</div>
+      <div class="stat-cell primary winrate-col">52.7%</div>
+      <div class="top-champs">
+        <img class="champ-icon" data-dd-champion="Akali" alt="아칼리" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Yone" alt="요네" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Anivia" alt="애니비아" width="22" height="22">
+      </div>
+    </a>
+
+    <a class="data-table-row leaderboard-grid leaderboard-row" href="summoner.html" aria-label="15위 Viper 상세 보기">
+      <div class="rank-cell">15</div>
+      <div class="change-down change-cell" aria-label="1계단 하락">▼ 1</div>
+      <div class="champ-cell">
+        <img class="profile-icon-img" data-dd-profile-icon="5263" alt="" width="32" height="32">
+        <div>
+          <div class="champ-cell-name">Viper <span class="text-tertiary">#KR1</span></div>
+          <div class="text-tertiary" style="font-size: 11px;">Viper · Hanwha</div>
+        </div>
+      </div>
+      <div><span class="tier-badge tier-grandmaster">Grandmaster</span></div>
+      <div class="stat-cell primary">541</div>
+      <div class="stat-cell">231 / 207</div>
+      <div class="stat-cell primary winrate-col">52.7%</div>
+      <div class="top-champs">
+        <img class="champ-icon" data-dd-champion="Kaisa" alt="카이사" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Caitlyn" alt="케이틀린" width="22" height="22">
+        <img class="champ-icon" data-dd-champion="Zeri" alt="제리" width="22" height="22">
+      </div>
+    </a>
+
+    <div class="table-footer">
+      300명 중 1~15위 표시
+      <nav class="pagination" aria-label="페이지">
+        <button class="page-btn active" type="button" aria-current="page">1</button>
+        <button class="page-btn" type="button">2</button>
+        <button class="page-btn" type="button">3</button>
+        <span class="page-btn" aria-hidden="true">…</span>
+        <button class="page-btn" type="button">20</button>
+        <button class="page-btn" type="button" aria-label="다음 페이지">›</button>
+      </nav>
+    </div>
+
+  </div>
+
+</main>
+
+<div data-slot="footer"></div>
+
+<script>
+(function () {
+  'use strict';
+  const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:')
+    ? 'http://localhost:3001' : '';
+
+  const params = new URL(location.href).searchParams;
+  const REGION = params.get('region') ?? 'kr';
+  const TIER   = params.get('tier')   ?? 'challenger';   // challenger | grandmaster | master
+  const QUEUE  = params.get('queue')  ?? 'RANKED_SOLO_5x5';
+
+  function tierKr(t) {
+    return ({ CHALLENGER:'챌린저', GRANDMASTER:'그랜드마스터', MASTER:'마스터' })[t] || t;
+  }
+  function tierClass(t) { return 'tier-' + (t || '').toLowerCase(); }
+
+  async function load() {
+    try {
+      const url = `${API_BASE}/api/leaderboard/${REGION}?queue=${encodeURIComponent(QUEUE)}&tier=${TIER}`;
+      const r = await fetch(url);
+      if (!r.ok) return false;
+      const data = await r.json();
+      if (!data.entries || data.entries.length === 0) return false;
+      render(data);
+      return true;
+    } catch (_e) { return false; }
+  }
+
+  function render(data) {
+    const table = document.querySelector('.data-table');
+    if (!table) return;
+    const header = table.querySelector('.data-table-header');
+    const footer = table.querySelector('.table-footer');
+    // Remove existing static rows
+    table.querySelectorAll('.data-table-row').forEach((el) => el.remove());
+
+    const tierBand = data.tier;
+    const region = (data.region || REGION).toUpperCase();
+    document.querySelector('.page-title').textContent = `${region} ${tierKr(tierBand)} 랭킹`;
+    document.querySelector('.page-subtitle').textContent =
+      `${new Date(data.generatedAt).toLocaleString('ko-KR')} 기준 · ${data.count.toLocaleString('ko-KR')}명 (LEAGUE-V4)`;
+
+    for (const e of data.entries.slice(0, 100)) {
+      const knownRiotId = e.gameName && e.tagLine;
+      const displayName = knownRiotId ? `${e.gameName}#${e.tagLine}` : `${e.puuid.slice(0, 8)}…`;
+      const row = document.createElement(knownRiotId ? 'a' : 'div');
+      row.className = 'data-table-row leaderboard-grid leaderboard-row';
+      if (knownRiotId) {
+        const nameAndTag = encodeURIComponent(`${e.gameName}#${e.tagLine}`);
+        row.href = `summoner.html?region=${REGION}&name=${encodeURIComponent(e.gameName)}&tag=${encodeURIComponent(e.tagLine)}`;
+        row.setAttribute('data-name-tag', nameAndTag);
+      } else {
+        row.title = '소환사 이름 미수집 (워커가 아직 못 찾음)';
+        row.style.cursor = 'default';
+        row.style.opacity = '0.6';
+      }
+      const tags = [];
+      if (e.hotStreak) tags.push('<span class="hot-streak-pill">연승</span>');
+      if (e.veteran) tags.push('베테랑');
+      if (e.freshBlood) tags.push('신규');
+      row.innerHTML = `
+        <div class="rank-cell">${e.rank}</div>
+        <div class="change-same change-cell">━</div>
+        <div class="champ-cell">
+          <img class="profile-icon-img" data-dd-profile-icon="29" alt="" width="32" height="32">
+          <div>
+            <div class="champ-cell-name">${escapeHtml(displayName)}</div>
+            <div class="text-tertiary" style="font-size: 11px; font-feature-settings: 'tnum' on;">${knownRiotId ? 'Riot ID' : 'PUUID'}</div>
+          </div>
+        </div>
+        <div><span class="tier-badge ${tierClass(e.tier)}">${tierKr(e.tier)} ${e.division || ''}</span></div>
+        <div class="stat-cell primary">${e.lp.toLocaleString('ko-KR')}</div>
+        <div class="stat-cell">${e.wins}W ${e.losses}L</div>
+        <div class="stat-cell winrate-col">${e.winrate}%</div>
+        <div class="stat-cell text-tertiary">${tags.join(' ')}</div>
+      `;
+      footer ? table.insertBefore(row, footer) : table.appendChild(row);
+    }
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(async () => {
+      const ok = await load();
+      if (!ok) {
+        const sub = document.querySelector('.page-subtitle');
+        if (sub) {
+          sub.innerHTML += ' · <span style="color: var(--color-warning);">(더미 데이터 — API 미연결)</span>';
+        }
+      }
+    }, 0);
+  });
+})();
+</script>
+
+</body>
+</html>

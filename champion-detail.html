@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>아지르 — 챔피언 상세 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+  <script src="pick-data.js" defer></script>
+  <script src="tier-engine.js" defer></script>
+</head>
+<body>
+
+<div data-slot="header" data-active="champions"></div>
+
+<main class="page">
+
+  <header class="champ-splash-header">
+    <img class="champ-splash-img" data-dd-splash="Azir" alt="" aria-hidden="true">
+    <div class="champ-splash-overlay"></div>
+    <div class="champ-splash-content">
+      <img class="champ-icon" data-dd-champion="Azir" alt="아지르" width="80" height="80">
+      <div class="champ-splash-text">
+        <h1 class="champ-splash-title">아지르 <span class="text-tertiary fw-medium" style="font-size: 14px;">샤스카르의 황제</span></h1>
+        <div class="champ-splash-subtitle" id="champ-subtitle">미드 · 마법사 · 패치 26.09</div>
+        <div class="champ-splash-stats" id="champ-stats">
+          <div><div class="champ-splash-stat-label">승률</div><div class="champ-splash-stat-value" id="stat-wr">—</div></div>
+          <div><div class="champ-splash-stat-label">픽률</div><div class="champ-splash-stat-value" id="stat-pr">—</div></div>
+          <div><div class="champ-splash-stat-label">밴율</div><div class="champ-splash-stat-value" id="stat-br">—</div></div>
+          <div><div class="champ-splash-stat-label">PS 스코어</div><div class="champ-splash-stat-value" id="stat-ps">—</div></div>
+          <div><div class="champ-splash-stat-label">티어</div><div class="champ-splash-stat-value" id="stat-letter">—</div></div>
+          <div><div class="champ-splash-stat-label">표본수</div><div class="champ-splash-stat-value" id="stat-n">—</div></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="filters" role="group" aria-label="챔피언 상세 필터">
+    <div class="filter-row" id="lane-filter-row">
+      <span class="filter-label">라인</span>
+      <button class="filter-chip" type="button" data-lane="top">탑</button>
+      <button class="filter-chip" type="button" data-lane="jungle">정글</button>
+      <button class="filter-chip active" type="button" data-lane="mid">미드</button>
+      <button class="filter-chip" type="button" data-lane="adc">원딜</button>
+      <button class="filter-chip" type="button" data-lane="support">서폿</button>
+    </div>
+    <div class="filter-row" id="bracket-filter-row">
+      <span class="filter-label">티어</span>
+      <button class="filter-chip" type="button" data-bracket="emerald+">에메랄드+</button>
+      <button class="filter-chip active" type="button" data-bracket="diamond+">다이아몬드+</button>
+      <button class="filter-chip" type="button" data-bracket="master+">마스터+</button>
+      <button class="filter-chip" type="button" data-bracket="gm+">그랜드마스터+</button>
+      <button class="filter-chip" type="button" data-bracket="challenger">챌린저</button>
+      <span class="filter-meta" id="filter-patch-meta">패치 — 기준</span>
+    </div>
+  </div>
+
+  <div class="champ-detail-grid">
+
+    <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+
+      <section class="card card-padded">
+        <div class="section-title">
+          <span>룬 빌드</span>
+          <span class="meta">픽률 1위 · 승률 51.42%</span>
+        </div>
+        <div class="rune-tree">
+          <div class="rune-tree-section">
+            <div class="rune-tree-title">메인 (마법)</div>
+            <div class="rune-tree-row">
+              <img class="rune-icon keystone" data-dd-rune-keystone="Sorcery/ArcaneComet/ArcaneComet" alt="신비로운 유성" width="36" height="36">
+              <div>
+                <div class="fw-medium">신비로운 유성</div>
+                <div class="text-tertiary" style="font-size: 11px;">키스톤</div>
+              </div>
+            </div>
+            <div class="rune-tree-row">
+              <img class="rune-icon" data-dd-rune-keystone="Sorcery/ManaflowBand/ManaflowBand" alt="마나순환 팔찌" width="28" height="28">
+              <span>마나순환 팔찌</span>
+            </div>
+            <div class="rune-tree-row">
+              <img class="rune-icon" data-dd-rune-keystone="Sorcery/Transcendence/Transcendence" alt="초월" width="28" height="28">
+              <span>초월</span>
+            </div>
+            <div class="rune-tree-row">
+              <img class="rune-icon" data-dd-rune-keystone="Sorcery/Scorch/Scorch" alt="기민함" width="28" height="28">
+              <span>기민함</span>
+            </div>
+          </div>
+          <div class="rune-tree-section">
+            <div class="rune-tree-title">보조 (영감)</div>
+            <div class="rune-tree-row">
+              <img class="rune-icon" data-dd-rune-keystone="Inspiration/BiscuitDelivery/BiscuitDelivery" alt="비스킷 배달" width="28" height="28">
+              <span>비스킷 배달</span>
+            </div>
+            <div class="rune-tree-row">
+              <img class="rune-icon" data-dd-rune-keystone="Inspiration/CosmicInsight/CosmicInsight" alt="우주적 통찰력" width="28" height="28">
+              <span>우주적 통찰력</span>
+            </div>
+            <div class="rune-tree-title" style="margin-top: var(--space-3);">스탯</div>
+            <div class="rune-tree-row">
+              <span class="text-tertiary" style="font-size: 12px;">적응형 +9 · 적응형 +9 · 마저 +6</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card card-padded">
+        <div class="section-title">
+          <span>룬코어 통계 <span class="tier-badge tier-master" style="margin-left: 6px;">차별화</span></span>
+          <span class="meta">룬+1코어 묶음</span>
+        </div>
+        <table class="scoreboard" style="margin-top: var(--space-2);">
+          <thead>
+            <tr>
+              <th>룬코어</th>
+              <th>승률</th>
+              <th>표본</th>
+              <th>픽률</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="player-cell">
+                  <img class="rune-icon keystone" data-dd-rune-keystone="Sorcery/ArcaneComet/ArcaneComet" alt="" width="24" height="24">
+                  <span style="margin: 0 4px; color: var(--text-quaternary);">+</span>
+                  <img class="item-icon" data-dd-item="6655" alt="" width="24" height="24">
+                  <span>유성 + 루덴의 동반자</span>
+                </div>
+              </td>
+              <td class="text-positive fw-semibold">53.8%</td>
+              <td>3,142</td>
+              <td>42.5%</td>
+            </tr>
+            <tr>
+              <td>
+                <div class="player-cell">
+                  <img class="rune-icon keystone" data-dd-rune-keystone="Sorcery/ArcaneComet/ArcaneComet" alt="" width="24" height="24">
+                  <span style="margin: 0 4px; color: var(--text-quaternary);">+</span>
+                  <img class="item-icon" data-dd-item="3152" alt="" width="24" height="24">
+                  <span>유성 + 헥스테크 로켓벨트</span>
+                </div>
+              </td>
+              <td class="fw-semibold">51.2%</td>
+              <td>1,820</td>
+              <td>24.6%</td>
+            </tr>
+            <tr>
+              <td>
+                <div class="player-cell">
+                  <img class="rune-icon keystone" data-dd-rune-keystone="Sorcery/PhaseRush/PhaseRush" alt="" width="24" height="24">
+                  <span style="margin: 0 4px; color: var(--text-quaternary);">+</span>
+                  <img class="item-icon" data-dd-item="6655" alt="" width="24" height="24">
+                  <span>난입 + 루덴의 동반자</span>
+                </div>
+              </td>
+              <td class="text-loss fw-semibold">48.4%</td>
+              <td>892</td>
+              <td>12.1%</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card card-padded">
+        <div class="section-title">
+          <span>아이템 빌드</span>
+          <span class="meta">픽률 순</span>
+        </div>
+
+        <div class="build-step-row">
+          <span class="build-step-label">시작</span>
+          <div class="build-step-options">
+            <div class="build-step-option">
+              <img class="item-icon" data-dd-item="1056" alt="도란의 반지" width="32" height="32">
+              <span class="build-step-option-label">82%</span>
+            </div>
+            <span class="build-step-or">OR</span>
+            <div class="build-step-option">
+              <img class="item-icon" data-dd-item="1052" alt="증폭의 고서" width="32" height="32">
+              <span class="build-step-option-label">14%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="build-step-row">
+          <span class="build-step-label">신발</span>
+          <div class="build-step-options">
+            <div class="build-step-option">
+              <img class="item-icon" data-dd-item="3020" alt="명석함의 아이오니아 장화" width="32" height="32">
+              <span class="build-step-option-label">68%</span>
+            </div>
+            <span class="build-step-or">OR</span>
+            <div class="build-step-option">
+              <img class="item-icon" data-dd-item="3158" alt="기동력의 장화" width="32" height="32">
+              <span class="build-step-option-label">22%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="build-step-row">
+          <span class="build-step-label">1코어</span>
+          <div class="build-step-options">
+            <div class="build-step-option">
+              <img class="item-icon" data-dd-item="6655" alt="루덴의 동반자" width="32" height="32">
+              <span class="build-step-option-label">66.5% · 53.8%</span>
+            </div>
+            <span class="build-step-arrow">→</span>
+            <div class="build-step-option">
+              <img class="item-icon" data-dd-item="3152" alt="헥스테크 로켓벨트" width="32" height="32">
+              <span class="build-step-option-label">21.4% · 51.2%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="build-step-row">
+          <span class="build-step-label">2코어</span>
+          <div class="build-step-options">
+            <div class="build-step-option">
+              <img class="item-icon" data-dd-item="3157" alt="존야의 모래시계" width="32" height="32">
+              <span class="build-step-option-label">71.2%</span>
+            </div>
+            <div class="build-step-option">
+              <img class="item-icon" data-dd-item="3089" alt="라바돈의 죽음모자" width="32" height="32">
+              <span class="build-step-option-label">18.5%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="build-step-row">
+          <span class="build-step-label">3코어</span>
+          <div class="build-step-options">
+            <div class="build-step-option">
+              <img class="item-icon" data-dd-item="3089" alt="라바돈의 죽음모자" width="32" height="32">
+              <span class="build-step-option-label">52.7%</span>
+            </div>
+            <div class="build-step-option">
+              <img class="item-icon" data-dd-item="3135" alt="공허의 지팡이" width="32" height="32">
+              <span class="build-step-option-label">28.4%</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--border-subtle);">
+          <div class="text-tertiary uppercase" style="font-size: 11px; margin-bottom: var(--space-2);">최종 6템 빌드 TOP 3</div>
+          <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+            <div style="display: flex; align-items: center; gap: var(--space-3);">
+              <div class="match-items">
+                <img class="item-icon" data-dd-item="3020" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="6655" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3157" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3089" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3135" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3116" alt="" width="22" height="22">
+              </div>
+              <span class="text-positive fw-semibold">54.2%</span>
+              <span class="text-tertiary" style="font-size: 11px;">2,184판</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-3);">
+              <div class="match-items">
+                <img class="item-icon" data-dd-item="3020" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="6655" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3157" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3089" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3135" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3165" alt="" width="22" height="22">
+              </div>
+              <span class="fw-semibold">51.8%</span>
+              <span class="text-tertiary" style="font-size: 11px;">1,420판</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-3);">
+              <div class="match-items">
+                <img class="item-icon" data-dd-item="3020" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3152" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3157" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3089" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3135" alt="" width="22" height="22">
+                <img class="item-icon" data-dd-item="3116" alt="" width="22" height="22">
+              </div>
+              <span class="fw-semibold">50.4%</span>
+              <span class="text-tertiary" style="font-size: 11px;">982판</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card card-padded">
+        <div class="section-title">
+          <span>스킬 빌드</span>
+          <span class="meta">Q › E › W</span>
+        </div>
+        <div class="skill-grid" role="img" aria-label="스킬 마스터 순서">
+          <div class="skill-grid-cell label">Q</div>
+          <div class="skill-grid-cell active q">1</div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell active q">3</div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell active q">5</div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell active q">7</div>
+          <div class="skill-grid-cell active q">9</div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+
+          <div class="skill-grid-cell label">W</div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell active w">4</div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell active w">11</div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell active w">13</div>
+          <div class="skill-grid-cell active w">14</div>
+          <div class="skill-grid-cell active w">15</div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+
+          <div class="skill-grid-cell label">E</div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell active e">2</div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell active e">16</div>
+          <div class="skill-grid-cell active e">17</div>
+          <div class="skill-grid-cell active e">18</div>
+          <div class="skill-grid-cell"></div>
+
+          <div class="skill-grid-cell label">R</div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell active r">6</div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell active r">12</div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+          <div class="skill-grid-cell"></div>
+        </div>
+      </section>
+
+      <section class="card card-padded">
+        <div class="section-title">
+          <span>소환사 주문</span>
+          <span class="meta">픽률 순</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+          <div style="display: flex; align-items: center; gap: var(--space-3);">
+            <img class="spell-icon" data-dd-spell="SummonerFlash" alt="점멸" width="28" height="28">
+            <span style="color: var(--text-quaternary);">+</span>
+            <img class="spell-icon" data-dd-spell="SummonerDot" alt="점화" width="28" height="28">
+            <div style="flex: 1; font-size: 12px;">점멸 + 점화</div>
+            <span class="text-positive fw-semibold">52.4%</span>
+            <span class="text-tertiary" style="font-size: 11px; min-width: 60px; text-align: right;">68%</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: var(--space-3);">
+            <img class="spell-icon" data-dd-spell="SummonerFlash" alt="점멸" width="28" height="28">
+            <span style="color: var(--text-quaternary);">+</span>
+            <img class="spell-icon" data-dd-spell="SummonerTeleport" alt="순간이동" width="28" height="28">
+            <div style="flex: 1; font-size: 12px;">점멸 + 순간이동</div>
+            <span class="fw-semibold">49.8%</span>
+            <span class="text-tertiary" style="font-size: 11px; min-width: 60px; text-align: right;">22%</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: var(--space-3);">
+            <img class="spell-icon" data-dd-spell="SummonerFlash" alt="점멸" width="28" height="28">
+            <span style="color: var(--text-quaternary);">+</span>
+            <img class="spell-icon" data-dd-spell="SummonerBarrier" alt="방어막" width="28" height="28">
+            <div style="flex: 1; font-size: 12px;">점멸 + 방어막</div>
+            <span class="fw-semibold">50.1%</span>
+            <span class="text-tertiary" style="font-size: 11px; min-width: 60px; text-align: right;">8%</span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <aside style="display: flex; flex-direction: column; gap: var(--space-4);">
+
+      <section class="card">
+        <div class="section-title">상대하기 어려운</div>
+        <a class="counter-row" href="champion-detail.html">
+          <img class="champ-icon" data-dd-champion="Yasuo" alt="야스오" width="28" height="28">
+          <div class="counter-info">
+            <div class="name">야스오</div>
+            <div class="meta">428경기</div>
+          </div>
+          <span class="counter-wr bad">42.8%</span>
+        </a>
+        <a class="counter-row" href="champion-detail.html">
+          <img class="champ-icon" data-dd-champion="Sylas" alt="사일러스" width="28" height="28">
+          <div class="counter-info">
+            <div class="name">사일러스</div>
+            <div class="meta">812경기</div>
+          </div>
+          <span class="counter-wr bad">44.2%</span>
+        </a>
+        <a class="counter-row" href="champion-detail.html">
+          <img class="champ-icon" data-dd-champion="Zed" alt="제드" width="28" height="28">
+          <div class="counter-info">
+            <div class="name">제드</div>
+            <div class="meta">521경기</div>
+          </div>
+          <span class="counter-wr bad">45.1%</span>
+        </a>
+        <a class="counter-row" href="champion-detail.html">
+          <img class="champ-icon" data-dd-champion="Akali" alt="아칼리" width="28" height="28">
+          <div class="counter-info">
+            <div class="name">아칼리</div>
+            <div class="meta">388경기</div>
+          </div>
+          <span class="counter-wr bad">46.4%</span>
+        </a>
+        <a class="counter-row" href="champion-detail.html">
+          <img class="champ-icon" data-dd-champion="Fizz" alt="피즈" width="28" height="28">
+          <div class="counter-info">
+            <div class="name">피즈</div>
+            <div class="meta">214경기</div>
+          </div>
+          <span class="counter-wr bad">46.7%</span>
+        </a>
+      </section>
+
+      <section class="card">
+        <div class="section-title">상대하기 쉬운</div>
+        <a class="counter-row" href="champion-detail.html">
+          <img class="champ-icon" data-dd-champion="Veigar" alt="베이가" width="28" height="28">
+          <div class="counter-info">
+            <div class="name">베이가</div>
+            <div class="meta">340경기</div>
+          </div>
+          <span class="counter-wr good">58.2%</span>
+        </a>
+        <a class="counter-row" href="champion-detail.html">
+          <img class="champ-icon" data-dd-champion="Kassadin" alt="카사딘" width="28" height="28">
+          <div class="counter-info">
+            <div class="name">카사딘</div>
+            <div class="meta">428경기</div>
+          </div>
+          <span class="counter-wr good">56.8%</span>
+        </a>
+        <a class="counter-row" href="champion-detail.html">
+          <img class="champ-icon" data-dd-champion="Anivia" alt="애니비아" width="28" height="28">
+          <div class="counter-info">
+            <div class="name">애니비아</div>
+            <div class="meta">241경기</div>
+          </div>
+          <span class="counter-wr good">55.1%</span>
+        </a>
+        <a class="counter-row" href="champion-detail.html">
+          <img class="champ-icon" data-dd-champion="Galio" alt="갈리오" width="28" height="28">
+          <div class="counter-info">
+            <div class="name">갈리오</div>
+            <div class="meta">182경기</div>
+          </div>
+          <span class="counter-wr good">54.4%</span>
+        </a>
+      </section>
+
+      <section class="card">
+        <div class="section-title">시너지 챔프 <span class="text-tertiary fw-medium" style="font-size: 11px;">같은 팀</span></div>
+        <a class="counter-row" href="champion-detail.html">
+          <img class="champ-icon" data-dd-champion="Renata" alt="레나타" width="28" height="28">
+          <div class="counter-info">
+            <div class="name">레나타</div>
+            <div class="meta">서폿 · 184경기</div>
+          </div>
+          <span class="counter-wr good">57.6%</span>
+        </a>
+        <a class="counter-row" href="champion-detail.html">
+          <img class="champ-icon" data-dd-champion="Ornn" alt="오른" width="28" height="28">
+          <div class="counter-info">
+            <div class="name">오른</div>
+            <div class="meta">탑 · 220경기</div>
+          </div>
+          <span class="counter-wr good">55.0%</span>
+        </a>
+        <a class="counter-row" href="champion-detail.html">
+          <img class="champ-icon" data-dd-champion="Maokai" alt="마오카이" width="28" height="28">
+          <div class="counter-info">
+            <div class="name">마오카이</div>
+            <div class="meta">정글 · 412경기</div>
+          </div>
+          <span class="counter-wr good">53.8%</span>
+        </a>
+      </section>
+
+      <section class="card">
+        <div class="section-title">패치 26.09 변경사항</div>
+        <ul style="font-size: 12px; color: var(--text-secondary); line-height: 1.7; padding-left: var(--space-4); margin-top: var(--space-2);">
+          <li>Q 마나 소모 12 감소 (8/9/10/11/12 → 6/7/8/9/10)</li>
+          <li>R 재사용 대기시간 10초 감소 (120/100/80 → 110/90/70)</li>
+          <li>패시브 부활 시간 1초 감소</li>
+        </ul>
+        <a href="#" class="text-tertiary" style="font-size: 11px; margin-top: var(--space-3); display: block;">패치 노트 전문 →</a>
+      </section>
+
+      <section class="card">
+        <div class="section-title">장인 빌드</div>
+        <a class="friend-row" href="summoner.html">
+          <img class="friend-avatar profile-icon-img" data-dd-profile-icon="6" alt="" width="24" height="24">
+          <span class="friend-name">Hide on bush</span>
+          <span class="friend-stats">580판 · 75%</span>
+        </a>
+        <a class="friend-row" href="summoner.html">
+          <img class="friend-avatar profile-icon-img" data-dd-profile-icon="3768" alt="" width="24" height="24">
+          <span class="friend-name">AzirGod</span>
+          <span class="friend-stats">412판 · 62%</span>
+        </a>
+        <a class="friend-row" href="summoner.html">
+          <img class="friend-avatar profile-icon-img" data-dd-profile-icon="29" alt="" width="24" height="24">
+          <span class="friend-name">DesertEmperor</span>
+          <span class="friend-stats">298판 · 58%</span>
+        </a>
+      </section>
+
+    </aside>
+
+  </div>
+
+</main>
+
+<div data-slot="footer"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const API_BASE = (window.AppConfig && window.AppConfig.API_BASE) || '';
+  const LANES_KR = (window.I18n && window.I18n.LANE_KR) || { top: '탑', jungle: '정글', mid: '미드', adc: '원딜', support: '서폿' };
+
+  // URL params: ?key=Aatrox&lane=top&bracket=diamond+
+  const params = new URL(location.href).searchParams;
+  const state = {
+    key: params.get('key') || 'Azir',
+    lane: params.get('lane') || 'mid',
+    bracket: params.get('bracket') || 'diamond+',
+  };
+
+  let ddIdToKey = null, ddKeyToId = null, ddKeyToName = null;
+
+  async function ensureDdragon() {
+    if (ddIdToKey) return;
+    const meta = window.DDragon && (await window.DDragon.meta());
+    if (!meta) return;
+    ddIdToKey = meta.championIdToKey || {};
+    ddKeyToName = meta.championKeyToName || {};
+    ddKeyToId = {};
+    for (const id in ddIdToKey) ddKeyToId[ddIdToKey[id]] = id;
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  function setSelected(rowId, dataAttr, value) {
+    document.querySelectorAll(`#${rowId} .filter-chip`).forEach((c) => {
+      c.classList.toggle('active', c.dataset[dataAttr] === value);
+    });
+  }
+
+  function setHeaderForKey(key) {
+    const splash = document.querySelector('.champ-splash-img');
+    if (splash) splash.setAttribute('data-dd-splash', key);
+    const icon = document.querySelector('.champ-splash-content > .champ-icon');
+    if (icon) icon.setAttribute('data-dd-champion', key);
+    const title = document.querySelector('.champ-splash-title');
+    const nameKr = ddKeyToName?.[key] ?? key;
+    if (title) title.firstChild && (title.firstChild.textContent = nameKr + ' ');
+    document.title = `${nameKr} — 챔피언 상세 — LoL Tracker`;
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  // ---- Skeleton management ---------------------------------------------
+  const SKELETON_LABEL = '...';
+  function showSkeleton() {
+    ['stat-wr','stat-pr','stat-br','stat-ps','stat-n'].forEach((id) => {
+      const el = document.getElementById(id); if (el) el.textContent = SKELETON_LABEL;
+    });
+    document.getElementById('stat-letter').innerHTML = `<span class="text-tertiary">${SKELETON_LABEL}</span>`;
+    document.getElementById('champ-subtitle').textContent = '로딩 중...';
+  }
+
+  // ---- API fetch with race protection ---------------------------------
+  let inFlight = null;
+
+  async function fetchDetail() {
+    if (inFlight) inFlight.abort();
+    const ctl = new AbortController();
+    inFlight = ctl;
+
+    const championId = ddKeyToId?.[state.key];
+    if (!championId) return null;
+    const url = `${API_BASE}/api/champions/${championId}/detail?lane=${encodeURIComponent(state.lane)}&bracket=${encodeURIComponent(state.bracket)}`;
+    let r;
+    try {
+      r = await fetch(url, { signal: ctl.signal });
+    } catch (e) {
+      if (e && e.name === 'AbortError') return null;
+      return null;
+    }
+    if (ctl !== inFlight) return null;
+    if (!r.ok) return null;
+    const data = await r.json();
+    if (!data.tier || data.tier.length === 0) return null;
+    return data;
+  }
+
+  function renderHeader(api) {
+    const myLane = api.tier.find((t) => t.lane === state.lane) ?? api.tier[0];
+    if (!myLane) return;
+    const wrEl = document.getElementById('stat-wr');
+    if (wrEl) {
+      wrEl.textContent = myLane.wr.toFixed(2) + '%';
+      wrEl.classList.toggle('text-positive', myLane.wr >= 51);
+      wrEl.classList.toggle('text-loss', myLane.wr <= 49);
+    }
+    document.getElementById('stat-pr').textContent = myLane.pickrate.toFixed(2) + '%';
+    document.getElementById('stat-br').textContent = myLane.banrate.toFixed(2) + '%';
+    document.getElementById('stat-n').textContent = (myLane.n ?? 0).toLocaleString('ko-KR');
+
+    if (window.TierEngine && window.PickData) {
+      const stats = { wr: myLane.wr, pickrate: myLane.pickrate, banrate: myLane.banrate, n: myLane.n };
+      const tierAvg = (window.PickData.TIER_AVG_WR && window.PickData.TIER_AVG_WR[state.lane]) || 50;
+      const ps = window.TierEngine.computePS(stats, tierAvg);
+      if (ps) {
+        document.getElementById('stat-ps').textContent = ps.score.toFixed(2);
+        document.getElementById('stat-letter').innerHTML =
+          `<span class="tier-badge ${ps.letterClass}" style="padding:2px 10px;font-weight:700;">${ps.letter}</span>`;
+      }
+    }
+
+    document.getElementById('champ-subtitle').textContent =
+      `${LANES_KR[myLane.lane] ?? myLane.lane} · ${state.bracket} · 패치 ${api.patch} · 표본 ${(myLane.n ?? 0).toLocaleString('ko-KR')}경기`;
+    const meta = document.getElementById('filter-patch-meta');
+    if (meta) meta.textContent = `패치 ${api.patch} · ${api.tier.reduce((s, t) => s + (t.n ?? 0), 0).toLocaleString('ko-KR')}경기`;
+  }
+
+  function findCard(keyword) {
+    let found = null;
+    document.querySelectorAll('aside.card, .champ-detail-grid aside .card').forEach((c) => {
+      const t = c.querySelector('.section-title')?.textContent?.trim() ?? '';
+      if (!found && t.includes(keyword)) found = c;
+    });
+    return found;
+  }
+
+  function renderMatchupList(card, rows) {
+    if (!card) return;
+    const title = card.querySelector('.section-title');
+    card.innerHTML = '';
+    if (title) card.appendChild(title);
+    if (!rows.length) {
+      card.appendChild(Object.assign(document.createElement('div'), {
+        className: 'text-tertiary', style: 'font-size:12px;padding:12px;', textContent: '표본 부족',
+      }));
+      return;
+    }
+    for (const r of rows) {
+      const wrCls = r.wr < 48 ? 'bad' : r.wr > 52 ? 'good' : '';
+      const a = document.createElement('a');
+      a.className = 'counter-row';
+      a.href = r.opponentKey ? `champion-detail.html?key=${r.opponentKey}&lane=${state.lane}&bracket=${encodeURIComponent(state.bracket)}` : '#';
+      const name = r.opponentNameKr || r.opponentKey || `champ#${r.opponentId}`;
+      a.innerHTML = `
+        <img class="champ-icon" ${r.opponentKey ? `data-dd-champion="${escapeHtml(r.opponentKey)}"` : ''} alt="${escapeHtml(name)}" width="28" height="28">
+        <div class="counter-info">
+          <div class="name">${escapeHtml(name)}</div>
+          <div class="meta">${r.games.toLocaleString('ko-KR')}경기</div>
+        </div>
+        <span class="counter-wr ${wrCls}">${r.wr.toFixed(1)}%</span>
+      `;
+      card.appendChild(a);
+    }
+  }
+
+  function renderSynergyList(card, rows) {
+    if (!card) return;
+    const title = card.querySelector('.section-title');
+    card.innerHTML = '';
+    if (title) card.appendChild(title);
+    if (!rows.length) {
+      card.appendChild(Object.assign(document.createElement('div'), {
+        className: 'text-tertiary', style: 'font-size:12px;padding:12px;', textContent: '표본 부족',
+      }));
+      return;
+    }
+    for (const r of rows) {
+      const cls = r.synergyDelta > 1 ? 'good' : r.synergyDelta < -1 ? 'bad' : '';
+      const sign = r.synergyDelta >= 0 ? '+' : '';
+      const a = document.createElement('a');
+      a.className = 'counter-row';
+      a.href = r.partnerKey ? `champion-detail.html?key=${r.partnerKey}&bracket=${encodeURIComponent(state.bracket)}` : '#';
+      const name = r.partnerNameKr || r.partnerKey || `champ#${r.partnerId}`;
+      a.innerHTML = `
+        <img class="champ-icon" ${r.partnerKey ? `data-dd-champion="${escapeHtml(r.partnerKey)}"` : ''} alt="${escapeHtml(name)}" width="28" height="28">
+        <div class="counter-info">
+          <div class="name">${escapeHtml(name)}</div>
+          <div class="meta">페어 ${r.pairWr.toFixed(1)}% · ${r.games.toLocaleString('ko-KR')}경기</div>
+        </div>
+        <span class="counter-wr ${cls}">${sign}${r.synergyDelta.toFixed(1)}%p</span>
+      `;
+      card.appendChild(a);
+    }
+  }
+
+  function renderBotDuoList(card, rows) {
+    if (!card) return;
+    const title = card.querySelector('.section-title');
+    card.innerHTML = '';
+    if (title) card.appendChild(title);
+    if (!rows.length) {
+      card.appendChild(Object.assign(document.createElement('div'), {
+        className: 'text-tertiary', style: 'font-size:12px;padding:12px;', textContent: '표본 부족',
+      }));
+      return;
+    }
+    for (const r of rows) {
+      const cls = r.synergyDelta > 1 ? 'good' : r.synergyDelta < -1 ? 'bad' : '';
+      const sign = r.synergyDelta >= 0 ? '+' : '';
+      const adcName = r.adcNameKr || r.adcKey || `#${r.adcId}`;
+      const supName = r.supNameKr || r.supKey || `#${r.supId}`;
+      const div = document.createElement('div');
+      div.className = 'counter-row';
+      div.innerHTML = `
+        <img class="champ-icon" ${r.adcKey ? `data-dd-champion="${escapeHtml(r.adcKey)}"` : ''} alt="" width="22" height="22">
+        <img class="champ-icon" ${r.supKey ? `data-dd-champion="${escapeHtml(r.supKey)}"` : ''} alt="" width="22" height="22" style="margin-left:-6px;">
+        <div class="counter-info">
+          <div class="name">${escapeHtml(adcName)} + ${escapeHtml(supName)}</div>
+          <div class="meta">페어 ${r.pairWr.toFixed(1)}% · ${r.games.toLocaleString('ko-KR')}경기</div>
+        </div>
+        <span class="counter-wr ${cls}">${sign}${r.synergyDelta.toFixed(1)}%p</span>
+      `;
+      card.appendChild(div);
+    }
+  }
+
+  async function refresh() {
+    showSkeleton();
+    setSelected('lane-filter-row', 'lane', state.lane);
+    setSelected('bracket-filter-row', 'bracket', state.bracket);
+    const api = await fetchDetail();
+    if (!api) {
+      document.getElementById('champ-subtitle').textContent = '데이터 없음 (표본 부족 또는 미수집)';
+      ['stat-wr','stat-pr','stat-br','stat-ps','stat-n'].forEach((id) => {
+        const el = document.getElementById(id); if (el) el.textContent = '—';
+      });
+      document.getElementById('stat-letter').innerHTML = '<span class="text-tertiary">—</span>';
+      return;
+    }
+    renderHeader(api);
+    renderMatchupList(findCard('상대하기 어려운'), api.worstMatchups || []);
+    renderMatchupList(findCard('상대하기 쉬운'),  api.bestMatchups || []);
+    renderSynergyList(findCard('시너지'), api.synergies || []);
+    renderBotDuoList(findCard('듀오'), api.botDuos || []);
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  function wireChips() {
+    document.querySelectorAll('#lane-filter-row .filter-chip').forEach((c) => {
+      c.addEventListener('click', () => {
+        if (c.dataset.lane === state.lane) return;
+        state.lane = c.dataset.lane;
+        // Update URL without reload (deep-linkable)
+        const u = new URL(location.href);
+        u.searchParams.set('lane', state.lane);
+        history.replaceState(null, '', u.toString());
+        refresh();
+      });
+    });
+    document.querySelectorAll('#bracket-filter-row .filter-chip').forEach((c) => {
+      c.addEventListener('click', () => {
+        if (c.dataset.bracket === state.bracket) return;
+        state.bracket = c.dataset.bracket;
+        const u = new URL(location.href);
+        u.searchParams.set('bracket', state.bracket);
+        history.replaceState(null, '', u.toString());
+        refresh();
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    await ensureDdragon();
+    setHeaderForKey(state.key);
+    wireChips();
+    refresh();
+  });
+})();
+</script>
+
+</body>
+</html>

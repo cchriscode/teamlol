@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>홈 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+</head>
+<body>
+
+<div data-slot="header" data-active="search" data-show-search="false"></div>
+
+<section class="hero">
+  <div class="hero-meta">PATCH 26.09 · KR</div>
+  <h1 class="hero-title">소환사명을 검색하세요</h1>
+  <form class="hero-search" data-component="hero-search" role="search">
+    <label class="sr-only" for="hero-input">소환사 검색</label>
+    <input id="hero-input" type="text" placeholder="이름#KR1" autocomplete="off">
+    <button class="primary" type="submit">검색</button>
+
+    <div class="autocomplete" id="hero-autocomplete" hidden>
+      <div class="autocomplete-section" id="autocomplete-recent" hidden>
+        <div class="autocomplete-label">최근 검색</div>
+        <div class="autocomplete-recent-list"></div>
+      </div>
+      <div class="autocomplete-section" id="autocomplete-popular" hidden>
+        <div class="autocomplete-label">인기 검색</div>
+        <div class="autocomplete-popular-list"></div>
+      </div>
+      <div class="autocomplete-empty" id="autocomplete-empty" style="padding: 16px; color: var(--text-tertiary); font-size: 12px;">
+        최근 검색 기록이 없습니다
+      </div>
+    </div>
+  </form>
+  <div class="hero-hint">예시: Hide on bush#KR1 · Chovy#KR1</div>
+</section>
+
+<div class="home-grid">
+
+  <div class="card">
+    <div class="section-title">
+      <span>실시간 인기 검색</span>
+      <span class="meta">최근 1시간</span>
+    </div>
+    <div>
+      <a class="ranking-item" href="summoner.html">
+        <div><span class="rank-num top">1</span><span class="fw-medium">Hide on bush</span> <span class="text-tertiary">#KR1</span></div>
+        <span class="text-tertiary">1,247</span>
+      </a>
+      <a class="ranking-item" href="summoner.html">
+        <div><span class="rank-num top">2</span><span class="fw-medium">Chovy</span> <span class="text-tertiary">#KR1</span></div>
+        <span class="text-tertiary">982</span>
+      </a>
+      <a class="ranking-item" href="summoner.html">
+        <div><span class="rank-num top">3</span><span class="fw-medium">Zeus</span> <span class="text-tertiary">#T1</span></div>
+        <span class="text-tertiary">874</span>
+      </a>
+      <a class="ranking-item" href="summoner.html">
+        <div><span class="rank-num">4</span><span class="fw-medium">Gumayusi</span> <span class="text-tertiary">#T1</span></div>
+        <span class="text-tertiary">623</span>
+      </a>
+      <a class="ranking-item" href="summoner.html">
+        <div><span class="rank-num">5</span><span class="fw-medium">Keria</span> <span class="text-tertiary">#T1</span></div>
+        <span class="text-tertiary">541</span>
+      </a>
+      <a class="ranking-item" href="summoner.html">
+        <div><span class="rank-num">6</span><span class="fw-medium">Kiin</span> <span class="text-tertiary">#GenG</span></div>
+        <span class="text-tertiary">498</span>
+      </a>
+      <a class="ranking-item" href="summoner.html">
+        <div><span class="rank-num">7</span><span class="fw-medium">Canyon</span> <span class="text-tertiary">#DK</span></div>
+        <span class="text-tertiary">421</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">
+      <span>이번 패치 떡상 챔프</span>
+      <span class="meta">26.09 · 다이아+</span>
+    </div>
+    <div>
+      <a class="meta-champ" href="champion-detail.html">
+        <div class="meta-champ-info">
+          <img class="champ-icon" data-dd-champion="Gangplank" alt="갱플랭크" width="36" height="36">
+          <div>
+            <div class="fw-medium">갱플랭크</div>
+            <div class="text-tertiary" style="font-size: 11px;">탑</div>
+          </div>
+        </div>
+        <div class="meta-champ-stats">
+          <div class="winrate">52.88%</div>
+          <div class="delta">+2.3%p</div>
+        </div>
+      </a>
+      <a class="meta-champ" href="champion-detail.html">
+        <div class="meta-champ-info">
+          <img class="champ-icon" data-dd-champion="Malphite" alt="말파이트" width="36" height="36">
+          <div>
+            <div class="fw-medium">말파이트</div>
+            <div class="text-tertiary" style="font-size: 11px;">탑</div>
+          </div>
+        </div>
+        <div class="meta-champ-stats">
+          <div class="winrate">51.15%</div>
+          <div class="delta">+1.8%p</div>
+        </div>
+      </a>
+      <a class="meta-champ" href="champion-detail.html">
+        <div class="meta-champ-info">
+          <img class="champ-icon" data-dd-champion="Irelia" alt="이렐리아" width="36" height="36">
+          <div>
+            <div class="fw-medium">이렐리아</div>
+            <div class="text-tertiary" style="font-size: 11px;">탑</div>
+          </div>
+        </div>
+        <div class="meta-champ-stats">
+          <div class="winrate">50.94%</div>
+          <div class="delta">+1.2%p</div>
+        </div>
+      </a>
+      <a class="meta-champ" href="champion-detail.html">
+        <div class="meta-champ-info">
+          <img class="champ-icon" data-dd-champion="Anivia" alt="애니비아" width="36" height="36">
+          <div>
+            <div class="fw-medium">애니비아</div>
+            <div class="text-tertiary" style="font-size: 11px;">미드</div>
+          </div>
+        </div>
+        <div class="meta-champ-stats">
+          <div class="winrate">52.76%</div>
+          <div class="delta">+1.1%p</div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <div class="card pros-grid">
+    <div class="section-title">
+      <span>프로/스트리머 바로가기</span>
+      <a href="leaderboard.html" class="meta">전체 보기 →</a>
+    </div>
+    <div class="pros-row">
+      <a class="pro-card" href="summoner.html">
+        <img class="pro-avatar" data-dd-profile-icon="6" alt="" width="48" height="48">
+        <div class="pro-name">Faker</div>
+        <div class="pro-team">T1</div>
+      </a>
+      <a class="pro-card" href="summoner.html">
+        <img class="pro-avatar" data-dd-profile-icon="29" alt="" width="48" height="48">
+        <div class="pro-name">Chovy</div>
+        <div class="pro-team">GenG</div>
+      </a>
+      <a class="pro-card" href="summoner.html">
+        <img class="pro-avatar" data-dd-profile-icon="588" alt="" width="48" height="48">
+        <div class="pro-name">Kiin</div>
+        <div class="pro-team">GenG</div>
+      </a>
+      <a class="pro-card" href="summoner.html">
+        <img class="pro-avatar" data-dd-profile-icon="1626" alt="" width="48" height="48">
+        <div class="pro-name">Canyon</div>
+        <div class="pro-team">DK</div>
+      </a>
+      <a class="pro-card" href="summoner.html">
+        <img class="pro-avatar" data-dd-profile-icon="3158" alt="" width="48" height="48">
+        <div class="pro-name">Viper</div>
+        <div class="pro-team">HLE</div>
+      </a>
+      <a class="pro-card" href="summoner.html">
+        <img class="pro-avatar" data-dd-profile-icon="4368" alt="" width="48" height="48">
+        <div class="pro-name">Showmaker</div>
+        <div class="pro-team">DK</div>
+      </a>
+      <a class="pro-card" href="summoner.html">
+        <img class="pro-avatar" data-dd-profile-icon="4895" alt="" width="48" height="48">
+        <div class="pro-name">Keria</div>
+        <div class="pro-team">T1</div>
+      </a>
+      <a class="pro-card" href="summoner.html">
+        <img class="pro-avatar" data-dd-profile-icon="3768" alt="" width="48" height="48">
+        <div class="pro-name">Zeus</div>
+        <div class="pro-team">T1</div>
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<div data-slot="footer"></div>
+
+<script>
+  // Hero search wiring (page-specific because hero search is bigger than the header search).
+  document.addEventListener('DOMContentLoaded', function () {
+    var form = document.querySelector('[data-component="hero-search"]');
+    if (!form) return;
+    var input = form.querySelector('#hero-input');
+    var dropdown = form.querySelector('#hero-autocomplete');
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+
+    function renderRecent() {
+      var sec = document.getElementById('autocomplete-recent');
+      var list = sec && sec.querySelector('.autocomplete-recent-list');
+      if (!list) return false;
+      var raw = localStorage.getItem('lol-tracker:recent-searches');
+      var entries = [];
+      try { entries = raw ? JSON.parse(raw) : []; } catch (_e) {}
+      if (!entries.length) { sec.hidden = true; return false; }
+      list.innerHTML = '';
+      entries.slice(0, 5).forEach(function (e) {
+        var a = document.createElement('a');
+        a.className = 'autocomplete-item';
+        a.href = 'summoner.html?region=' + encodeURIComponent(e.region || 'kr')
+              + '&name=' + encodeURIComponent(e.gameName)
+              + '&tag=' + encodeURIComponent(e.tagLine);
+        a.innerHTML = '<img class="profile-icon-img" data-dd-profile-icon="' + (e.profileIconId || 1) + '" alt="" width="24" height="24">'
+          + '<span class="name">' + escapeHtml(e.gameName) + '</span>'
+          + '<span class="tag">#' + escapeHtml(e.tagLine) + '</span>';
+        list.appendChild(a);
+      });
+      sec.hidden = false;
+      if (window.DDragon) window.DDragon.rewriteAll();
+      return true;
+    }
+
+    async function renderPopular() {
+      var sec = document.getElementById('autocomplete-popular');
+      var list = sec && sec.querySelector('.autocomplete-popular-list');
+      if (!list) return false;
+      try {
+        var API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:')
+          ? 'http://localhost:3001' : '';
+        var r = await fetch(API_BASE + '/api/home/popular-searches');
+        if (!r.ok) return false;
+        var d = await r.json();
+        if (!d.entries || !d.entries.length) return false;
+        list.innerHTML = '';
+        d.entries.slice(0, 5).forEach(function (e) {
+          var parts = (e.riot_id || '').split('#');
+          var a = document.createElement('a');
+          a.className = 'autocomplete-item';
+          var region = (e.region || 'kr').toLowerCase();
+          a.href = 'summoner.html?region=' + encodeURIComponent(region)
+                + '&name=' + encodeURIComponent(parts[0] || '')
+                + '&tag=' + encodeURIComponent(parts[1] || '');
+          a.innerHTML = '<img class="profile-icon-img" data-dd-profile-icon="29" alt="" width="24" height="24">'
+            + '<span class="name">' + escapeHtml(parts[0] || e.riot_id) + '</span>'
+            + (parts[1] ? '<span class="tag">#' + escapeHtml(parts[1]) + '</span>' : '');
+          list.appendChild(a);
+        });
+        sec.hidden = false;
+        if (window.DDragon) window.DDragon.rewriteAll();
+        return true;
+      } catch (_e) { return false; }
+    }
+
+    var anyRendered = false;
+    function refreshAutocomplete() {
+      var hasRecent = renderRecent();
+      anyRendered = hasRecent || anyRendered;
+      var emptyEl = document.getElementById('autocomplete-empty');
+      if (emptyEl) emptyEl.hidden = anyRendered;
+    }
+    refreshAutocomplete();
+    renderPopular().then(function (ok) {
+      if (ok) {
+        anyRendered = true;
+        var emptyEl = document.getElementById('autocomplete-empty');
+        if (emptyEl) emptyEl.hidden = true;
+      }
+    });
+
+    function showAutocomplete() { refreshAutocomplete(); if (dropdown) dropdown.hidden = false; }
+    function hideAutocomplete() { if (dropdown) dropdown.hidden = true; }
+
+    input.addEventListener('focus', showAutocomplete);
+    input.addEventListener('blur', function () { setTimeout(hideAutocomplete, 150); });
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var v = (input.value || '').trim();
+      if (!v) { input.focus(); return; }
+      var parts = v.split('#');
+      if (parts.length !== 2 || !parts[0] || !parts[1]) {
+        input.setCustomValidity('형식: 이름#KR1');
+        input.reportValidity();
+        setTimeout(function () { input.setCustomValidity(''); }, 1500);
+        return;
+      }
+      var region = (localStorage.getItem('lol-tracker:region') || 'kr').toLowerCase();
+      window.location.href =
+        'summoner.html?region=' + encodeURIComponent(region) +
+        '&name=' + encodeURIComponent(parts[0]) +
+        '&tag=' + encodeURIComponent(parts[1]);
+    });
+  });
+</script>
+
+<script>
+(function () {
+  'use strict';
+  // Live home widgets — popular searches + trending champions.
+  const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:')
+    ? 'http://localhost:3001' : '';
+
+  let ddIdToKey = null, ddKeyToName = null;
+  async function loadDd() {
+    if (ddIdToKey) return;
+    try {
+      const versions = await fetch('https://ddragon.leagueoflegends.com/api/versions.json').then((r) => r.json());
+      const data = await fetch(`https://ddragon.leagueoflegends.com/cdn/${versions[0]}/data/ko_KR/champion.json`).then((r) => r.json());
+      ddIdToKey = {}; ddKeyToName = {};
+      for (const c of Object.values(data.data)) {
+        ddIdToKey[String(c.key)] = c.id;
+        ddKeyToName[c.id] = c.name;
+      }
+    } catch (_e) { /* keep null, fall back to ids */ }
+  }
+
+  const LANE_KR = { top: '탑', jungle: '정글', mid: '미드', adc: '원딜', support: '서폿' };
+
+  async function loadPopular() {
+    try {
+      const r = await fetch(`${API_BASE}/api/home/popular-searches`);
+      if (!r.ok) return;
+      const d = await r.json();
+      if (!d.entries || d.entries.length === 0) return;
+      const card = document.querySelectorAll('.card')[0];
+      if (!card) return;
+      const list = card.querySelector('div + div');
+      if (!list) return;
+      list.innerHTML = '';
+      d.entries.forEach((e, i) => {
+        const a = document.createElement('a');
+        a.className = 'ranking-item';
+        const region = (e.region || 'kr').toLowerCase();
+        const [name, tag] = e.riot_id.split('#');
+        a.href = `summoner.html?region=${region}&name=${encodeURIComponent(name || '')}&tag=${encodeURIComponent(tag || '')}`;
+        a.innerHTML = `
+          <div><span class="rank-num${i < 3 ? ' top' : ''}">${i + 1}</span>
+            <span class="fw-medium">${escapeHtml(name || e.riot_id)}</span>
+            ${tag ? `<span class="text-tertiary">#${escapeHtml(tag)}</span>` : ''}
+          </div>
+          <span class="text-tertiary">${e.n.toLocaleString('ko-KR')}</span>
+        `;
+        list.appendChild(a);
+      });
+    } catch (_e) { /* keep static */ }
+  }
+
+  async function loadTrending() {
+    await loadDd();
+    try {
+      const r = await fetch(`${API_BASE}/api/home/trending-champions`);
+      if (!r.ok) return;
+      const d = await r.json();
+      if (!d.entries || d.entries.length === 0) return;
+      const card = document.querySelectorAll('.card')[1];
+      if (!card) return;
+      const list = card.querySelector('div + div');
+      if (!list) return;
+      list.innerHTML = '';
+      const meta = card.querySelector('.section-title .meta');
+      if (meta) meta.textContent = `${d.bracket} · 표본 기반`;
+      for (const e of d.entries.slice(0, 4)) {
+        const key = ddIdToKey?.[String(e.championId)] ?? null;
+        const name = key ? (ddKeyToName?.[key] ?? key) : `champ#${e.championId}`;
+        const a = document.createElement('a');
+        a.className = 'meta-champ';
+        a.href = key ? `champion-detail.html?key=${key}&lane=${e.lane}` : '#';
+        const wr = (e.wr ?? 0).toFixed(2);
+        const delta = e.wrDelta ?? 0;
+        const deltaSign = delta >= 0 ? '+' : '';
+        a.innerHTML = `
+          <div class="meta-champ-info">
+            <img class="champ-icon" ${key ? `data-dd-champion="${key}"` : ''} alt="${name}" width="36" height="36">
+            <div>
+              <div class="fw-medium">${name}</div>
+              <div class="text-tertiary" style="font-size: 11px;">${LANE_KR[e.lane] ?? e.lane}</div>
+            </div>
+          </div>
+          <div class="meta-champ-stats">
+            <div class="winrate">${wr}%</div>
+            <div class="delta${delta < 0 ? ' down' : ''}">${deltaSign}${delta.toFixed(1)}%p</div>
+          </div>
+        `;
+        list.appendChild(a);
+      }
+      if (window.DDragon) window.DDragon.rewriteAll();
+    } catch (_e) { /* keep static */ }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadPopular();
+    loadTrending();
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>픽 추천 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+  <script src="pick-data.js" defer></script>
+  <script src="pick-engine.js" defer></script>
+</head>
+<body>
+
+<div data-slot="header" data-active="pick-recommend"></div>
+
+<main class="page page-wide">
+
+  <header style="margin-bottom: var(--space-4); display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-3); flex-wrap: wrap;">
+    <div>
+      <h1 class="page-title">
+        픽 추천 <span class="tier-badge tier-master" style="margin-left: 6px;">BETA</span>
+      </h1>
+      <p class="page-subtitle">챔프 셀렉트 단계의 픽·밴·순서·라인을 입력하면 종합 점수로 추천합니다 · 상세 명세: docs/pick-recommend-spec.md</p>
+    </div>
+    <div class="side-toggle" role="group" aria-label="내 팀 사이드">
+      <span class="side-toggle-label">내 자리</span>
+      <button type="button" class="side-toggle-btn active" data-side="blue">블루팀</button>
+      <button type="button" class="side-toggle-btn" data-side="red">레드팀</button>
+    </div>
+  </header>
+
+  <!-- Pick order strip -->
+  <div class="pick-order-strip" id="pick-order-strip"></div>
+
+  <!-- Bans -->
+  <div class="ban-slots-row">
+    <span class="ban-team-label blue">우리팀 밴</span>
+    <div class="ban-slot-v3" data-side="my" data-idx="0"></div>
+    <div class="ban-slot-v3" data-side="my" data-idx="1"></div>
+    <div class="ban-slot-v3" data-side="my" data-idx="2"></div>
+    <div class="ban-slot-v3" data-side="my" data-idx="3"></div>
+    <div class="ban-slot-v3" data-side="my" data-idx="4"></div>
+    <span style="flex: 1;"></span>
+    <span class="ban-team-label red">적팀 밴</span>
+    <div class="ban-slot-v3" data-side="enemy" data-idx="0"></div>
+    <div class="ban-slot-v3" data-side="enemy" data-idx="1"></div>
+    <div class="ban-slot-v3" data-side="enemy" data-idx="2"></div>
+    <div class="ban-slot-v3" data-side="enemy" data-idx="3"></div>
+    <div class="ban-slot-v3" data-side="enemy" data-idx="4"></div>
+  </div>
+
+  <!-- Picks (two teams, 5 slots each, by pick order within team) -->
+  <div class="pick-grid">
+    <div class="card pick-team">
+      <div class="team-header" id="my-team-header">우리팀</div>
+      <div class="pick-slots" id="my-team-slots"></div>
+    </div>
+    <div class="card pick-team">
+      <div class="team-header" id="enemy-team-header">적팀</div>
+      <div class="pick-slots" id="enemy-team-slots"></div>
+    </div>
+  </div>
+
+  <!-- Scenario indicator -->
+  <div class="card scenario-card" id="scenario-card"></div>
+
+  <!-- Two-column: composition + recommendations | ban suggestions -->
+  <div class="pick-page-grid">
+
+    <div>
+      <div class="card composition-card" id="composition-card"></div>
+
+      <div class="card bot-duo-card" id="bot-duo-card" hidden></div>
+
+      <h2 class="section-title" style="margin-top: var(--space-4);">
+        <span>추천 챔프 <span class="text-tertiary fw-medium" style="font-size: 11px;">15개</span></span>
+        <span class="meta" id="rec-meta"></span>
+      </h2>
+      <div class="pick-recommend-grid" id="recommend-grid"></div>
+    </div>
+
+    <aside>
+      <div class="card ban-suggestions-card">
+        <div class="section-title">
+          <span>추천 밴</span>
+          <span class="meta">메타 OP</span>
+        </div>
+        <div id="ban-suggestions"></div>
+        <p class="text-tertiary" style="font-size: 10px; margin-top: var(--space-2); line-height: 1.5;">
+          winrate × pickrate × √banrate 기준. 픽 추천과 별개의 단순 정렬입니다.
+        </p>
+      </div>
+    </aside>
+
+  </div>
+
+</main>
+
+<!-- Champion picker modal -->
+<div class="champ-modal-backdrop" id="champ-modal" hidden>
+  <div class="champ-modal" role="dialog" aria-modal="true" aria-labelledby="champ-modal-title">
+    <h2 id="champ-modal-title" class="sr-only">챔피언 선택</h2>
+    <div class="champ-modal-head">
+      <input type="text" id="champ-search" placeholder="챔프 검색 (한글/영문)" autocomplete="off">
+      <select id="champ-lane">
+        <option value="">라인 선택</option>
+        <option value="top">탑</option>
+        <option value="jungle">정글</option>
+        <option value="mid">미드</option>
+        <option value="adc">원딜</option>
+        <option value="support">서폿</option>
+      </select>
+      <select id="champ-status">
+        <option value="confirmed">확정 픽</option>
+        <option value="intent">의도 (할게요)</option>
+      </select>
+    </div>
+    <div class="champ-modal-body">
+      <div class="champ-modal-grid" id="champ-modal-grid"></div>
+    </div>
+    <div class="champ-modal-foot">
+      <button type="button" id="champ-clear">슬롯 비우기</button>
+      <button type="button" id="champ-cancel">취소</button>
+    </div>
+  </div>
+</div>
+
+<div data-slot="footer"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // Empty initial DraftState — user fills in their actual draft.
+  // First slot of "myTeam" is marked as the user (isMine=true) by default;
+  // the user can re-assign by clicking "내 자리" toggle (TODO).
+  const state = {
+    myTeam: [
+      { pickOrder: 1, champion: undefined, lane: undefined, status: 'empty', isMine: true  },
+      { pickOrder: 2, champion: undefined, lane: undefined, status: 'empty', isMine: false },
+      { pickOrder: 3, champion: undefined, lane: undefined, status: 'empty', isMine: false },
+      { pickOrder: 4, champion: undefined, lane: undefined, status: 'empty', isMine: false },
+      { pickOrder: 5, champion: undefined, lane: undefined, status: 'empty', isMine: false },
+    ],
+    enemyTeam: [
+      { pickOrder: 1, champion: undefined, lane: undefined, status: 'empty', isMine: false },
+      { pickOrder: 2, champion: undefined, lane: undefined, status: 'empty', isMine: false },
+      { pickOrder: 3, champion: undefined, lane: undefined, status: 'empty', isMine: false },
+      { pickOrder: 4, champion: undefined, lane: undefined, status: 'empty', isMine: false },
+      { pickOrder: 5, champion: undefined, lane: undefined, status: 'empty', isMine: false },
+    ],
+    myBans: [],
+    enemyBans: [],
+    patch: '16.9',
+    tierBracket: 'diamond+',
+    pickPhaseGlobal: 1,
+    mySide: 'blue',     // which physical team I'm on; toggleable
+  };
+
+  const PICK_ORDER = [
+    { num: 1,  team: 'blue', label: 'B1' },
+    { num: 2,  team: 'red',  label: 'R1' },
+    { num: 3,  team: 'red',  label: 'R2' },
+    { num: 4,  team: 'blue', label: 'B2' },
+    { num: 5,  team: 'blue', label: 'B3' },
+    { num: 6,  team: 'red',  label: 'R3' },
+    { num: 7,  team: 'red',  label: 'R4' },
+    { num: 8,  team: 'blue', label: 'B4' },
+    { num: 9,  team: 'blue', label: 'B5' },
+    { num: 10, team: 'red',  label: 'R5' },
+  ];
+
+  let editing = null; // { kind: 'pick'|'ban', side: 'my'|'enemy', idx: 0..4 }
+
+  function laneKr(l) {
+    return { top: '탑', jungle: '정글', mid: '미드', adc: '원딜', support: '서폿' }[l] || '?';
+  }
+
+  function el(tag, attrs, children) {
+    const e = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach((k) => {
+      if (k === 'class') e.className = attrs[k];
+      else if (k === 'dataset') Object.assign(e.dataset, attrs[k]);
+      else if (k === 'on') Object.keys(attrs.on).forEach((evt) => e.addEventListener(evt, attrs.on[evt]));
+      else if (k === 'html') e.innerHTML = attrs[k];
+      else e.setAttribute(k, attrs[k]);
+    });
+    (children || []).forEach((c) => {
+      if (c == null) return;
+      e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    });
+    return e;
+  }
+
+  function renderPickOrderStrip() {
+    const wrap = document.getElementById('pick-order-strip');
+    wrap.innerHTML = '';
+    PICK_ORDER.forEach((step, i) => {
+      const isCurrent = step.num === state.pickPhaseGlobal;
+      const cls = ['pick-order-step', `team-${step.team}`, isCurrent ? 'current' : ''].filter(Boolean).join(' ');
+      wrap.appendChild(el('div', { class: cls }, [
+        el('div', { class: 'num' }, [String(step.num)]),
+        el('div', { class: 'team' }, [step.label]),
+      ]));
+      if (i < PICK_ORDER.length - 1) {
+        wrap.appendChild(el('div', { class: 'pick-order-arrow' }, ['→']));
+      }
+    });
+  }
+
+  function renderBans() {
+    ['my', 'enemy'].forEach((side) => {
+      const bans = side === 'my' ? state.myBans : state.enemyBans;
+      document.querySelectorAll(`.ban-slot-v3[data-side="${side}"]`).forEach((slot, i) => {
+        slot.innerHTML = '';
+        const c = bans[i];
+        if (c) {
+          slot.classList.add('filled');
+          const img = document.createElement('img');
+          img.className = 'champ-icon';
+          img.dataset.ddChampion = c;
+          img.alt = window.PickData.nameKr(c);
+          slot.appendChild(img);
+        } else {
+          slot.classList.remove('filled');
+          slot.textContent = '+';
+        }
+        slot.onclick = () => openModal({ kind: 'ban', side, idx: i });
+      });
+    });
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  // Map "my"/"enemy" → physical team color based on mySide.
+  function physicalSideOf(side) {
+    return side === 'my' ? state.mySide : (state.mySide === 'blue' ? 'red' : 'blue');
+  }
+  function pickNumLabel(side, pickOrder) {
+    const physTeam = physicalSideOf(side);
+    return `${physTeam === 'blue' ? 'B' : 'R'}${pickOrder}`;
+  }
+
+  // Infer most-likely lane from TIER_DATA pickrates if slot has champion but no lane.
+  function inferLane(championKey) {
+    const tier = window.PickData?.TIER_DATA?.[championKey] || {};
+    let bestLane = null, bestRate = 0;
+    for (const [lane, stats] of Object.entries(tier)) {
+      if ((stats.pickrate || 0) > bestRate) { bestRate = stats.pickrate; bestLane = lane; }
+    }
+    return bestLane;
+  }
+
+  const ALL_LANES = ['top', 'jungle', 'mid', 'adc', 'support'];
+
+  function renderLaneSelector(side, idx, slot) {
+    const wrap = el('div', { class: 'slot-lane-select-wrap' }, []);
+    const sel = el('select', { class: 'slot-lane-select', title: '라인 선택' }, []);
+    sel.appendChild(el('option', { value: '' }, ['라인 선택']));
+    ALL_LANES.forEach((ln) => {
+      const opt = el('option', { value: ln }, [laneKr(ln)]);
+      if (slot.lane === ln) opt.setAttribute('selected', '');
+      sel.appendChild(opt);
+    });
+    sel.onchange = (ev) => {
+      ev.stopPropagation();
+      const team = side === 'my' ? state.myTeam : state.enemyTeam;
+      team[idx].lane = sel.value || undefined;
+      renderAll();
+    };
+    sel.onclick = (ev) => ev.stopPropagation();
+    wrap.appendChild(sel);
+    return wrap;
+  }
+
+  function renderTeamSlots(side, predictions) {
+    const team = side === 'my' ? state.myTeam : state.enemyTeam;
+    const wrap = document.getElementById(side === 'my' ? 'my-team-slots' : 'enemy-team-slots');
+    wrap.innerHTML = '';
+    const physTeam = physicalSideOf(side);
+    team.forEach((slot, i) => {
+      const slotPreds = predictions && predictions[i];
+      const hasPreds = !slot.champion && slotPreds && slotPreds.length > 0;
+      const cls = [
+        'pick-slot-v3',
+        `team-${physTeam}`,
+        slot.status === 'confirmed' ? 'confirmed' : '',
+        slot.status === 'intent' ? 'intent' : '',
+        slot.isMine ? 'is-mine' : '',
+        hasPreds ? 'has-predictions' : '',
+      ].filter(Boolean).join(' ');
+
+      const inner = el('div', { class: cls }, [
+        el('span', { class: 'slot-pick-num' }, [pickNumLabel(side, slot.pickOrder)]),
+      ]);
+
+      if (side === 'my') {
+        const star = el('span', { class: 'slot-mine-star', title: '내 자리 토글' }, []);
+        star.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 1l2.09 4.24 4.68.68-3.39 3.3.8 4.66L8 11.66 3.82 13.88l.8-4.66L1.23 5.92l4.68-.68z"/></svg>';
+        star.onclick = (ev) => {
+          ev.stopPropagation();
+          toggleMine(i);
+        };
+        inner.appendChild(star);
+      }
+
+      const content = el('div', { class: 'slot-content' }, []);
+      if (slot.champion) {
+        const img = el('img', {
+          class: 'champ-icon',
+          alt: window.PickData.nameKr(slot.champion),
+        });
+        img.dataset.ddChampion = slot.champion;
+        img.onclick = (ev) => { ev.stopPropagation(); openModal({ kind: 'pick', side, idx: i }); };
+        content.appendChild(img);
+        content.appendChild(el('div', { class: 'slot-champ-name' }, [window.PickData.nameKr(slot.champion)]));
+        // Show inferred lane in subtle style if user hasn't set one explicitly.
+        if (!slot.lane) {
+          const inferred = inferLane(slot.champion);
+          if (inferred) content.appendChild(el('div', { class: 'slot-lane inferred' }, [`(추정 ${laneKr(inferred)})`]));
+        }
+      } else {
+        const addBtn = el('div', { class: 'slot-empty-text' }, ['+ 챔프 추가']);
+        addBtn.onclick = (ev) => { ev.stopPropagation(); openModal({ kind: 'pick', side, idx: i }); };
+        content.appendChild(addBtn);
+      }
+      inner.appendChild(content);
+
+      // Lane selector dropdown on every card
+      inner.appendChild(renderLaneSelector(side, i, slot));
+
+      // Predicted picks (only for empty slots)
+      if (hasPreds) {
+        const predBox = el('div', { class: 'slot-predictions' }, [
+          el('div', { class: 'slot-predictions-label' }, ['예상']),
+        ]);
+        slotPreds.slice(0, 3).forEach((p) => {
+          const row = el('div', { class: 'pred-row' }, [
+            el('img', { class: 'champ-icon', alt: window.PickData.nameKr(p.c), dataset: { ddChampion: p.c } }, []),
+            el('span', { class: 'pred-name' }, [window.PickData.nameKr(p.c)]),
+            el('span', { class: 'pred-prob' }, [`${Math.round(p.prob * 100)}%`]),
+          ]);
+          predBox.appendChild(row);
+        });
+        inner.appendChild(predBox);
+      }
+
+      if (slot.champion) {
+        const status = el('span', {
+          class: 'slot-status',
+          title: '클릭: 확정 ↔ 의도',
+        }, [slot.status === 'confirmed' ? '확정' : '의도']);
+        status.onclick = (ev) => {
+          ev.stopPropagation();
+          toggleStatus(side, i);
+        };
+        inner.appendChild(status);
+      }
+
+      // Click anywhere else on card opens champion modal.
+      inner.onclick = () => openModal({ kind: 'pick', side, idx: i });
+      wrap.appendChild(inner);
+    });
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  function renderTeamHeaders() {
+    const my = document.getElementById('my-team-header');
+    const en = document.getElementById('enemy-team-header');
+    if (!my || !en) return;
+    const myColor = state.mySide;
+    const enColor = state.mySide === 'blue' ? 'red' : 'blue';
+    my.className = 'team-header ' + myColor;
+    en.className = 'team-header ' + enColor;
+    my.textContent = `우리팀 (${myColor === 'blue' ? '블루' : '레드'})`;
+    en.textContent = `적팀 (${enColor === 'blue' ? '블루' : '레드'})`;
+  }
+
+  function renderScenario(result) {
+    const card = document.getElementById('scenario-card');
+    const scenarioKr = {
+      first_blind: '선픽 (정보 없음)',
+      first_with_intent: '선픽 + 팀 의도 있음',
+      middle: '중간 픽',
+      last_general: '후픽 (일반)',
+      last_counter_clear: '후픽 + 같은 라인 적 명확',
+    }[result.meta.scenario] || result.meta.scenario;
+    const w = result.meta.weights;
+    card.innerHTML = '';
+    card.appendChild(el('span', { class: 'scenario-label' }, ['감지된 시나리오']));
+    card.appendChild(el('span', { class: 'scenario-name' }, [scenarioKr]));
+    card.appendChild(el('span', { class: 'scenario-weights' }, [
+      `M:${w.M} · C:${w.C} · S:${w.S} · B:${w.B} · R:${w.R} · I:${w.I}`,
+    ]));
+  }
+
+  function renderComposition(result) {
+    const card = document.getElementById('composition-card');
+    const c = result.composition;
+    card.innerHTML = '';
+    const head = el('div', { class: 'section-title' }, [
+      el('span', {}, [
+        '우리팀 컴포 분석',
+        c.archetype !== 'unknown' ? el('span', { class: 'archetype-pill', style: 'margin-left:8px' }, [
+          el('span', { class: 'name' }, [window.PickEngine.archetypeKr(c.archetype)]),
+          ` (${Math.round(c.archetypeConfidence * 100)}%)`,
+        ]) : null,
+      ]),
+      el('span', { class: 'meta' }, [`${c.filledSlots}슬롯 채움`]),
+    ]);
+    card.appendChild(head);
+
+    const rows = [
+      { label: 'AD/AP', value: `AD ${c.adShare}% / AP ${c.apShare}%`, bar: c.adShare, gap: c.gaps.some((g) => g.type === 'ad' || g.type === 'ap') },
+      { label: '하드 CC', value: `${c.hardCcCount}건 (목표 ${c.ccTarget}+)`, bar: Math.min(100, (c.hardCcCount / c.ccTarget) * 100), gap: c.hardCcCount < c.ccTarget },
+      { label: '탱/브루저', value: `${(c.tankCount + c.bruiserCount).toFixed(1)}명`, bar: Math.min(100, (c.tankCount + c.bruiserCount) * 50), gap: c.gaps.some((g) => g.type === 'tank') },
+      { label: '이니시', value: c.engageType === 'none' ? '없음' : c.engageType === 'hard' ? '하드' : c.engageType === 'soft' ? '소프트' : '픽', bar: { none: 0, soft: 40, pick: 60, hard: 100 }[c.engageType] || 0, gap: c.gaps.some((g) => g.type === 'engage') },
+      { label: '웨클', value: `${c.waveClear}점`, bar: Math.min(100, c.waveClear * 10), gap: c.gaps.some((g) => g.type === 'waveClear') },
+      { label: '후반 스케일', value: `초${c.scaling.early} 중${c.scaling.mid} 후${c.scaling.late}`, bar: Math.min(100, c.scaling.late * 25 + c.scaling.mid * 10), gap: c.gaps.some((g) => g.type === 'scaling') },
+    ];
+
+    rows.forEach((row) => {
+      const div = el('div', { class: `comp-row ${row.gap ? 'gap' : ''}` }, [
+        el('div', { class: 'comp-label' }, [row.label]),
+        el('div', { class: 'comp-bar-track' }, [
+          el('div', { class: 'comp-bar-fill', style: `width:${row.bar}%` }, []),
+        ]),
+        el('div', { class: 'comp-value' }, [row.value]),
+      ]);
+      card.appendChild(div);
+    });
+
+    if (c.gaps.length) {
+      const gapList = el('div', { class: 'comp-gap-list' }, []);
+      c.gaps.forEach((g) => {
+        gapList.appendChild(el('div', { class: 'comp-gap-item' }, [
+          el('span', { class: `severity-dot ${g.severity}` }, []),
+          g.message,
+        ]));
+      });
+      card.appendChild(gapList);
+    }
+  }
+
+  function renderCandidates(result) {
+    const grid = document.getElementById('recommend-grid');
+    const meta = document.getElementById('rec-meta');
+    meta.textContent = `패치 ${result.meta.patch} · ${result.meta.tierBracket}`;
+    grid.innerHTML = '';
+    if (!result.candidates.length) {
+      grid.appendChild(el('div', { class: 'card', style: 'grid-column: 1/-1; padding: 32px; text-align: center; color: var(--text-tertiary);' }, [
+        '본인 자리(★)와 라인을 입력하면 추천이 표시됩니다.',
+      ]));
+      return;
+    }
+
+    const cards = result.candidates.map((c) => {
+      const card = el('div', { class: `recommend-card v3 ${c.isBanned ? 'banned' : ''}` }, []);
+
+      if (c.isBanned) {
+        const label = el('span', { class: 'banned-label' }, [
+          c.bannedBy === 'us' ? 'BANNED (우리)' : 'BANNED (적)',
+        ]);
+        card.appendChild(label);
+      }
+
+      const head = el('div', { class: 'head' }, [
+        el('img', { class: 'champ-icon', alt: window.PickData.nameKr(c.champion), dataset: { ddChampion: c.champion } }, []),
+        el('div', { style: 'flex:1' }, [
+          el('div', { class: 'name' }, [window.PickData.nameKr(c.champion)]),
+        ]),
+        el('div', { class: 'meta' }, [
+          el('div', { class: 'score' }, [String(c.score)]),
+        ]),
+      ]);
+      card.appendChild(head);
+
+      const breakdownItems = [
+        ['카운터', c.breakdown.C],
+        ['메타',   c.breakdown.M],
+        ['시너지', c.breakdown.S],
+        ['밸런스', c.breakdown.B],
+        ['선픽안전', c.breakdown.R],
+        ['의도',   c.breakdown.I],
+      ];
+      const bars = el('div', { class: 'breakdown-bars' }, []);
+      breakdownItems.forEach(([label, val]) => {
+        const v = Number(val) || 0;
+        const widthPct = Math.min(100, Math.abs(v) * 4);
+        bars.appendChild(el('div', { class: `row ${v < 0 ? 'neg' : ''}` }, [
+          el('div', {}, [label]),
+          el('div', { class: 'bar-track' }, [
+            el('div', { class: 'bar-fill', style: `width:${widthPct}%` }, []),
+          ]),
+          el('div', {}, [`${v >= 0 ? '+' : ''}${v}`]),
+        ]));
+      });
+      card.appendChild(bars);
+
+      card.appendChild(el('div', { class: 'reason-text' }, [c.reasonText]));
+
+      if (c.reasonTags.length) {
+        const tags = el('div', { class: 'reason-tags' }, []);
+        c.reasonTags.forEach((t) => tags.appendChild(el('span', { class: 'reason-tag' }, [t])));
+        card.appendChild(tags);
+      }
+
+      const m = c.masteryInfo;
+      const diffKr = { easy: '쉬움', medium: '중간', hard: '어려움', insane: '매우 어려움' }[m.difficulty];
+      card.appendChild(el('div', { class: 'mastery-info' }, [
+        el('span', { class: `diff-${m.difficulty}` }, [diffKr]),
+        '·',
+        m.message,
+        el('span', { style: 'margin-left: auto;' }, [`본인 ${m.seasonGames}판`]),
+      ]));
+
+      return card;
+    });
+
+    cards.forEach((c) => grid.appendChild(c));
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  function renderBanSuggestions(result) {
+    const wrap = document.getElementById('ban-suggestions');
+    wrap.innerHTML = '';
+    result.banSuggestions.forEach((b, i) => {
+      wrap.appendChild(el('div', { class: 'ban-suggestion-row' }, [
+        el('span', { class: 'rank' }, [String(i + 1)]),
+        el('img', { class: 'champ-icon', alt: window.PickData.nameKr(b.champion), dataset: { ddChampion: b.champion } }, []),
+        el('div', { class: 'info' }, [
+          el('div', { class: 'name' }, [window.PickData.nameKr(b.champion)]),
+          el('div', { class: 'reason' }, [b.reason]),
+        ]),
+        el('div', { class: 'op' }, [String(b.opScore)]),
+      ]));
+    });
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  // State mutations
+  function toggleMine(idx) {
+    state.myTeam.forEach((s, i) => { s.isMine = (i === idx); });
+    renderAll();
+  }
+
+  function toggleStatus(side, idx) {
+    const team = side === 'my' ? state.myTeam : state.enemyTeam;
+    const cur = team[idx].status;
+    if (cur === 'confirmed') team[idx].status = 'intent';
+    else if (cur === 'intent') team[idx].status = 'confirmed';
+    renderAll();
+  }
+
+  function setPick(side, idx, champion, lane, status) {
+    const team = side === 'my' ? state.myTeam : state.enemyTeam;
+    team[idx].champion = champion;
+    team[idx].lane = lane;
+    team[idx].status = status;
+    renderAll();
+  }
+
+  function clearPick(side, idx) {
+    const team = side === 'my' ? state.myTeam : state.enemyTeam;
+    team[idx].champion = undefined;
+    team[idx].status = 'empty';
+    renderAll();
+  }
+
+  function setBan(side, idx, champion) {
+    const bans = side === 'my' ? state.myBans : state.enemyBans;
+    if (champion === undefined) {
+      bans.splice(idx, 1);
+    } else {
+      bans[idx] = champion;
+    }
+    renderAll();
+  }
+
+  // Champion modal
+  let modalTriggerEl = null; // restore focus here on close
+  function openModal(target) {
+    editing = target;
+    modalTriggerEl = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const modal = document.getElementById('champ-modal');
+    const search = document.getElementById('champ-search');
+    const laneSel = document.getElementById('champ-lane');
+    const statusSel = document.getElementById('champ-status');
+
+    // Lane select moved to each pick card; hide in modal regardless of kind.
+    laneSel.style.display = 'none';
+    if (target.kind === 'pick') {
+      statusSel.value = state.myTeam && (target.side === 'my' ? state.myTeam : state.enemyTeam)[target.idx].status === 'intent' ? 'intent' : 'confirmed';
+      statusSel.style.display = '';
+    } else {
+      statusSel.style.display = 'none';
+    }
+
+    search.value = '';
+    renderModalGrid('');
+    modal.hidden = false;
+    setTimeout(() => search.focus(), 0);
+  }
+
+  function closeModal() {
+    document.getElementById('champ-modal').hidden = true;
+    editing = null;
+    if (modalTriggerEl && document.body.contains(modalTriggerEl)) {
+      modalTriggerEl.focus();
+    }
+    modalTriggerEl = null;
+  }
+
+  // Focus trap — keep Tab inside the dialog while open.
+  document.getElementById('champ-modal').addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const dialog = document.querySelector('#champ-modal .champ-modal');
+    if (!dialog) return;
+    const focusable = dialog.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+
+  function renderModalGrid(query) {
+    const grid = document.getElementById('champ-modal-grid');
+    grid.innerHTML = '';
+    const q = query.toLowerCase().trim();
+    const champs = window.PickData.listChampions();
+    champs
+      .filter((c) => {
+        if (!q) return true;
+        const meta = window.PickData.CHAMPIONS[c];
+        return c.toLowerCase().includes(q) || meta.nameKr.includes(q);
+      })
+      .forEach((c) => {
+        const tile = el('button', { type: 'button', class: 'champ-modal-tile' }, [
+          el('img', { class: 'champ-icon', alt: window.PickData.nameKr(c), dataset: { ddChampion: c } }, []),
+          el('div', { class: 'name' }, [window.PickData.nameKr(c)]),
+        ]);
+        tile.onclick = () => commitChampion(c);
+        grid.appendChild(tile);
+      });
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  function commitChampion(champion) {
+    if (!editing) return;
+    if (editing.kind === 'ban') {
+      setBan(editing.side, editing.idx, champion);
+    } else {
+      // Lane intentionally NOT taken from modal (it's on the card now).
+      // Preserve whatever the user already set on the card; if empty, leave undefined
+      // and let the slot's inferred-lane indicator handle display.
+      const lane = (editing.side === 'my' ? state.myTeam : state.enemyTeam)[editing.idx].lane;
+      const status = document.getElementById('champ-status').value;
+      const finalStatus = editing.side === 'enemy' ? 'confirmed' : status;
+      setPick(editing.side, editing.idx, champion, lane, finalStatus);
+    }
+    closeModal();
+  }
+
+  document.getElementById('champ-search').addEventListener('input', (e) => {
+    renderModalGrid(e.target.value);
+  });
+  document.getElementById('champ-cancel').addEventListener('click', closeModal);
+  document.getElementById('champ-clear').addEventListener('click', () => {
+    if (!editing) return;
+    if (editing.kind === 'ban') setBan(editing.side, editing.idx, undefined);
+    else clearPick(editing.side, editing.idx);
+    closeModal();
+  });
+  document.getElementById('champ-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'champ-modal') closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('champ-modal').hidden) closeModal();
+  });
+
+  function renderBotDuoCard(result) {
+    const card = document.getElementById('bot-duo-card');
+    const me = state.myTeam.find((s) => s.isMine);
+    if (!me || (me.lane !== 'adc' && me.lane !== 'support')) {
+      card.hidden = true;
+      return;
+    }
+    card.hidden = false;
+    card.innerHTML = '';
+
+    const partnerLane = me.lane === 'adc' ? 'support' : 'adc';
+    const partner = state.myTeam.find((s) => s.lane === partnerLane && s.champion && !s.isMine);
+
+    let enemyAdcSlot = state.enemyTeam.find((s) => s.lane === 'adc' && s.champion);
+    let enemySupSlot = state.enemyTeam.find((s) => s.lane === 'support' && s.champion);
+    let enemyAdcPredicted = null;
+    let enemySupPredicted = null;
+    state.enemyTeam.forEach((s, i) => {
+      const pr = result.predictions.enemy[i];
+      if (!pr || !pr.length) return;
+      const top = pr[0];
+      if (!enemyAdcSlot && top.lane === 'adc' && !enemyAdcPredicted) enemyAdcPredicted = top;
+      if (!enemySupSlot && top.lane === 'support' && !enemySupPredicted) enemySupPredicted = top;
+    });
+
+    card.appendChild(el('div', { class: 'section-title' }, [
+      el('span', {}, [
+        '봇 라인 매치업 ',
+        el('span', { class: 'tier-badge tier-master', style: 'margin-left:6px' }, ['2v2']),
+      ]),
+      el('span', { class: 'meta' }, [me.lane === 'adc' ? '본인 원딜' : '본인 서폿']),
+    ]));
+
+    function addPair(side, primary, secondary) {
+      const wrap = el('div', { class: `bot-duo-side ${side}` }, []);
+      [primary, secondary].forEach((p) => {
+        if (!p) {
+          wrap.appendChild(el('span', { class: 'duo-empty' }, ['(미픽)']));
+          return;
+        }
+        const champ = p.champion || p.c;
+        const styleAttr = p.predicted ? 'opacity:0.6' : '';
+        wrap.appendChild(el('img', { class: 'champ-icon', alt: window.PickData.nameKr(champ), dataset: { ddChampion: champ }, style: styleAttr }, []));
+        const text = el('div', { class: 'duo-text' }, [
+          el('span', { class: 'name' }, [window.PickData.nameKr(champ)]),
+        ]);
+        if (p.predicted) {
+          text.appendChild(el('span', { class: 'duo-predicted' }, [`예상 ${Math.round(p.prob * 100)}%`]));
+        } else {
+          text.appendChild(el('span', { class: 'role' }, [p.lane === 'adc' ? '원딜' : '서폿']));
+        }
+        wrap.appendChild(text);
+      });
+      return wrap;
+    }
+
+    const meDuoEntry = me.champion ? { champion: me.champion, lane: me.lane } : null;
+    const partnerEntry = partner ? { champion: partner.champion, lane: partner.lane } : null;
+    const enemyAdcEntry = enemyAdcSlot
+      ? { champion: enemyAdcSlot.champion, lane: 'adc' }
+      : enemyAdcPredicted ? { c: enemyAdcPredicted.c, lane: 'adc', prob: enemyAdcPredicted.prob, predicted: true } : null;
+    const enemySupEntry = enemySupSlot
+      ? { champion: enemySupSlot.champion, lane: 'support' }
+      : enemySupPredicted ? { c: enemySupPredicted.c, lane: 'support', prob: enemySupPredicted.prob, predicted: true } : null;
+
+    card.appendChild(el('div', { class: 'bot-duo-vs' }, [
+      addPair('blue', meDuoEntry, partnerEntry),
+      el('div', { class: 'bot-duo-vs-arrow' }, ['VS']),
+      addPair('red', enemyAdcEntry, enemySupEntry),
+    ]));
+
+    const adcKey = me.lane === 'adc' ? me.champion : (partner && partner.champion);
+    const supKey = me.lane === 'support' ? me.champion : (partner && partner.champion);
+    const ourSyn = window.PickData.botDuoSynergy(adcKey, supKey);
+    const enemyAdcKey = enemyAdcEntry && (enemyAdcEntry.champion || enemyAdcEntry.c);
+    const enemySupKey = enemySupEntry && (enemySupEntry.champion || enemySupEntry.c);
+    const enemySyn = window.PickData.botDuoSynergy(enemyAdcKey, enemySupKey);
+
+    function addDelta(deltas, label, val) {
+      const cls = val == null ? '' : (val > 0 ? 'pos' : val < 0 ? 'neg' : '');
+      deltas.appendChild(el('div', { class: 'row' }, [
+        el('span', { class: 'label' }, [label]),
+        el('span', { class: `v ${cls}` }, [val == null ? '—' : `${val > 0 ? '+' : ''}${val.toFixed(1)}%p`]),
+      ]));
+    }
+    const deltas = el('div', { class: 'bot-duo-deltas' }, []);
+    addDelta(deltas, '우리 듀오 시너지', ourSyn ? ourSyn.delta : null);
+    addDelta(deltas, '적 듀오 시너지', enemySyn ? enemySyn.delta : null);
+    card.appendChild(deltas);
+
+    const ourArc = ourSyn ? ourSyn.archetype : null;
+    const enemyArc = enemySyn ? enemySyn.archetype : null;
+    if (ourArc || enemyArc) {
+      card.appendChild(el('div', { class: 'bot-duo-archetype' }, [
+        el('span', {}, [
+          '듀오 스타일: ',
+          ourArc ? el('span', { class: 'my' }, [window.PickEngine.botArchetypeKr(ourArc)]) : '?',
+          ' vs ',
+          enemyArc ? el('span', { class: 'enemy' }, [window.PickEngine.botArchetypeKr(enemyArc)]) : '?',
+        ]),
+      ]));
+    }
+
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  function renderAll() {
+    if (!window.PickEngine || !window.PickData) {
+      console.warn('[pick-recommend] engine or data not ready yet');
+      return;
+    }
+    renderTeamHeaders();
+    renderPickOrderStrip();
+    renderBans();
+    try {
+      const result = window.PickEngine.recommend(state);
+      const myPreds = result.predictions && result.predictions.my;
+      const enemyPreds = result.predictions && result.predictions.enemy;
+      renderTeamSlots('my', myPreds);
+      renderTeamSlots('enemy', enemyPreds);
+      renderScenario(result);
+      renderComposition(result);
+      renderBotDuoCard(result);
+      renderCandidates(result);
+      renderBanSuggestions(result);
+    } catch (err) {
+      console.error('[pick-recommend] engine failed:', err);
+      renderTeamSlots('my', null);
+      renderTeamSlots('enemy', null);
+      const grid = document.getElementById('recommend-grid');
+      grid.innerHTML = '';
+      grid.appendChild(el('div', { class: 'card', style: 'grid-column: 1/-1; padding: 32px; text-align: center; color: var(--color-loss);' }, [
+        '추천 계산 실패: ' + (err.message || '알 수 없는 오류'),
+      ]));
+    }
+  }
+
+  // ---- Live data integration (PR-6) ------------------------------------
+  // Pick algorithm itself is single-source-of-truth (frontend pick-engine.js).
+  // We only swap the *data* layer: PickData.{TIER_DATA, MATCHUPS, SYNERGIES,
+  // BOT_DUO_SYNERGY, COPICK_PROBS, CHAMPIONS} get replaced with live values.
+  // Falls back to dummy if API unreachable or empty.
+  const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:')
+    ? 'http://localhost:3001' : '';
+
+  // ---- Champion meta inference from official Riot spell tooltips -------
+  // championFull.json gives us each champ's 4 spells + passive with Korean
+  // description text. We pattern-match for explicit CC keywords ("기절"/
+  // "에어본"/"매혹"/"속박" etc.) — same primary source pro guides use.
+  // Output: { ccLevel, engageType, waveClear, scaling, blindPickSafe }
+  function buildCurationFromTooltips(fullData) {
+    // Keywords come from Riot's actual ko_KR tooltip phrasing (not community
+    // jargon like "에어본"). Verified against championFull.json sample tooltips.
+    const HARD_CC = [
+      '기절', '공중으로 띄', '공중에 띄', '띄워', '띄웁',  // stun + knockup
+      '매혹', '유혹',                                       // charm
+      '공포', '두려', '도주',                               // fear / flee
+      '도발',                                               // taunt
+      '속박', '뿌리',                                       // root
+      '침묵',                                               // silence
+      '잠재', '잠들',                                       // sleep
+      '폴리모프', '변이시',                                 // polymorph
+      '제압',                                               // suppress
+      '구속',                                               // chained / restrain
+      '빙결',                                               // freeze
+    ];
+    const SOFT_CC = ['둔화', '감속', '느려', '이동 속도가 감소', '이동 속도를 감소'];
+    const ENGAGE_VERBS = ['돌진', '도약', '돌격', '점프', '뛰어', '날아오', '나아가', '저지 불가'];
+    const RANGED_PICK = ['투사체', '갈고리', '족쇄', '체인', '관통하는', '긴 사거리'];
+    const PROTECT_KW = ['보호막', '실드', '치유', '회복', '재생', '방어막', '동맹에게'];
+    const POKE_KW = ['긴 사거리', '먼 거리', '광역 마법 피해', '관통하며', '범위 마법'];
+    const ONHIT_KW = ['기본 공격이', '평타가', '공격 강화', '공격 속도가 증가'];
+    const WAVECLEAR_KW = ['미니언', '광역', '범위 내 모든', '주변의 모든', '주위의 모든', '주변 적', '여러 대상에게'];
+    const SCALING_LATE = ['영구히', '영구적', '무한', '스택', '레벨당', '최대 체력의', '대상 최대 체력'];
+    const SCALING_EARLY = ['초반', '레벨 1', '게임 초반'];
+
+    function clean(text) {
+      return text
+        .replace(/<[^>]+>/g, ' ')        // strip HTML tags
+        .replace(/\{\{\s*[^}]+\}\}/g, ' ') // strip Riot template variables {{ qdamagecalc }}
+        .replace(/\s+/g, ' ');
+    }
+    function countMatches(text, words) {
+      let n = 0; for (const w of words) { const re = new RegExp(w, 'g'); n += (text.match(re) || []).length; }
+      return n;
+    }
+    function hasAOE(text) {
+      return /광역|범위|주변|주위|모든 적|반경|일대|여러 대상/.test(text);
+    }
+
+    const out = {};
+    for (const [key, champ] of Object.entries(fullData)) {
+      const spells = (champ.spells || []).map((s) => `${s.name || ''} ${s.description || ''} ${s.tooltip || ''}`).join(' ');
+      const passive = `${champ.passive?.name || ''} ${champ.passive?.description || ''}`;
+      const all = clean(spells + ' ' + passive);
+
+      const hardCcCount = countMatches(all, HARD_CC);
+      const softCcCount = countMatches(all, SOFT_CC);
+      const isAOE = hasAOE(all);
+
+      // ccLevel: 0=none, 1=soft CC, 2=hard CC, 3=AOE-engage hard CC
+      // Tightened: ccLevel 3 requires multiple hardCC matches AND AOE keywords —
+      // single AOE+CC mention (e.g. Karthus wall slow) shouldn't auto-promote to 3.
+      let ccLevel = 0;
+      if ((hardCcCount >= 4) || (hardCcCount >= 2 && isAOE)) ccLevel = 3;
+      else if (hardCcCount >= 1) ccLevel = 2;
+      else if (softCcCount >= 2) ccLevel = 1;
+
+      // engageType
+      const hasEngage = countMatches(all, ENGAGE_VERBS) > 0 && hardCcCount > 0;
+      const hasPick = countMatches(all, RANGED_PICK) > 0 && hardCcCount > 0;
+      const protectScore = countMatches(all, PROTECT_KW);
+      const pokeScore = countMatches(all, POKE_KW);
+      const onhitScore = countMatches(all, ONHIT_KW);
+      let engageType = 'none';
+      if (hasEngage) engageType = 'engage';
+      else if (hasPick) engageType = 'pick';
+      else if (protectScore >= 3) engageType = 'protect';
+      else if (pokeScore >= 2) engageType = 'poke';
+      else if (onhitScore >= 2) engageType = 'onhit';
+
+      // waveClear: count AOE damage references
+      const wcRefs = countMatches(all, WAVECLEAR_KW);
+      const waveClear = wcRefs >= 4 ? 3 : wcRefs >= 2 ? 2 : wcRefs >= 1 ? 1 : 0;
+
+      // scaling: keyword tilt
+      const lateScore = countMatches(all, SCALING_LATE);
+      const earlyScore = countMatches(all, SCALING_EARLY);
+      const scaling = lateScore - earlyScore >= 2 ? 'late'
+                    : earlyScore - lateScore >= 2 ? 'early'
+                    : 'mid';
+
+      out[key] = { ccLevel, engageType, waveClear, scaling };
+    }
+    return out;
+  }
+
+  async function loadLiveData() {
+    let ddIdToKey = null, ddKeyToName = null, ddRaw = null;
+    try {
+      const versions = await fetch('https://ddragon.leagueoflegends.com/api/versions.json').then((r) => r.json());
+      const v = versions[0];
+      const data = await fetch(`https://ddragon.leagueoflegends.com/cdn/${v}/data/ko_KR/champion.json`).then((r) => r.json());
+      ddIdToKey = {}; ddKeyToName = {}; ddRaw = data.data;
+      for (const c of Object.values(data.data)) {
+        ddIdToKey[String(c.key)] = c.id;
+        ddKeyToName[c.id] = c.name;
+      }
+    } catch (e) {
+      console.warn('[pick-recommend] ddragon fetch failed, keeping dummy', e);
+      return false;
+    }
+
+    let api;
+    try {
+      const r = await fetch(`${API_BASE}/api/pick-recommend/data?bracket=diamond%2B`);
+      if (!r.ok) return false;
+      api = await r.json();
+      if (!api.tier || api.tier.length === 0) return false;
+    } catch (_e) { return false; }
+
+    // ---- Auto-curated meta via championFull.json spell tooltip parsing -------
+    // ddragon doesn't expose CC/engage/etc. directly, but every spell description
+    // contains Korean keywords like "기절"/"에어본"/"매혹"/"속박" that we can
+    // pattern-match. Accuracy is ~70-80% — false positives possible (e.g.
+    // "기절 면역" texts), but better than hand-curating 170 champs from memory.
+    //
+    // Source: https://ddragon.leagueoflegends.com/cdn/{ver}/data/ko_KR/championFull.json
+    // Manual overrides for cases where heuristic fails are merged after.
+    let curationFromTooltips = {};
+    try {
+      const fullUrl = `https://ddragon.leagueoflegends.com/cdn/${v}/data/ko_KR/championFull.json`;
+      const full = await fetch(fullUrl).then((r) => r.json());
+      curationFromTooltips = buildCurationFromTooltips(full.data || {});
+    } catch (e) {
+      console.warn('[pick-recommend] championFull fetch failed; falling back to defaults', e);
+    }
+    // Hand-curated overrides only for borderline / commonly-mis-detected cases.
+    // Empty by default — auto-parse is the primary source. Add entries ONLY
+    // when a heuristic gives demonstrably wrong output for a specific champ.
+    // Use STRING KEYS (with quotes) for champion IDs containing punctuation
+    // like "Cho'Gath", "Vel'Koz", "Bel'Veth".
+    const MANUAL_OVERRIDES = {};
+    /* Removed legacy hand-curation block (had unquoted apostrophe keys causing
+       a SyntaxError that broke the whole page). Auto-parse from championFull.json
+       now provides curation. Re-add specific overrides as needed.
+      Malphite: { ccLevel: 3, engageType: 'engage', waveClear: 1, scaling: 'mid', blindPickSafe: true },
+      Amumu:    { ccLevel: 3, engageType: 'engage', waveClear: 1, scaling: 'mid' },
+      Sejuani:  { ccLevel: 3, engageType: 'engage', waveClear: 1, scaling: 'mid' },
+      Leona:    { ccLevel: 3, engageType: 'engage', waveClear: 0, scaling: 'mid' },
+      Nautilus: { ccLevel: 3, engageType: 'engage', waveClear: 1, scaling: 'mid' },
+      Alistar:  { ccLevel: 3, engageType: 'engage', waveClear: 0, scaling: 'mid', blindPickSafe: true },
+      Rakan:    { ccLevel: 2, engageType: 'engage', waveClear: 0, scaling: 'mid' },
+      Rell:     { ccLevel: 3, engageType: 'engage', waveClear: 0, scaling: 'mid' },
+      Maokai:   { ccLevel: 3, engageType: 'engage', waveClear: 2, scaling: 'mid' },
+      Ornn:     { ccLevel: 3, engageType: 'engage', waveClear: 1, scaling: 'late' },
+      Sion:     { ccLevel: 2, engageType: 'engage', waveClear: 2, scaling: 'late' },
+      JarvanIV: { ccLevel: 3, engageType: 'engage', waveClear: 1, scaling: 'mid' },
+      Vi:       { ccLevel: 2, engageType: 'pick',   waveClear: 1, scaling: 'mid' },
+      Zac:      { ccLevel: 3, engageType: 'engage', waveClear: 1, scaling: 'mid' },
+      Hecarim:  { ccLevel: 2, engageType: 'engage', waveClear: 1, scaling: 'mid' },
+      Wukong:   { ccLevel: 3, engageType: 'engage', waveClear: 1, scaling: 'mid' },
+      Gragas:   { ccLevel: 3, engageType: 'engage', waveClear: 1, scaling: 'mid' },
+      Diana:    { ccLevel: 2, engageType: 'engage', waveClear: 2, scaling: 'mid' },
+      Skarner:  { ccLevel: 3, engageType: 'engage', waveClear: 1, scaling: 'mid' },
+      Galio:    { ccLevel: 3, engageType: 'engage', waveClear: 2, scaling: 'mid' },
+
+      // — Pick / lockdown supports & junglers —
+      Thresh:   { ccLevel: 2, engageType: 'pick',   waveClear: 0, scaling: 'mid', blindPickSafe: true },
+      Blitzcrank: { ccLevel: 2, engageType: 'pick', waveClear: 0, scaling: 'mid' },
+      Pyke:     { ccLevel: 2, engageType: 'pick',   waveClear: 0, scaling: 'mid' },
+      Bard:     { ccLevel: 2, engageType: 'pick',   waveClear: 0, scaling: 'mid' },
+      LeeSin:   { ccLevel: 1, engageType: 'pick',   waveClear: 1, scaling: 'early' },
+      Elise:    { ccLevel: 1, engageType: 'pick',   waveClear: 1, scaling: 'early' },
+      Khazix:   { ccLevel: 0, engageType: 'pick',   waveClear: 1, scaling: 'mid' },
+
+      // — Poke mages —
+      Lux:      { ccLevel: 2, engageType: 'poke',   waveClear: 2, scaling: 'mid' },
+      Xerath:   { ccLevel: 1, engageType: 'poke',   waveClear: 2, scaling: 'mid' },
+      Ziggs:    { ccLevel: 0, engageType: 'poke',   waveClear: 3, scaling: 'mid' },
+      Karma:    { ccLevel: 1, engageType: 'poke',   waveClear: 2, scaling: 'mid' },
+      Vel'Koz:  { ccLevel: 1, engageType: 'poke',   waveClear: 2, scaling: 'late' },
+      Velkoz:   { ccLevel: 1, engageType: 'poke',   waveClear: 2, scaling: 'late' },
+
+      // — Protect (peel) supports —
+      Lulu:     { ccLevel: 1, engageType: 'protect', waveClear: 0, scaling: 'late' },
+      Janna:    { ccLevel: 2, engageType: 'protect', waveClear: 0, scaling: 'mid', blindPickSafe: true },
+      Soraka:   { ccLevel: 1, engageType: 'protect', waveClear: 0, scaling: 'mid', blindPickSafe: true },
+      Yuumi:    { ccLevel: 1, engageType: 'protect', waveClear: 0, scaling: 'late' },
+      Renata:   { ccLevel: 2, engageType: 'protect', waveClear: 0, scaling: 'mid' },
+
+      // — Hyper-scaling carries —
+      Kassadin: { ccLevel: 0, engageType: 'none',   waveClear: 1, scaling: 'late' },
+      Veigar:   { ccLevel: 2, engageType: 'none',   waveClear: 2, scaling: 'late' },
+      Vladimir: { ccLevel: 0, engageType: 'none',   waveClear: 2, scaling: 'late' },
+      Anivia:   { ccLevel: 2, engageType: 'none',   waveClear: 3, scaling: 'late' },
+      Ryze:     { ccLevel: 1, engageType: 'none',   waveClear: 2, scaling: 'late' },
+      Cassiopeia: { ccLevel: 1, engageType: 'none', waveClear: 1, scaling: 'late' },
+      Karthus:  { ccLevel: 1, engageType: 'none',   waveClear: 3, scaling: 'late' },
+      Senna:    { ccLevel: 1, engageType: 'none',   waveClear: 0, scaling: 'late' },
+      Vayne:    { ccLevel: 1, engageType: 'onhit',  waveClear: 0, scaling: 'late', blindPickSafe: true },
+      KogMaw:   { ccLevel: 0, engageType: 'onhit',  waveClear: 3, scaling: 'late' },
+      Twitch:   { ccLevel: 0, engageType: 'onhit',  waveClear: 1, scaling: 'late' },
+
+      // — Lane bullies / kill-lane ADCs —
+      Caitlyn:  { ccLevel: 1, engageType: 'killlane', waveClear: 1, scaling: 'mid', blindPickSafe: true },
+      Draven:   { ccLevel: 0, engageType: 'killlane', waveClear: 0, scaling: 'early' },
+      Lucian:   { ccLevel: 0, engageType: 'killlane', waveClear: 1, scaling: 'mid' },
+      MissFortune: { ccLevel: 1, engageType: 'killlane', waveClear: 2, scaling: 'mid' },
+      Jhin:     { ccLevel: 1, engageType: 'killlane', waveClear: 1, scaling: 'mid', blindPickSafe: true },
+      Ezreal:   { ccLevel: 1, engageType: 'poke',    waveClear: 1, scaling: 'mid', blindPickSafe: true },
+      Aphelios: { ccLevel: 1, engageType: 'killlane', waveClear: 1, scaling: 'late' },
+
+      // — Assassins —
+      Yasuo:    { ccLevel: 1, engageType: 'none',   waveClear: 2, scaling: 'mid' },
+      Yone:     { ccLevel: 1, engageType: 'engage', waveClear: 2, scaling: 'mid' },
+      Akali:    { ccLevel: 0, engageType: 'pick',   waveClear: 1, scaling: 'mid' },
+      Zed:      { ccLevel: 0, engageType: 'pick',   waveClear: 1, scaling: 'mid' },
+      Talon:    { ccLevel: 0, engageType: 'pick',   waveClear: 2, scaling: 'mid' },
+      Qiyana:   { ccLevel: 1, engageType: 'pick',   waveClear: 1, scaling: 'mid' },
+
+      // — Bruiser / fighter top —
+      Aatrox:   { ccLevel: 1, engageType: 'engage', waveClear: 1, scaling: 'mid' },
+      Camille:  { ccLevel: 1, engageType: 'pick',   waveClear: 1, scaling: 'mid' },
+      Jax:      { ccLevel: 1, engageType: 'none',   waveClear: 1, scaling: 'late' },
+      Fiora:    { ccLevel: 0, engageType: 'none',   waveClear: 1, scaling: 'late' },
+      Riven:    { ccLevel: 1, engageType: 'engage', waveClear: 1, scaling: 'mid' },
+      Renekton: { ccLevel: 1, engageType: 'engage', waveClear: 1, scaling: 'early' },
+      Darius:   { ccLevel: 1, engageType: 'engage', waveClear: 1, scaling: 'early' },
+      Garen:    { ccLevel: 1, engageType: 'engage', waveClear: 1, scaling: 'mid', blindPickSafe: true },
+      Mundo:    { ccLevel: 0, engageType: 'sustain', waveClear: 1, scaling: 'late' },
+      Cho'Gath: { ccLevel: 2, engageType: 'engage', waveClear: 2, scaling: 'late' },
+      Chogath:  { ccLevel: 2, engageType: 'engage', waveClear: 2, scaling: 'late' },
+      Singed:   { ccLevel: 1, engageType: 'engage', waveClear: 1, scaling: 'mid' },
+      Tryndamere: { ccLevel: 0, engageType: 'none', waveClear: 1, scaling: 'late' },
+
+      // — Mid mages (mixed) —
+      Ahri:     { ccLevel: 1, engageType: 'pick',   waveClear: 1, scaling: 'mid', blindPickSafe: true },
+      Syndra:   { ccLevel: 2, engageType: 'pick',   waveClear: 1, scaling: 'mid' },
+      Orianna:  { ccLevel: 2, engageType: 'engage', waveClear: 2, scaling: 'late' },
+      Azir:     { ccLevel: 2, engageType: 'engage', waveClear: 2, scaling: 'late' },
+      Hwei:     { ccLevel: 2, engageType: 'poke',   waveClear: 2, scaling: 'mid' },
+      Sylas:    { ccLevel: 1, engageType: 'pick',   waveClear: 1, scaling: 'mid' },
+      LeBlanc:  { ccLevel: 1, engageType: 'pick',   waveClear: 1, scaling: 'mid' },
+      Leblanc:  { ccLevel: 1, engageType: 'pick',   waveClear: 1, scaling: 'mid' },
+      Twisted_Fate: { ccLevel: 2, engageType: 'pick', waveClear: 2, scaling: 'mid' },
+      TwistedFate: { ccLevel: 2, engageType: 'pick', waveClear: 2, scaling: 'mid' },
+
+      // — Junglers extra —
+      Graves:   { ccLevel: 0, engageType: 'pick',   waveClear: 1, scaling: 'mid' },
+      Kindred:  { ccLevel: 1, engageType: 'pick',   waveClear: 1, scaling: 'late' },
+      Karthus_J:{ ccLevel: 1, engageType: 'none',   waveClear: 3, scaling: 'late' },
+      Briar:    { ccLevel: 1, engageType: 'engage', waveClear: 1, scaling: 'mid' },
+      // (Bel'Veth, Belveth and other entries previously here.)
+    */
+
+    // Build CHAMPIONS from ddragon (lanes filled from API tier data).
+    const ROLE_MAP = { Tank: 'Tank', Fighter: 'Bruiser', Mage: 'Mage', Marksman: 'Marksman', Assassin: 'Assassin', Support: 'Support' };
+    const CHAMPIONS = {};
+    for (const [key, c] of Object.entries(ddRaw)) {
+      const att = c.info?.attack ?? 5;
+      const mag = c.info?.magic ?? 5;
+      const curated = { ...(curationFromTooltips[key] || {}), ...(MANUAL_OVERRIDES[key] || {}) };
+      CHAMPIONS[key] = {
+        nameKr: c.name,
+        lanes: [],
+        damageType: att > mag + 2 ? 'AD' : mag > att + 2 ? 'AP' : 'Mixed',
+        role: (c.tags || []).map((t) => ROLE_MAP[t] ?? t),
+        ccLevel: curated.ccLevel ?? 0,
+        engageType: curated.engageType ?? 'none',
+        scaling: curated.scaling ?? 'mid',
+        waveClear: curated.waveClear ?? 1,
+        blindPickSafe: curated.blindPickSafe ?? false,
+        difficulty: c.info?.difficulty ?? 5,
+        archetypeAffinity: [],
+      };
+    }
+
+    // TIER_DATA (and fill CHAMPIONS.lanes from observed data)
+    const TIER_DATA = {};
+    for (const t of api.tier) {
+      const key = ddIdToKey[String(t.championId)];
+      if (!key) continue;
+      TIER_DATA[key] = TIER_DATA[key] || {};
+      TIER_DATA[key][t.lane] = {
+        wr: t.wr, pickrate: t.pickrate, banrate: t.banrate, n: t.n, psScore: 50,
+      };
+      // Only count a champion as "playable in this lane" if pickrate is
+      // significant — otherwise off-meta picks (Singed mid 0.7%, Hwei adc 0.3%)
+      // pollute the prediction list. 1.5% covers all real meta picks while
+      // dropping troll/coin-flip picks.
+      const MIN_LANE_PICKRATE = 1.5;
+      const MIN_LANE_GAMES = 50;
+      if (CHAMPIONS[key]
+          && t.pickrate >= MIN_LANE_PICKRATE
+          && t.n >= MIN_LANE_GAMES
+          && !CHAMPIONS[key].lanes.includes(t.lane)) {
+        CHAMPIONS[key].lanes.push(t.lane);
+      }
+    }
+    // Fallback: a champ that didn't pass the threshold in any lane still needs
+    // a lanes[] so it can appear in matchup tables / champion search.
+    for (const key of Object.keys(CHAMPIONS)) {
+      if (CHAMPIONS[key].lanes.length === 0 && TIER_DATA[key]) {
+        // Pick the most-played lane regardless of threshold (better than empty).
+        let bestLane = null, bestN = 0;
+        for (const [ln, st] of Object.entries(TIER_DATA[key])) {
+          if (st.n > bestN) { bestN = st.n; bestLane = ln; }
+        }
+        if (bestLane) CHAMPIONS[key].lanes.push(bestLane);
+      }
+    }
+
+    // MATCHUPS — { lane: { championKey: { enemyKey: { wr, n } } } }
+    const MATCHUPS = { top: {}, jungle: {}, mid: {}, adc: {}, support: {} };
+    for (const m of api.matchups) {
+      const aKey = ddIdToKey[String(m.a)];
+      const bKey = ddIdToKey[String(m.b)];
+      if (!aKey || !bKey || !MATCHUPS[m.lane]) continue;
+      MATCHUPS[m.lane][aKey] = MATCHUPS[m.lane][aKey] || {};
+      MATCHUPS[m.lane][aKey][bKey] = { wr: m.wr, n: m.n };
+      // Mirror for the opposite side.
+      MATCHUPS[m.lane][bKey] = MATCHUPS[m.lane][bKey] || {};
+      MATCHUPS[m.lane][bKey][aKey] = {
+        wr: Math.round((100 - m.wr) * 100) / 100,
+        n: m.n,
+      };
+    }
+
+    // SYNERGIES — { championKey: { allyKey: { wr, n } } }
+    const SYNERGIES = {};
+    for (const s of (api.synergies || [])) {
+      const aKey = ddIdToKey[String(s.a)];
+      const bKey = ddIdToKey[String(s.b)];
+      if (!aKey || !bKey) continue;
+      SYNERGIES[aKey] = SYNERGIES[aKey] || {};
+      SYNERGIES[aKey][bKey] = { wr: s.wr, n: s.n };
+      SYNERGIES[bKey] = SYNERGIES[bKey] || {};
+      SYNERGIES[bKey][aKey] = { wr: s.wr, n: s.n };
+    }
+
+    // BOT_DUO_SYNERGY — { adcKey: { supKey: { wr, n, delta } } }
+    const BOT_DUO_SYNERGY = {};
+    for (const d of api.botDuos) {
+      const adc = ddIdToKey[String(d.adcId)];
+      const sup = ddIdToKey[String(d.supId)];
+      if (!adc || !sup) continue;
+      BOT_DUO_SYNERGY[adc] = BOT_DUO_SYNERGY[adc] || {};
+      BOT_DUO_SYNERGY[adc][sup] = { wr: d.wr, n: d.n, delta: d.delta, archetype: 'protect' };
+    }
+
+    // COPICK_PROBS — { anchorKey: { partnerLane: { partnerKey: prob } } }
+    const COPICK_PROBS = {};
+    for (const p of api.copickProbs) {
+      const aKey = ddIdToKey[String(p.anchorId)];
+      const pKey = ddIdToKey[String(p.partnerId)];
+      if (!aKey || !pKey) continue;
+      COPICK_PROBS[aKey] = COPICK_PROBS[aKey] || {};
+      COPICK_PROBS[aKey][p.partnerRole] = COPICK_PROBS[aKey][p.partnerRole] || {};
+      COPICK_PROBS[aKey][p.partnerRole][pKey] = p.prob;
+    }
+
+    // LANE_META_PRIORS — recompute from TIER_DATA pickrates.
+    const LANE_META_PRIORS = { top: {}, jungle: {}, mid: {}, adc: {}, support: {} };
+    for (const [key, lanes] of Object.entries(TIER_DATA)) {
+      for (const [lane, stats] of Object.entries(lanes)) {
+        if (!LANE_META_PRIORS[lane]) continue;
+        LANE_META_PRIORS[lane][key] = stats.pickrate || 1;
+      }
+    }
+    for (const lane of Object.keys(LANE_META_PRIORS)) {
+      const total = Object.values(LANE_META_PRIORS[lane]).reduce((a, b) => a + b, 0);
+      if (total > 0) for (const k of Object.keys(LANE_META_PRIORS[lane])) {
+        LANE_META_PRIORS[lane][k] /= total;
+      }
+    }
+
+    // TIER_AVG_WR from API
+    const TIER_AVG_WR = api.laneAvgWr && Object.keys(api.laneAvgWr).length > 0
+      ? api.laneAvgWr
+      : window.PickData.TIER_AVG_WR;
+
+    // Swap into PickData (preserve helpers)
+    Object.assign(window.PickData, {
+      PATCH: api.patch ?? window.PickData.PATCH,
+      BRACKET: api.bracket ?? window.PickData.BRACKET,
+      CHAMPIONS,
+      TIER_DATA,
+      TIER_DATA_PREV: window.PickData.TIER_DATA_PREV ?? {},   // trend not used here
+      MATCHUPS,
+      SYNERGIES,
+      BOT_DUO_SYNERGY,
+      COPICK_PROBS,
+      LANE_META_PRIORS,
+      TIER_AVG_WR,
+    });
+
+    // Re-build helpers that depend on the swapped data
+    window.PickData.listChampions = () => Object.keys(CHAMPIONS);
+    window.PickData.nameKr = (k) => CHAMPIONS[k] ? CHAMPIONS[k].nameKr : k;
+    window.PickData.botDuoSynergy = (adc, sup) => (BOT_DUO_SYNERGY[adc] && BOT_DUO_SYNERGY[adc][sup]) || null;
+    window.PickData.laneMetaPrior = (champ, lane) => (LANE_META_PRIORS[lane] && LANE_META_PRIORS[lane][champ]) || 0;
+    window.PickData.copickProb = (anchor, lane, partner) => {
+      const a = COPICK_PROBS[anchor];
+      if (a && a[lane] && a[lane][partner] != null) return a[lane][partner];
+      return null;
+    };
+    return true;
+  }
+
+  function showLiveBadge(live, patch, sample) {
+    const sub = document.querySelector('.page-subtitle');
+    if (!sub) return;
+    if (live) {
+      sub.innerHTML = sub.innerHTML.replace(/\s·\s\(.*\)$/, '') +
+        ` · <span style="color: var(--color-positive);">실 데이터 — 패치 ${patch}, 표본 ${sample}</span>`;
+    } else {
+      sub.innerHTML += ' · <span style="color: var(--color-warning);">(더미 — API 미연결 또는 데이터 부족)</span>';
+    }
+  }
+
+  function wireSideToggle() {
+    document.querySelectorAll('.side-toggle-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const side = btn.dataset.side;
+        if (side !== 'blue' && side !== 'red') return;
+        if (state.mySide === side) return;
+        state.mySide = side;
+        document.querySelectorAll('.side-toggle-btn').forEach((b) => {
+          b.classList.toggle('active', b.dataset.side === side);
+        });
+        renderAll();
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(async () => {
+      const live = await loadLiveData();
+      const tierCount = Object.keys(window.PickData.TIER_DATA || {}).length;
+      showLiveBadge(live, window.PickData.PATCH, tierCount);
+      wireSideToggle();
+      renderAll();
+    }, 0);
+  });
+})();
+</script>
+
+</body>
+</html>

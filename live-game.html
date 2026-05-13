@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hide on bush#KR1 — 라이브 게임 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+  <style>
+    body[data-page-state="loading"] main { visibility: hidden; }
+    body[data-page-state="loading"]::after {
+      content: "로딩 중..."; position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary); font-size: 14px; pointer-events: none;
+    }
+  </style>
+</head>
+<body data-page-state="loading">
+
+<div data-slot="header" data-active="search" data-search-placeholder="다른 소환사 검색..."></div>
+
+<main class="page page-narrow">
+
+  <div class="card profile-header">
+    <div class="profile-top">
+      <div class="profile-icon-wrap">
+        <img class="profile-icon-img" data-dd-profile-icon="6" alt="Hide on bush의 프로필 아이콘" width="80" height="80">
+        <div class="profile-level">409</div>
+      </div>
+      <div class="profile-info">
+        <div class="profile-name">Hide on bush <span class="tag">#KR1</span></div>
+        <div class="profile-meta">
+          <span class="tier-badge tier-challenger">Challenger 1,247 LP</span>
+          현재 게임 중
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="tabs" aria-label="소환사 페이지 탭">
+    <a class="tab" href="summoner.html">개요</a>
+    <a class="tab" href="summoner-champions.html">챔피언 통계</a>
+    <a class="tab active" href="live-game.html" aria-current="page">라이브 게임 <span class="live-dot" aria-label="진행 중"></span></a>
+    <a class="tab" href="summoner-seasons.html">시즌 기록</a>
+  </nav>
+
+  <div class="card live-header">
+    <div class="live-header-left">
+      <div class="live-status">
+        <div class="live-status-dot"></div>
+        <span class="live-status-text">진행 중</span>
+      </div>
+      <span class="live-meta">솔로랭크 · 소환사의 협곡</span>
+    </div>
+    <div class="live-time" data-component="elapsed">12분 34초 경과</div>
+  </div>
+
+  <div class="card prediction-card">
+    <div class="prediction-label">AI 예측 승률</div>
+    <div class="prediction-bar" role="img" aria-label="블루팀 58% 대 레드팀 42%">
+      <div class="prediction-bar-blue" style="width: 58%;"></div>
+      <div class="prediction-bar-red" style="width: 42%;"></div>
+    </div>
+    <div class="prediction-numbers">
+      <div class="blue">블루팀 58%</div>
+      <div class="red">42% 레드팀</div>
+    </div>
+  </div>
+
+  <div class="card bans-card">
+    <div class="bans-section">
+      <div class="ban-label">블루팀 밴</div>
+      <div class="bans-list">
+        <div class="ban-wrap"><img class="champ-icon" data-dd-champion="Yone" alt="요네 밴" width="28" height="28"></div>
+        <div class="ban-wrap"><img class="champ-icon" data-dd-champion="Thresh" alt="쓰레쉬 밴" width="28" height="28"></div>
+        <div class="ban-wrap"><img class="champ-icon" data-dd-champion="LeeSin" alt="리신 밴" width="28" height="28"></div>
+        <div class="ban-wrap"><img class="champ-icon" data-dd-champion="Yasuo" alt="야스오 밴" width="28" height="28"></div>
+        <div class="ban-wrap"><img class="champ-icon" data-dd-champion="Camille" alt="카밀 밴" width="28" height="28"></div>
+      </div>
+    </div>
+    <div class="bans-section">
+      <div class="ban-label">레드팀 밴</div>
+      <div class="bans-list">
+        <div class="ban-wrap"><img class="champ-icon" data-dd-champion="Briar" alt="브라이어 밴" width="28" height="28"></div>
+        <div class="ban-wrap"><img class="champ-icon" data-dd-champion="Kassadin" alt="카사딘 밴" width="28" height="28"></div>
+        <div class="ban-wrap"><img class="champ-icon" data-dd-champion="Jhin" alt="진 밴" width="28" height="28"></div>
+        <div class="ban-wrap"><img class="champ-icon" data-dd-champion="Pyke" alt="파이크 밴" width="28" height="28"></div>
+        <div class="ban-wrap"><img class="champ-icon" data-dd-champion="Volibear" alt="볼리베어 밴" width="28" height="28"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="refresh-bar">
+    <span>30초마다 자동 갱신</span>
+    <button type="button" style="font-size: 11px; padding: 4px 10px;">지금 갱신</button>
+  </div>
+
+  <div class="teams-grid">
+
+    <div>
+      <div class="team-header blue">블루팀</div>
+      <div class="team-list">
+
+        <a class="player-card blue" href="summoner.html">
+          <div class="player-header">
+            <img class="champ-icon" data-dd-champion="Azir" alt="아지르" width="40" height="40">
+            <div class="player-name-block">
+              <div class="player-name">Hide on bush <span class="pro-badge">PRO</span></div>
+              <div class="player-rank">Challenger · 1,247 LP</div>
+            </div>
+            <div class="player-spells">
+              <img class="spell-icon" data-dd-spell="SummonerFlash" alt="" width="16" height="16">
+              <img class="spell-icon" data-dd-spell="SummonerDot" alt="" width="16" height="16">
+            </div>
+          </div>
+          <div class="player-stats">
+            <div>
+              <div class="player-stat-label">시즌 승률</div>
+              <div class="player-stat-value">53.8% (580판)</div>
+            </div>
+            <div>
+              <div class="player-stat-label">아지르 (8판)</div>
+              <div class="player-stat-value win">75% · 6.0/3.5/9.0</div>
+            </div>
+          </div>
+          <div class="player-footer">
+            <span>숙련도 7 · 1,234,567</span>
+            <div class="recent-form" aria-label="최근 5게임 폼">
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot loss"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+            </div>
+          </div>
+        </a>
+
+        <a class="player-card blue" href="summoner.html">
+          <div class="player-header">
+            <img class="champ-icon" data-dd-champion="Graves" alt="그레이브즈" width="40" height="40">
+            <div class="player-name-block">
+              <div class="player-name">Canyon <span class="pro-badge">PRO</span></div>
+              <div class="player-rank">Challenger · 982 LP</div>
+            </div>
+            <div class="player-spells">
+              <img class="spell-icon" data-dd-spell="SummonerFlash" alt="" width="16" height="16">
+              <img class="spell-icon" data-dd-spell="SummonerSmite" alt="" width="16" height="16">
+            </div>
+          </div>
+          <div class="player-stats">
+            <div>
+              <div class="player-stat-label">시즌 승률</div>
+              <div class="player-stat-value">58.1% (412판)</div>
+            </div>
+            <div>
+              <div class="player-stat-label">그레이브즈 (15판)</div>
+              <div class="player-stat-value win">67% · 5.2/4.1/7.0</div>
+            </div>
+          </div>
+          <div class="player-footer">
+            <span>숙련도 7 · 892,341</span>
+            <div class="recent-form" aria-label="최근 5게임 폼">
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot loss"></div>
+              <div class="form-dot win"></div>
+            </div>
+          </div>
+        </a>
+
+        <a class="player-card blue" href="summoner.html">
+          <div class="player-header">
+            <img class="champ-icon" data-dd-champion="Jax" alt="잭스" width="40" height="40">
+            <div class="player-name-block">
+              <div class="player-name">Tarzan_KR</div>
+              <div class="player-rank">Diamond II · 47 LP</div>
+            </div>
+            <div class="player-spells">
+              <img class="spell-icon" data-dd-spell="SummonerFlash" alt="" width="16" height="16">
+              <img class="spell-icon" data-dd-spell="SummonerTeleport" alt="" width="16" height="16">
+            </div>
+          </div>
+          <div class="player-stats">
+            <div>
+              <div class="player-stat-label">시즌 승률</div>
+              <div class="player-stat-value">51.2% (203판)</div>
+            </div>
+            <div>
+              <div class="player-stat-label">잭스 (3판)</div>
+              <div class="player-stat-value">33% · 4.0/6.0/3.0</div>
+            </div>
+          </div>
+          <div class="player-footer">
+            <span>숙련도 5 · 87,234</span>
+            <div class="recent-form" aria-label="최근 5게임 폼">
+              <div class="form-dot loss"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot loss"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot loss"></div>
+            </div>
+          </div>
+        </a>
+
+        <a class="player-card blue" href="summoner.html">
+          <div class="player-header">
+            <img class="champ-icon" data-dd-champion="Zeri" alt="제리" width="40" height="40">
+            <div class="player-name-block">
+              <div class="player-name">SilverMoon99</div>
+              <div class="player-rank">Diamond IV · 12 LP</div>
+            </div>
+            <div class="player-spells">
+              <img class="spell-icon" data-dd-spell="SummonerFlash" alt="" width="16" height="16">
+              <img class="spell-icon" data-dd-spell="SummonerHeal" alt="" width="16" height="16">
+            </div>
+          </div>
+          <div class="player-stats">
+            <div>
+              <div class="player-stat-label">시즌 승률</div>
+              <div class="player-stat-value">49.8% (245판)</div>
+            </div>
+            <div>
+              <div class="player-stat-label">제리 (12판)</div>
+              <div class="player-stat-value win">58% · 7.0/4.0/8.5</div>
+            </div>
+          </div>
+          <div class="player-footer">
+            <span>숙련도 6 · 156,892</span>
+            <div class="recent-form" aria-label="최근 5게임 폼">
+              <div class="form-dot win"></div>
+              <div class="form-dot loss"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot loss"></div>
+            </div>
+          </div>
+        </a>
+
+        <a class="player-card blue" href="summoner.html">
+          <div class="player-header">
+            <img class="champ-icon" data-dd-champion="Renata" alt="레나타 글라스크" width="40" height="40">
+            <div class="player-name-block">
+              <div class="player-name">Keria <span class="pro-badge">PRO</span></div>
+              <div class="player-rank">Challenger · 856 LP</div>
+            </div>
+            <div class="player-spells">
+              <img class="spell-icon" data-dd-spell="SummonerFlash" alt="" width="16" height="16">
+              <img class="spell-icon" data-dd-spell="SummonerExhaust" alt="" width="16" height="16">
+            </div>
+          </div>
+          <div class="player-stats">
+            <div>
+              <div class="player-stat-label">시즌 승률</div>
+              <div class="player-stat-value">56.4% (380판)</div>
+            </div>
+            <div>
+              <div class="player-stat-label">레나타 (5판)</div>
+              <div class="player-stat-value win">80% · 1.0/3.0/15.0</div>
+            </div>
+          </div>
+          <div class="player-footer">
+            <span>숙련도 7 · 654,321</span>
+            <div class="recent-form" aria-label="최근 5게임 폼">
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot loss"></div>
+            </div>
+          </div>
+        </a>
+
+      </div>
+    </div>
+
+    <div>
+      <div class="team-header red">레드팀</div>
+      <div class="team-list">
+
+        <a class="player-card red" href="summoner.html">
+          <div class="player-header">
+            <img class="champ-icon" data-dd-champion="Akali" alt="아칼리" width="40" height="40">
+            <div class="player-name-block">
+              <div class="player-name">Chovy <span class="pro-badge">PRO</span></div>
+              <div class="player-rank">Challenger · 1,156 LP</div>
+            </div>
+            <div class="player-spells">
+              <img class="spell-icon" data-dd-spell="SummonerFlash" alt="" width="16" height="16">
+              <img class="spell-icon" data-dd-spell="SummonerDot" alt="" width="16" height="16">
+            </div>
+          </div>
+          <div class="player-stats">
+            <div>
+              <div class="player-stat-label">시즌 승률</div>
+              <div class="player-stat-value">55.2% (485판)</div>
+            </div>
+            <div>
+              <div class="player-stat-label">아칼리 (6판)</div>
+              <div class="player-stat-value win">83% · 8.0/2.5/4.0</div>
+            </div>
+          </div>
+          <div class="player-footer">
+            <span>숙련도 7 · 1,098,234</span>
+            <div class="recent-form" aria-label="최근 5게임 폼">
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot loss"></div>
+            </div>
+          </div>
+        </a>
+
+        <a class="player-card red" href="summoner.html">
+          <div class="player-header">
+            <img class="champ-icon" data-dd-champion="Vi" alt="바이" width="40" height="40">
+            <div class="player-name-block">
+              <div class="player-name">JungleKing</div>
+              <div class="player-rank">Diamond I · 78 LP</div>
+            </div>
+            <div class="player-spells">
+              <img class="spell-icon" data-dd-spell="SummonerFlash" alt="" width="16" height="16">
+              <img class="spell-icon" data-dd-spell="SummonerSmite" alt="" width="16" height="16">
+            </div>
+          </div>
+          <div class="player-stats">
+            <div>
+              <div class="player-stat-label">시즌 승률</div>
+              <div class="player-stat-value">50.4% (312판)</div>
+            </div>
+            <div>
+              <div class="player-stat-label">바이 (9판)</div>
+              <div class="player-stat-value">44% · 4.0/6.0/8.0</div>
+            </div>
+          </div>
+          <div class="player-footer">
+            <span>숙련도 6 · 234,567</span>
+            <div class="recent-form" aria-label="최근 5게임 폼">
+              <div class="form-dot loss"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot loss"></div>
+              <div class="form-dot loss"></div>
+            </div>
+          </div>
+        </a>
+
+        <a class="player-card red" href="summoner.html">
+          <div class="player-header">
+            <img class="champ-icon" data-dd-champion="Syndra" alt="신드라" width="40" height="40">
+            <div class="player-name-block">
+              <div class="player-name">MidLaner_KR</div>
+              <div class="player-rank">Master · 234 LP</div>
+            </div>
+            <div class="player-spells">
+              <img class="spell-icon" data-dd-spell="SummonerFlash" alt="" width="16" height="16">
+              <img class="spell-icon" data-dd-spell="SummonerTeleport" alt="" width="16" height="16">
+            </div>
+          </div>
+          <div class="player-stats">
+            <div>
+              <div class="player-stat-label">시즌 승률</div>
+              <div class="player-stat-value">52.8% (267판)</div>
+            </div>
+            <div>
+              <div class="player-stat-label">신드라 (4판)</div>
+              <div class="player-stat-value">50% · 6.0/5.0/3.0</div>
+            </div>
+          </div>
+          <div class="player-footer">
+            <span>숙련도 7 · 412,890</span>
+            <div class="recent-form" aria-label="최근 5게임 폼">
+              <div class="form-dot win"></div>
+              <div class="form-dot loss"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+            </div>
+          </div>
+        </a>
+
+        <a class="player-card red" href="summoner.html">
+          <div class="player-header">
+            <img class="champ-icon" data-dd-champion="Ezreal" alt="이즈리얼" width="40" height="40">
+            <div class="player-name-block">
+              <div class="player-name">Gumayusi <span class="pro-badge">PRO</span></div>
+              <div class="player-rank">Challenger · 745 LP</div>
+            </div>
+            <div class="player-spells">
+              <img class="spell-icon" data-dd-spell="SummonerFlash" alt="" width="16" height="16">
+              <img class="spell-icon" data-dd-spell="SummonerHeal" alt="" width="16" height="16">
+            </div>
+          </div>
+          <div class="player-stats">
+            <div>
+              <div class="player-stat-label">시즌 승률</div>
+              <div class="player-stat-value">54.7% (398판)</div>
+            </div>
+            <div>
+              <div class="player-stat-label">이즈리얼 (22판)</div>
+              <div class="player-stat-value win">68% · 9.0/2.0/7.0</div>
+            </div>
+          </div>
+          <div class="player-footer">
+            <span>숙련도 7 · 876,543</span>
+            <div class="recent-form" aria-label="최근 5게임 폼">
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot loss"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot win"></div>
+            </div>
+          </div>
+        </a>
+
+        <a class="player-card red" href="summoner.html">
+          <div class="player-header">
+            <img class="champ-icon" data-dd-champion="Nautilus" alt="노틸러스" width="40" height="40">
+            <div class="player-name-block">
+              <div class="player-name">SupportGod99</div>
+              <div class="player-rank">Diamond III · 23 LP</div>
+            </div>
+            <div class="player-spells">
+              <img class="spell-icon" data-dd-spell="SummonerFlash" alt="" width="16" height="16">
+              <img class="spell-icon" data-dd-spell="SummonerExhaust" alt="" width="16" height="16">
+            </div>
+          </div>
+          <div class="player-stats">
+            <div>
+              <div class="player-stat-label">시즌 승률</div>
+              <div class="player-stat-value">48.9% (178판)</div>
+            </div>
+            <div>
+              <div class="player-stat-label">노틸러스 (7판)</div>
+              <div class="player-stat-value">43% · 2.0/4.0/12.0</div>
+            </div>
+          </div>
+          <div class="player-footer">
+            <span>숙련도 5 · 198,234</span>
+            <div class="recent-form" aria-label="최근 5게임 폼">
+              <div class="form-dot loss"></div>
+              <div class="form-dot loss"></div>
+              <div class="form-dot win"></div>
+              <div class="form-dot loss"></div>
+              <div class="form-dot win"></div>
+            </div>
+          </div>
+        </a>
+
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<div data-slot="footer"></div>
+
+<script>
+(function () {
+  'use strict';
+  const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:')
+    ? 'http://localhost:3001' : '';
+
+  // URL params: ?region=kr&name=...&tag=KR1
+  const params = new URL(location.href).searchParams;
+  const REGION = params.get('region');
+  const NAME = params.get('name');
+  const TAG = params.get('tag');
+
+  function tierKr(t) {
+    return ({ IRON:'아이언', BRONZE:'브론즈', SILVER:'실버', GOLD:'골드', PLATINUM:'플래티넘',
+      EMERALD:'에메랄드', DIAMOND:'다이아몬드', MASTER:'마스터',
+      GRANDMASTER:'그랜드마스터', CHALLENGER:'챌린저' })[t] || t;
+  }
+
+  async function resolvePuuid() {
+    if (!REGION || !NAME || !TAG) return null;
+    try {
+      const r = await fetch(`${API_BASE}/api/summoner/${encodeURIComponent(REGION)}/${encodeURIComponent(NAME + '#' + TAG)}`);
+      if (!r.ok) return null;
+      return (await r.json()).account.puuid;
+    } catch (_e) { return null; }
+  }
+
+  async function loadLive(puuid) {
+    try {
+      const r = await fetch(`${API_BASE}/api/live/${REGION}/${puuid}`);
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (_e) { return null; }
+  }
+
+  function showOffline() {
+    const main = document.querySelector('main');
+    if (!main) return;
+    const card = document.querySelector('.live-header');
+    if (card) card.innerHTML = `
+      <div class="live-header-left">
+        <span class="live-meta">현재 게임 중이 아닙니다</span>
+      </div>
+      <a href="live-game-empty.html" class="live-time">자세히 보기 →</a>
+    `;
+    document.querySelector('.teams-grid')?.remove();
+    document.querySelector('.bans-card')?.remove();
+    document.querySelector('.prediction-card')?.remove();
+  }
+
+  function elapsed(sec) {
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return `${m}분 ${String(s).padStart(2, '0')}초 경과`;
+  }
+
+  function renderLive(data) {
+    if (!data || !data.inGame) {
+      showOffline();
+      return;
+    }
+    document.querySelector('.live-time').textContent = elapsed(data.gameLength);
+
+    // Bans
+    const banSections = document.querySelectorAll('.bans-section');
+    if (banSections.length === 2) {
+      const blueBans = data.bans.filter((b) => b.teamId === 100);
+      const redBans = data.bans.filter((b) => b.teamId === 200);
+      [blueBans, redBans].forEach((bans, i) => {
+        const list = banSections[i].querySelector('.bans-list');
+        if (!list) return;
+        list.innerHTML = '';
+        for (const b of bans) {
+          if (b.championId === -1) continue; // -1 = no ban
+          const wrap = document.createElement('div');
+          wrap.className = 'ban-wrap';
+          wrap.innerHTML = `<img class="ban-icon" data-dd-champion-id="${b.championId}" alt="" width="32" height="32">`;
+          list.appendChild(wrap);
+        }
+      });
+    }
+
+    // Two team grids: render player cards
+    const grids = document.querySelectorAll('.teams-grid > div');
+    if (grids.length !== 2) return;
+    const [blueGrid, redGrid] = grids;
+    const blueList = blueGrid.querySelector('.team-list');
+    const redList  = redGrid.querySelector('.team-list');
+    if (!blueList || !redList) return;
+    blueList.innerHTML = ''; redList.innerHTML = '';
+
+    for (const p of data.participants) {
+      const card = document.createElement('a');
+      card.className = 'card player-card ' + (p.teamId === 100 ? 'blue' : 'red');
+      card.href = '#';
+      const tierLine = p.tier
+        ? `<span class="tier-badge tier-${p.tier.toLowerCase()}">${tierKr(p.tier)} ${p.rank || ''}</span> ${p.lp ?? 0} LP`
+        : '<span class="text-tertiary">언랭/캐시 없음</span>';
+      const wlLine = (p.wins != null && p.losses != null)
+        ? `<div class="player-stat-value">${p.wins}W ${p.losses}L</div>`
+        : '<div class="player-stat-value text-tertiary">—</div>';
+      card.innerHTML = `
+        <div class="player-header">
+          <img class="champ-icon" data-dd-champion-id="${p.championId}" alt="" width="40" height="40">
+          <div class="player-name-block">
+            <div class="player-name">${p.puuid.slice(0, 10)}…</div>
+            <div class="player-rank">${tierLine}</div>
+          </div>
+          <div class="player-spells">
+            <img class="spell-icon" data-dd-spell="${p.spell1Id}" alt="" width="20" height="20">
+            <img class="spell-icon" data-dd-spell="${p.spell2Id}" alt="" width="20" height="20">
+          </div>
+        </div>
+        <div class="player-stats">
+          <div>
+            <div class="player-stat-label">시즌 W/L</div>
+            ${wlLine}
+          </div>
+        </div>
+      `;
+      (p.teamId === 100 ? blueList : redList).appendChild(card);
+    }
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  // Module-level so cleanup can reach it.
+  let pollTimerId = null;
+  function stopPolling() {
+    if (pollTimerId != null) {
+      clearInterval(pollTimerId);
+      pollTimerId = null;
+    }
+  }
+
+  function setReady() { document.body.dataset.pageState = 'ready'; }
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (!REGION || !NAME || !TAG) { setReady(); return; } // demo state (header search context)
+    const puuid = await resolvePuuid();
+    if (!puuid) { setReady(); return showOffline(); }
+    const live = await loadLive(puuid);
+    setReady();
+    if (!live) return showOffline();
+    renderLive(live);
+
+    // Auto-refresh every 30s while on tab. Cleared on page hide/unload to
+    // avoid leaking timers when the user navigates away or closes the tab.
+    pollTimerId = setInterval(async () => {
+      if (document.hidden) return;
+      const fresh = await loadLive(puuid);
+      if (fresh) renderLive(fresh);
+    }, 30_000);
+  });
+
+  window.addEventListener('pagehide', stopPolling);
+  window.addEventListener('beforeunload', stopPolling);
+})();
+</script>
+
+</body>
+</html>

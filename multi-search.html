@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>멀티서치 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+</head>
+<body>
+
+<div data-slot="header" data-active="multi-search"></div>
+
+<main class="page">
+
+  <header class="tier-page-header">
+    <div>
+      <h1 class="page-title">멀티서치</h1>
+      <div class="page-subtitle">최대 5명의 소환사 정보를 한 번에 조회합니다</div>
+    </div>
+  </header>
+
+  <form class="card multi-input-card" data-component="multi-search-form" aria-label="멀티서치 입력">
+    <div class="multi-input-grid">
+      <div>
+        <label class="sr-only" for="multi-input">소환사 Riot ID 5명</label>
+        <textarea
+          id="multi-input"
+          name="riot-ids"
+          rows="5"
+          placeholder="줄바꿈 또는 쉼표로 구분하여 입력하세요&#10;예시:&#10;Hide on bush#KR1&#10;Chovy#KR1&#10;Canyon#KR1&#10;Keria#T1&#10;Gumayusi#T1"
+          aria-describedby="multi-input-hint"
+        ></textarea>
+      </div>
+      <button class="primary" type="submit" style="padding: 0 24px; min-width: 96px;">검색</button>
+    </div>
+    <div id="multi-input-hint" class="text-tertiary" style="font-size: 11px; margin-top: 8px;">
+      형식: <span class="text-secondary">이름#태그</span> · 5명까지 한 번에 조회 가능
+    </div>
+  </form>
+
+  <section aria-label="멀티서치 결과">
+
+    <div class="section-title">
+      <span>검색 결과 (5명)</span>
+      <span class="meta">2026년 5월 10일 14:32 KST 조회</span>
+    </div>
+
+    <div class="multi-result-grid">
+
+      <article class="player-card">
+        <div class="player-header">
+          <img class="profile-icon-img" data-dd-profile-icon="6" alt="Hide on bush 프로필" width="40" height="40">
+          <div class="player-name-block">
+            <div class="player-name">Hide on bush <span class="pro-badge">PRO</span></div>
+            <div class="player-rank">레벨 409 · #KR1</div>
+          </div>
+        </div>
+        <div class="player-stats">
+          <div>
+            <div class="player-stat-label">솔로랭크</div>
+            <div class="player-stat-value">
+              <span class="tier-badge tier-challenger">Challenger</span>
+              <span class="text-secondary" style="margin-left: 4px;">1,247 LP</span>
+            </div>
+          </div>
+          <div>
+            <div class="player-stat-label">시즌 전적</div>
+            <div class="player-stat-value win">53.5% · 412승 358패</div>
+          </div>
+        </div>
+        <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px; margin-bottom: 10px;">
+          <div class="player-stat-label" style="margin-bottom: 6px;">자주 픽한 챔프</div>
+          <div class="top-champs" style="justify-content: flex-start;">
+            <img class="champ-icon" data-dd-champion="Azir" alt="아지르" width="28" height="28">
+            <img class="champ-icon" data-dd-champion="Orianna" alt="오리아나" width="28" height="28">
+            <img class="champ-icon" data-dd-champion="Yone" alt="요네" width="28" height="28">
+          </div>
+          <div class="text-tertiary" style="font-size: 11px; margin-top: 4px;">아지르 62% · 오리아나 58% · 요네 54%</div>
+        </div>
+        <div class="player-footer">
+          <div class="recent-form" aria-label="최근 5게임 폼">
+            <div class="form-dot win"></div>
+            <div class="form-dot win"></div>
+            <div class="form-dot loss"></div>
+            <div class="form-dot win"></div>
+            <div class="form-dot win"></div>
+          </div>
+          <a href="summoner.html" class="text-secondary" style="font-size: 11px;">전체 보기 →</a>
+        </div>
+      </article>
+
+      <article class="player-card">
+        <div class="player-header">
+          <img class="profile-icon-img" data-dd-profile-icon="29" alt="Chovy 프로필" width="40" height="40">
+          <div class="player-name-block">
+            <div class="player-name">Chovy <span class="pro-badge">PRO</span></div>
+            <div class="player-rank">레벨 387 · #KR1</div>
+          </div>
+        </div>
+        <div class="player-stats">
+          <div>
+            <div class="player-stat-label">솔로랭크</div>
+            <div class="player-stat-value">
+              <span class="tier-badge tier-challenger">Challenger</span>
+              <span class="text-secondary" style="margin-left: 4px;">1,156 LP</span>
+            </div>
+          </div>
+          <div>
+            <div class="player-stat-label">시즌 전적</div>
+            <div class="player-stat-value win">55.2% · 385승 312패</div>
+          </div>
+        </div>
+        <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px; margin-bottom: 10px;">
+          <div class="player-stat-label" style="margin-bottom: 6px;">자주 픽한 챔프</div>
+          <div class="top-champs" style="justify-content: flex-start;">
+            <img class="champ-icon" data-dd-champion="Ahri" alt="아리" width="28" height="28">
+            <img class="champ-icon" data-dd-champion="Akali" alt="아칼리" width="28" height="28">
+            <img class="champ-icon" data-dd-champion="Syndra" alt="신드라" width="28" height="28">
+          </div>
+          <div class="text-tertiary" style="font-size: 11px; margin-top: 4px;">아리 64% · 아칼리 60% · 신드라 52%</div>
+        </div>
+        <div class="player-footer">
+          <div class="recent-form" aria-label="최근 5게임 폼">
+            <div class="form-dot win"></div>
+            <div class="form-dot win"></div>
+            <div class="form-dot win"></div>
+            <div class="form-dot win"></div>
+            <div class="form-dot loss"></div>
+          </div>
+          <a href="summoner.html" class="text-secondary" style="font-size: 11px;">전체 보기 →</a>
+        </div>
+      </article>
+
+      <article class="player-card">
+        <div class="player-header">
+          <img class="profile-icon-img" data-dd-profile-icon="3768" alt="Canyon 프로필" width="40" height="40">
+          <div class="player-name-block">
+            <div class="player-name">Canyon <span class="pro-badge">PRO</span></div>
+            <div class="player-rank">레벨 342 · #KR1</div>
+          </div>
+        </div>
+        <div class="player-stats">
+          <div>
+            <div class="player-stat-label">솔로랭크</div>
+            <div class="player-stat-value">
+              <span class="tier-badge tier-challenger">Challenger</span>
+              <span class="text-secondary" style="margin-left: 4px;">982 LP</span>
+            </div>
+          </div>
+          <div>
+            <div class="player-stat-label">시즌 전적</div>
+            <div class="player-stat-value win">55.1% · 301승 245패</div>
+          </div>
+        </div>
+        <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px; margin-bottom: 10px;">
+          <div class="player-stat-label" style="margin-bottom: 6px;">자주 픽한 챔프</div>
+          <div class="top-champs" style="justify-content: flex-start;">
+            <img class="champ-icon" data-dd-champion="Graves" alt="그레이브즈" width="28" height="28">
+            <img class="champ-icon" data-dd-champion="Vi" alt="바이" width="28" height="28">
+            <img class="champ-icon" data-dd-champion="Khazix" alt="카직스" width="28" height="28">
+          </div>
+          <div class="text-tertiary" style="font-size: 11px; margin-top: 4px;">그레이브즈 67% · 바이 56% · 카직스 51%</div>
+        </div>
+        <div class="player-footer">
+          <div class="recent-form" aria-label="최근 5게임 폼">
+            <div class="form-dot win"></div>
+            <div class="form-dot loss"></div>
+            <div class="form-dot win"></div>
+            <div class="form-dot win"></div>
+            <div class="form-dot loss"></div>
+          </div>
+          <a href="summoner.html" class="text-secondary" style="font-size: 11px;">전체 보기 →</a>
+        </div>
+      </article>
+
+      <article class="player-card">
+        <div class="player-header">
+          <img class="profile-icon-img" data-dd-profile-icon="588" alt="Keria 프로필" width="40" height="40">
+          <div class="player-name-block">
+            <div class="player-name">Keria <span class="pro-badge">PRO</span></div>
+            <div class="player-rank">레벨 365 · #T1</div>
+          </div>
+        </div>
+        <div class="player-stats">
+          <div>
+            <div class="player-stat-label">솔로랭크</div>
+            <div class="player-stat-value">
+              <span class="tier-badge tier-challenger">Challenger</span>
+              <span class="text-secondary" style="margin-left: 4px;">896 LP</span>
+            </div>
+          </div>
+          <div>
+            <div class="player-stat-label">시즌 전적</div>
+            <div class="player-stat-value win">56.1% · 342승 268패</div>
+          </div>
+        </div>
+        <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px; margin-bottom: 10px;">
+          <div class="player-stat-label" style="margin-bottom: 6px;">자주 픽한 챔프</div>
+          <div class="top-champs" style="justify-content: flex-start;">
+            <img class="champ-icon" data-dd-champion="Renata" alt="레나타" width="28" height="28">
+            <img class="champ-icon" data-dd-champion="Thresh" alt="쓰레쉬" width="28" height="28">
+            <img class="champ-icon" data-dd-champion="Lulu" alt="룰루" width="28" height="28">
+          </div>
+          <div class="text-tertiary" style="font-size: 11px; margin-top: 4px;">레나타 80% · 쓰레쉬 58% · 룰루 53%</div>
+        </div>
+        <div class="player-footer">
+          <div class="recent-form" aria-label="최근 5게임 폼">
+            <div class="form-dot win"></div>
+            <div class="form-dot win"></div>
+            <div class="form-dot win"></div>
+            <div class="form-dot win"></div>
+            <div class="form-dot loss"></div>
+          </div>
+          <a href="summoner.html" class="text-secondary" style="font-size: 11px;">전체 보기 →</a>
+        </div>
+      </article>
+
+      <article class="player-card">
+        <div class="player-header">
+          <img class="profile-icon-img" data-dd-profile-icon="911" alt="Gumayusi 프로필" width="40" height="40">
+          <div class="player-name-block">
+            <div class="player-name">Gumayusi <span class="pro-badge">PRO</span></div>
+            <div class="player-rank">레벨 298 · #T1</div>
+          </div>
+        </div>
+        <div class="player-stats">
+          <div>
+            <div class="player-stat-label">솔로랭크</div>
+            <div class="player-stat-value">
+              <span class="tier-badge tier-challenger">Challenger</span>
+              <span class="text-secondary" style="margin-left: 4px;">874 LP</span>
+            </div>
+          </div>
+          <div>
+            <div class="player-stat-label">시즌 전적</div>
+            <div class="player-stat-value win">54.0% · 298승 254패</div>
+          </div>
+        </div>
+        <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px; margin-bottom: 10px;">
+          <div class="player-stat-label" style="margin-bottom: 6px;">자주 픽한 챔프</div>
+          <div class="top-champs" style="justify-content: flex-start;">
+            <img class="champ-icon" data-dd-champion="Ezreal" alt="이즈리얼" width="28" height="28">
+            <img class="champ-icon" data-dd-champion="Jhin" alt="진" width="28" height="28">
+            <img class="champ-icon" data-dd-champion="Kaisa" alt="카이사" width="28" height="28">
+          </div>
+          <div class="text-tertiary" style="font-size: 11px; margin-top: 4px;">이즈리얼 68% · 진 55% · 카이사 50%</div>
+        </div>
+        <div class="player-footer">
+          <div class="recent-form" aria-label="최근 5게임 폼">
+            <div class="form-dot loss"></div>
+            <div class="form-dot win"></div>
+            <div class="form-dot win"></div>
+            <div class="form-dot loss"></div>
+            <div class="form-dot win"></div>
+          </div>
+          <a href="summoner.html" class="text-secondary" style="font-size: 11px;">전체 보기 →</a>
+        </div>
+      </article>
+
+    </div>
+
+  </section>
+
+</main>
+
+<div data-slot="footer"></div>
+
+<script>
+(function () {
+  'use strict';
+  const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:')
+    ? 'http://localhost:3001' : '';
+
+  function tierKr(t) {
+    return ({ IRON:'아이언', BRONZE:'브론즈', SILVER:'실버', GOLD:'골드', PLATINUM:'플래티넘',
+      EMERALD:'에메랄드', DIAMOND:'다이아몬드', MASTER:'마스터',
+      GRANDMASTER:'그랜드마스터', CHALLENGER:'챌린저' })[t] || t;
+  }
+  function tierClass(t) { return 'tier-' + (t || '').toLowerCase(); }
+
+  async function searchOne(region, riotId) {
+    try {
+      const r = await fetch(`${API_BASE}/api/summoner/${encodeURIComponent(region)}/${encodeURIComponent(riotId)}`);
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        return { ok: false, error: err.error || `${r.status}`, riotId };
+      }
+      return { ok: true, data: await r.json(), riotId };
+    } catch (e) { return { ok: false, error: e.message, riotId }; }
+  }
+
+  function renderCard(result) {
+    const card = document.createElement('div');
+    card.className = 'card player-card';
+    if (!result.ok) {
+      card.innerHTML = `
+        <div class="player-name" style="color: var(--color-loss);">${escapeHtml(result.riotId)}</div>
+        <div class="text-tertiary" style="font-size: 11px;">검색 실패: ${escapeHtml(result.error)}</div>
+      `;
+      return card;
+    }
+    const d = result.data;
+    const solo = d.leagueEntries.find((e) => e.queueType === 'RANKED_SOLO_5x5');
+    const region = (d.account.region || '').toUpperCase();
+    card.innerHTML = `
+      <div class="player-header">
+        <img class="champ-icon profile-icon-img" data-dd-profile-icon="${d.summoner?.profileIconId ?? 0}" alt="" width="40" height="40" style="border-radius: var(--radius-md);">
+        <div class="player-name-block">
+          <div class="player-name">
+            <a href="summoner.html?region=${region.toLowerCase()}&name=${encodeURIComponent(d.account.gameName)}&tag=${encodeURIComponent(d.account.tagLine)}" style="color: inherit;">
+              ${escapeHtml(d.account.gameName)}<span class="text-tertiary">#${escapeHtml(d.account.tagLine)}</span>
+            </a>
+          </div>
+          <div class="player-rank">레벨 ${d.summoner?.summonerLevel ?? '?'} · ${region}</div>
+        </div>
+      </div>
+      <div class="player-stats">
+        <div>
+          <div class="player-stat-label">솔로랭크</div>
+          <div class="player-stat-value">${
+            solo
+              ? `<span class="tier-badge ${tierClass(solo.tier)}">${tierKr(solo.tier)} ${solo.rank || ''}</span> ${solo.leaguePoints} LP`
+              : '<span class="text-tertiary">언랭</span>'
+          }</div>
+        </div>
+        <div>
+          <div class="player-stat-label">시즌 승률</div>
+          <div class="player-stat-value ${solo && solo.winrate >= 55 ? 'win' : ''}">${
+            solo ? `${solo.winrate}% (${solo.wins + solo.losses}판)` : '—'
+          }</div>
+        </div>
+      </div>
+      <div class="player-footer">
+        <span class="text-tertiary">매치 캐시: ${d.matchesAvailable}판</span>
+        <a href="summoner.html?region=${region.toLowerCase()}&name=${encodeURIComponent(d.account.gameName)}&tag=${encodeURIComponent(d.account.tagLine)}" class="text-tertiary" style="font-size: 11px;">전체 보기 →</a>
+      </div>
+    `;
+    return card;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function parseRiotIdLine(line) {
+    const t = line.trim();
+    if (!t) return null;
+    const idx = t.lastIndexOf('#');
+    if (idx <= 0 || idx === t.length - 1) return null;
+    return t;
+  }
+
+  async function runSearch(region, ids) {
+    const grid = document.querySelector('.multi-result-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    // Loading skeletons
+    for (const id of ids) {
+      const card = document.createElement('div');
+      card.className = 'card player-card';
+      card.innerHTML = `<div class="player-name">${escapeHtml(id)}</div><div class="text-tertiary" style="font-size: 11px;">검색 중...</div>`;
+      grid.appendChild(card);
+    }
+    const results = await Promise.all(ids.map((id) => searchOne(region, id)));
+    grid.innerHTML = '';
+    results.forEach((r) => grid.appendChild(renderCard(r)));
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('[data-component="multi-search-form"]');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const ta = form.querySelector('textarea, input[type="text"]');
+      if (!ta) return;
+      const lines = (ta.value || '').split(/\n|,/).map(parseRiotIdLine).filter(Boolean).slice(0, 5);
+      if (lines.length === 0) return;
+      // Region selector via header (defaults to KR via shared layout)
+      const region = (localStorage.getItem('lol-tracker:region') || 'kr').toLowerCase();
+      await runSearch(region, lines);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

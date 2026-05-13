@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>챔피언 티어표 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+  <script src="pick-data.js" defer></script>
+  <script src="tier-engine.js" defer></script>
+</head>
+<body>
+
+<div data-slot="header" data-active="champions"></div>
+
+<main class="page">
+
+  <header class="tier-page-header">
+    <div>
+      <h1 class="page-title">챔피언 티어표</h1>
+      <div class="page-subtitle" id="tier-subtitle">로딩 중...</div>
+    </div>
+    <div class="patch-info">
+      패치 <span class="patch-num" id="tier-patch">—</span> ▾
+    </div>
+  </header>
+
+  <div class="filters" role="group" aria-label="티어표 필터">
+    <div class="filter-row" id="lane-filter-row">
+      <span class="filter-label">라인</span>
+      <button class="filter-chip" type="button" data-lane="all">전체</button>
+      <button class="filter-chip" type="button" data-lane="top">탑</button>
+      <button class="filter-chip" type="button" data-lane="jungle">정글</button>
+      <button class="filter-chip active" type="button" data-lane="mid">미드</button>
+      <button class="filter-chip" type="button" data-lane="adc">원딜</button>
+      <button class="filter-chip" type="button" data-lane="support">서폿</button>
+      <div class="filter-divider" aria-hidden="true"></div>
+      <button class="filter-chip" type="button" data-lane="aram" disabled title="더미에 칼바람 데이터 없음">칼바람</button>
+    </div>
+    <div class="filter-row" id="bracket-filter-row">
+      <span class="filter-label">티어</span>
+      <button class="filter-chip" type="button" data-bracket="emerald+">에메랄드+</button>
+      <button class="filter-chip active" type="button" data-bracket="diamond+">다이아몬드+</button>
+      <button class="filter-chip" type="button" data-bracket="master+">마스터+</button>
+      <button class="filter-chip" type="button" data-bracket="gm+">그랜드마스터+</button>
+      <button class="filter-chip" type="button" data-bracket="challenger+">챌린저+</button>
+      <span class="filter-meta">픽률 0.5% 이상</span>
+    </div>
+  </div>
+
+  <div class="data-table">
+    <div class="data-table-header tier-table-grid">
+      <div>순위</div>
+      <div>변동</div>
+      <div>챔피언</div>
+      <div>라인</div>
+      <div class="text-right">PS / 티어</div>
+      <div class="text-right honey">꿀챔 점수</div>
+      <div class="text-right">승률</div>
+      <div class="text-right">픽률</div>
+      <div class="text-right ban-col">밴율</div>
+      <div class="text-right">표본수</div>
+    </div>
+    <div id="tier-rows"></div>
+    <div class="table-footer" id="tier-footer"></div>
+  </div>
+
+  <p class="text-tertiary" style="font-size: 11px; margin-top: var(--space-3); line-height: 1.7;">
+    PS Score = 0.55 × WR(Wilson) + 0.20 × PBI + 0.15 × log(픽률) + 0.10 × 밴 시그널 − 표본 페널티 ·
+    <a href="docs/tier-spec.md" style="color: var(--text-secondary);">알고리즘 상세 →</a>
+  </p>
+
+</main>
+
+<div data-slot="footer"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const state = {
+    lane: 'mid',
+    bracket: 'diamond+',
+  };
+
+  function laneKr(l) {
+    return { top: '탑', jungle: '정글', mid: '미드', adc: '원딜', support: '서폿' }[l] || l;
+  }
+
+  function el(tag, attrs, children) {
+    const e = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach((k) => {
+      if (k === 'class') e.className = attrs[k];
+      else if (k === 'dataset') Object.assign(e.dataset, attrs[k]);
+      else if (k === 'on') Object.keys(attrs.on).forEach((evt) => e.addEventListener(evt, attrs.on[evt]));
+      else e.setAttribute(k, attrs[k]);
+    });
+    (children || []).forEach((c) => {
+      if (c == null) return;
+      e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    });
+    return e;
+  }
+
+  function psCellClass(score) {
+    if (score >= 58) return 'ps-score';        // S+/S — green
+    if (score >= 48) return 'ps-score mid';    // A/B — neutral
+    return 'ps-score low';                     // C/D — secondary
+  }
+
+  function renderRows() {
+    const wrap = document.getElementById('tier-rows');
+    wrap.innerHTML = '';
+
+    const rows = state.lane === 'all'
+      ? window.TierEngine.fullTable({ minPickrate: 0.5 })
+      : window.TierEngine.tierTable(state.lane, { minPickrate: 0.5 });
+
+    if (!rows.length) {
+      wrap.appendChild(el('div', { class: 'table-footer' }, ['표시할 챔프가 없습니다.']));
+      return;
+    }
+
+    rows.forEach((r) => {
+      const row = el('a', {
+        class: 'data-table-row tier-table-grid',
+        href: 'champion-detail.html',
+      }, [
+        el('div', { class: 'rank-cell' }, [String(r.rank)]),
+        el('div', { class: r.trendClass }, [r.trendArrow + (r.trend.wrDelta > 0 ? ' +' : ' ') + Math.abs(r.trend.wrDelta).toFixed(1) + '%']),
+        el('div', { class: 'champ-cell' }, [
+          (function () {
+            const img = document.createElement('img');
+            img.className = 'champ-icon';
+            img.dataset.ddChampion = r.champion;
+            img.alt = window.PickData.nameKr(r.champion);
+            img.width = 32; img.height = 32;
+            return img;
+          })(),
+          el('span', { class: 'champ-cell-name' }, [window.PickData.nameKr(r.champion)]),
+        ]),
+        el('div', { class: 'lane-cell' }, [laneKr(r.lane)]),
+        // PS / Letter
+        el('div', { class: psCellClass(r.psScore), style: 'display:flex;justify-content:flex-end;align-items:center;gap:6px;' }, [
+          el('span', { class: `tier-badge ${r.letterClass}`, style: 'padding: 1px 6px; font-size:10px; font-weight:700;' }, [r.letter]),
+          String(r.psScore.toFixed(2)),
+        ]),
+        // honey
+        el('div', { class: 'stat-cell honey' }, [r.honey.toFixed(2)]),
+        // wr/pr/br/n
+        el('div', { class: 'stat-cell primary' }, [r.stats.wr.toFixed(2) + '%']),
+        el('div', { class: 'stat-cell' }, [r.stats.pickrate.toFixed(2) + '%']),
+        el('div', { class: 'stat-cell ban-col' }, [r.stats.banrate.toFixed(2) + '%']),
+        el('div', { class: 'stat-cell tertiary' }, [r.stats.n.toLocaleString('ko-KR')]),
+      ]);
+      wrap.appendChild(row);
+    });
+
+    document.getElementById('tier-footer').innerHTML = '';
+    document.getElementById('tier-footer').appendChild(
+      el('span', {}, [`${rows.length}개 챔프 · ${state.lane === 'all' ? '전체 라인' : laneKr(state.lane)} · ${state.bracket}`])
+    );
+
+    if (window.DDragon) window.DDragon.rewriteAll();
+  }
+
+  function renderHeader() {
+    document.getElementById('tier-patch').textContent = window.PickData.PATCH;
+    const totalSample = Object.values(window.PickData.TIER_DATA).reduce((acc, lanes) => {
+      Object.values(lanes).forEach((s) => { acc += s.n; });
+      return acc;
+    }, 0);
+    const now = new Date();
+    const fmt = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} KST`;
+    document.getElementById('tier-subtitle').textContent =
+      `${fmt} 기준 · 표본수 ${totalSample.toLocaleString('ko-KR')} 게임`;
+  }
+
+  function wireFilters() {
+    document.querySelectorAll('#lane-filter-row .filter-chip').forEach((chip) => {
+      if (chip.disabled) return;
+      chip.addEventListener('click', async () => {
+        document.querySelectorAll('#lane-filter-row .filter-chip').forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+        state.lane = chip.dataset.lane;
+        await loadAndRender();
+      });
+    });
+    document.querySelectorAll('#bracket-filter-row .filter-chip').forEach((chip) => {
+      chip.addEventListener('click', async () => {
+        document.querySelectorAll('#bracket-filter-row .filter-chip').forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+        state.bracket = chip.dataset.bracket;
+        await loadAndRender();
+      });
+    });
+  }
+
+  // ---- Live data layer (tries our API, falls back to dummy PickData) ----
+  const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:')
+    ? 'http://localhost:3001' : '';
+  let ddIdToKey = null;     // "266" → "Aatrox"
+  let ddKeyToName = null;   // "Aatrox" → "아트록스"
+  let ddVersion = null;
+  let usingLiveData = false;
+
+  async function loadDdragonMeta() {
+    if (ddIdToKey) return;
+    const versions = await fetch('https://ddragon.leagueoflegends.com/api/versions.json').then((r) => r.json());
+    ddVersion = versions[0];
+    const data = await fetch(`https://ddragon.leagueoflegends.com/cdn/${ddVersion}/data/ko_KR/champion.json`).then((r) => r.json());
+    ddIdToKey = {}; ddKeyToName = {};
+    for (const c of Object.values(data.data)) {
+      ddIdToKey[c.key] = c.id;
+      ddKeyToName[c.id] = c.name;
+    }
+  }
+
+  async function tryFetchLiveTier(lane, bracket, signal) {
+    try {
+      const laneParam = lane === 'all' ? '' : `lane=${encodeURIComponent(lane)}&`;
+      const url = `${API_BASE}/api/champions/tier?${laneParam}bracket=${encodeURIComponent(bracket)}`;
+      const r = await fetch(url, { signal });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (e) {
+      // AbortError is expected when a newer request supersedes us; bubble up
+      // so the caller can ignore stale work.
+      if (e && e.name === 'AbortError') throw e;
+      return null;
+    }
+  }
+
+  function applyLiveTier(api) {
+    const TIER_DATA = {};
+    for (const row of api.rows) {
+      const key = ddIdToKey ? ddIdToKey[String(row.championId)] : null;
+      if (!key) continue;
+      TIER_DATA[key] = TIER_DATA[key] || {};
+      TIER_DATA[key][row.lane] = {
+        wr: row.wr, pickrate: row.pickrate, banrate: row.banrate, n: row.n,
+        psScore: 50,
+      };
+      if (!window.PickData.CHAMPIONS[key]) {
+        window.PickData.CHAMPIONS[key] = {
+          nameKr: ddKeyToName?.[key] ?? key,
+          lanes: [row.lane],
+          damageType: 'AD', role: [], ccLevel: 0,
+          engageType: 'none', scaling: 'mid', waveClear: 0,
+          blindPickSafe: false, difficulty: 5, archetypeAffinity: [],
+        };
+      } else if (!window.PickData.CHAMPIONS[key].lanes.includes(row.lane)) {
+        window.PickData.CHAMPIONS[key].lanes.push(row.lane);
+      }
+    }
+    window.PickData.TIER_DATA = TIER_DATA;
+    window.PickData.PATCH = api.patch ?? window.PickData.PATCH;
+  }
+
+  // Tracks the in-flight request so a newer click cancels the older one.
+  let inFlight = null;
+
+  async function loadAndRender() {
+    if (inFlight) inFlight.abort();
+    const ctl = new AbortController();
+    inFlight = ctl;
+
+    let api;
+    try {
+      api = await tryFetchLiveTier(state.lane, state.bracket, ctl.signal);
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // newer request took over
+      api = null;
+    }
+    if (ctl !== inFlight) return; // another request started while we were awaiting
+    inFlight = null;
+
+    if (api && api.rows && api.rows.length > 0) {
+      await loadDdragonMeta();
+      applyLiveTier(api);
+      usingLiveData = true;
+    } else {
+      usingLiveData = false;
+    }
+    renderHeader();
+    renderRows();
+    // Set warning declaratively each render — never append.
+    const sub = document.getElementById('tier-subtitle');
+    if (!usingLiveData) {
+      sub.textContent += ' · (더미 데이터 — API 미연결 또는 데이터 부족)';
+      sub.style.color = 'var(--color-warning)';
+    } else {
+      sub.style.color = '';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(async () => {
+      if (!window.TierEngine || !window.PickData) {
+        document.getElementById('tier-rows').innerHTML =
+          '<div class="table-footer" style="color: var(--color-loss);">알고리즘 로드 실패: TierEngine 또는 PickData 누락</div>';
+        return;
+      }
+      wireFilters();
+      await loadAndRender();
+    }, 0);
+  });
+})();
+</script>
+
+</body>
+</html>

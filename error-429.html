@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>트래픽이 많습니다 — LoL Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="ddragon.js" defer></script>
+  <script src="app-config.js" defer></script>
+  <script src="i18n.js" defer></script>
+  <script src="riot-id.js" defer></script>
+  <script src="api-client.js" defer></script>
+  <script src="layout.js" defer></script>
+</head>
+<body>
+
+<div data-slot="header" data-active=""></div>
+
+<main class="page page-narrow">
+  <div class="empty-state">
+    <div class="empty-state-num">429</div>
+    <h1 class="empty-state-title">트래픽이 많습니다</h1>
+    <p class="empty-state-message">
+      잠시 후 다시 시도해주세요. Riot API의 요청 한도에 도달했습니다.
+    </p>
+
+    <p class="text-tertiary" style="font-size: 12px; margin-bottom: var(--space-5); font-feature-settings: 'tnum' on;">
+      <span id="retry-countdown">30</span>초 후 자동 재시도...
+    </p>
+
+    <div class="empty-state-actions">
+      <button class="primary" type="button" onclick="location.reload()">다시 시도</button>
+      <a href="index.html"><button type="button">홈으로</button></a>
+    </div>
+  </div>
+</main>
+
+<div data-slot="footer"></div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('retry-countdown');
+    if (!el) return;
+    var remaining = 30;
+    var timer = setInterval(function () {
+      remaining -= 1;
+      if (remaining <= 0) {
+        clearInterval(timer);
+        location.reload();
+        return;
+      }
+      el.textContent = String(remaining);
+    }, 1000);
+  });
+</script>
+
+</body>
+</html>
