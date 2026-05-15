@@ -1,0 +1,35 @@
+{
+  "name": "lol-tracker-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LoL Tracker — backend monorepo (Riot API client + DB + workers + API).",
+  "engines": {
+    "node": ">=20.10",
+    "pnpm": ">=9.0"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter \"./packages/*\" --filter \"./apps/*\" build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "db:generate": "pnpm --filter @lol-tracker/db generate",
+    "db:migrate": "pnpm --filter @lol-tracker/db migrate",
+    "db:studio": "pnpm --filter @lol-tracker/db studio",
+    "worker:dev": "pnpm --filter @lol-tracker/worker dev",
+    "worker:cli": "pnpm --filter @lol-tracker/worker cli",
+    "seed": "pnpm --filter @lol-tracker/worker cli seed",
+    "agg:tier": "pnpm --filter @lol-tracker/worker cli agg-tier",
+    "agg:all": "pnpm --filter @lol-tracker/worker cli agg-all",
+    "status": "pnpm --filter @lol-tracker/worker cli status",
+    "watch": "pnpm --filter @lol-tracker/worker cli watch",
+    "api:dev": "pnpm --filter @lol-tracker/api dev",
+    "compose:up": "docker compose up -d",
+    "compose:down": "docker compose down",
+    "compose:logs": "docker compose logs -f"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "tsx": "^4.19.2",
+    "@types/node": "^22.9.0"
+  },
+  "packageManager": "pnpm@9.12.3"
+}

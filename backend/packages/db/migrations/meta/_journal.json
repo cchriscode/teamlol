@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1778464913691,
+      "tag": "0000_milky_prima",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778500000000,
+      "tag": "0001_ai_score_v2",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778600000000,
+      "tag": "0002_champion_masteries",
+      "breakpoints": true
+    }
+  ]
+}

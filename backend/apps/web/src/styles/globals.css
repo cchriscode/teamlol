@@ -1,0 +1,8 @@
+/* Order matters: Tailwind utilities load AFTER prototype CSS so utility classes
+   can override but won't reset prototype's design tokens. We skip Tailwind's
+   preflight (CSS reset) to avoid clobbering the prototype's intentional styles. */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@import './prototype.css';
+@import './prototype-components.css';

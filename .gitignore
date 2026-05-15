@@ -1,6 +1,6 @@
 # Dependencies
 node_modules/
-backend/node_modules/
+**/node_modules/
 
 # Build artifacts
 dist/
@@ -10,17 +10,26 @@ build/
 .turbo/
 *.tsbuildinfo
 
+# Next.js
+.next/
+**/.next/
+out/
+**/out/
+next-env.d.ts
+
 # Env / secrets
 .env
 .env.local
 .env.*.local
-backend/.env
-backend/.env.local
+.env.production
+**/.env
+**/.env.local
+**/.env.*.local
 
 # Logs
 *.log
-backend/logs/
 **/logs/
+*.pid
 
 # OS / editor
 .DS_Store
@@ -30,4 +39,13 @@ Thumbs.db
 
 # Generated / cache
 **/.cache/
-**/.next/
+
+# Backend internals not for public repo
+# (worker/api source is fine; runtime artifacts already ignored above)
+backend/redis-data/
+backend/postgres-data/
+
+# Crash dumps / temp
+*.stackdump
+*.tmp
+~$*

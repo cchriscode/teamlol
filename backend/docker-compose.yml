@@ -1,0 +1,64 @@
+# Local dev environment for the LoL Tracker backend.
+# Brings up PostgreSQL 16 + Redis 7 + a pgAdmin web UI.
+# Persistence in named volumes; safe to docker compose down without losing data.
+#
+# Usage:
+#   docker compose up -d         # start
+#   docker compose logs -f       # tail logs
+#   docker compose down          # stop (data persists)
+#   docker compose down -v       # stop + delete data
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    container_name: lol-tracker-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-loltracker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-loltracker_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-loltracker}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-loltracker}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    container_name: lol-tracker-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    restart: unless-stopped
+    container_name: lol-tracker-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    profiles: ["with-admin"]
+
+volumes:
+  postgres-data:
+  redis-data:
+  pgadmin-data:

@@ -130,7 +130,7 @@
     rows.forEach((r) => {
       const row = el('a', {
         class: 'data-table-row tier-table-grid',
-        href: 'champion-detail.html',
+        href: `champion-detail.html?champion=${encodeURIComponent(r.champion)}&lane=${encodeURIComponent(r.lane)}&bracket=${encodeURIComponent(state.bracket)}`,
       }, [
         el('div', { class: 'rank-cell' }, [String(r.rank)]),
         el('div', { class: r.trendClass }, [r.trendArrow + (r.trend.wrDelta > 0 ? ' +' : ' ') + Math.abs(r.trend.wrDelta).toFixed(1) + '%']),
