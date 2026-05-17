@@ -112,7 +112,7 @@ export default async function ChampionsPage({ searchParams }: PageProps) {
           <div>변동</div>
           <div>챔피언</div>
           <div>라인</div>
-          <div className="text-right">PS / 티어</div>
+          <div className="text-right">점수 / 등급</div>
           <div className="text-right honey">꿀챔 점수</div>
           <div className="text-right">승률</div>
           <div className="text-right">픽률</div>
@@ -158,7 +158,7 @@ export default async function ChampionsPage({ searchParams }: PageProps) {
       </div>
 
       <p className="text-tertiary" style={{ fontSize: 11, marginTop: 'var(--space-3)', lineHeight: 1.7 }}>
-        PS Score = 0.55 × WR(Wilson) + 0.20 × PBI + 0.15 × log(픽률) + 0.10 × 밴 시그널 − 표본 페널티
+        점수 = 0.55 × WR(Wilson 신뢰하한) + 0.20 × 라인 대비 우위 + 0.15 × log(픽률) + 0.10 × 밴 시그널 − 표본 페널티
       </p>
     </main>
   );
