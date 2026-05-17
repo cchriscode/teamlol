@@ -40,24 +40,31 @@ export interface MatchListResponse {
 
 export interface MatchListItem {
   matchId: string;
-  region: string;
   patch: string;
   queueId: number;
   gameCreation: number;
   gameDuration: number;
-  win: boolean;
-  championId: number;
-  championKey: string;
-  lane: string;
-  kills: number;
-  deaths: number;
-  assists: number;
-  cs: number;
-  goldPerMin: number;
-  visionScore: number;
-  items: number[];
-  spells?: number[];
-  runes?: unknown;
+  bluewin: number | null;
+  /** Stats for the requested player only. */
+  self: {
+    championKey: string;
+    championId: number;
+    lane: string;
+    team: string;
+    win: boolean;
+    kills: number; deaths: number; assists: number;
+    kp: number | null;
+    cs: number;
+    csPerMin: number | null;
+    visionScore: number;
+    dmgToChampPerMin: number;
+    items: number[];
+    spells: number[];
+    runes?: unknown;
+    aiScore: number | null;
+    aiScoreLetter: string | null;
+  };
+  /** All 10 participants for the expand view. */
   participants: Array<{
     puuid: string;
     team: string;

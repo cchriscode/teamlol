@@ -5,6 +5,7 @@ import { ChampionIcon } from '@/components/atoms/champion-icon';
 import { parseRiotIdSlug, formatRiotId } from '@/lib/riot-id';
 import { getChampionMeta } from '@/lib/champion-meta';
 import type { SummonerSearchResponse } from '@/lib/api-types-summoner';
+import { SummonerHeader } from '../summoner-header';
 
 // Live game state changes every few seconds; don't cache.
 export const revalidate = 0;
@@ -71,15 +72,10 @@ export default async function LiveGamePage({ params }: PageProps) {
   if (!live || !live.inGame || !live.participants) {
     return (
       <main className="page">
-        <header className="tier-page-header">
-          <div>
-            <h1 className="page-title">{id.gameName} <span style={{ color: 'var(--text-tertiary)', fontSize: 16, fontWeight: 400 }}>#{id.tagLine}</span></h1>
-            <div className="page-subtitle">현재 게임 중이 아닙니다.</div>
-          </div>
-        </header>
-        <p style={{ marginTop: 24 }}>
-          <Link href={`/${region}/${riotId}`} style={{ color: 'var(--text-secondary)' }}>← 프로필로</Link>
-        </p>
+        <SummonerHeader summoner={summoner} region={region} riotId={riotId} tab="live" />
+        <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+          현재 게임 중이 아닙니다.
+        </div>
       </main>
     );
   }
@@ -90,6 +86,7 @@ export default async function LiveGamePage({ params }: PageProps) {
 
   return (
     <main className="page">
+      <SummonerHeader summoner={summoner} region={region} riotId={riotId} tab="live" />
       <header className="tier-page-header">
         <div>
           <h1 className="page-title">라이브 게임</h1>

@@ -2,9 +2,11 @@ import Link from 'next/link';
 import { apiGet } from '@/lib/api';
 import { ChampionIcon } from '@/components/atoms/champion-icon';
 import { getChampionMeta } from '@/lib/champion-meta';
-import type { ChampionTierResponse, Lane, Bracket } from '@/lib/types';
+import { buildPickData } from '@/app/pick/build-pick-data';
+import { createTierEngine } from '@/lib/tier-engine';
+import type { Lane, Bracket } from '@/lib/types';
 
-export const revalidate = 600;          // ISR 10min per (lane, bracket) combo
+export const revalidate = 600;
 
 const LANES: Array<{ key: Lane | 'all'; label: string }> = [
   { key: 'all',     label: '전체'  },
@@ -23,8 +25,6 @@ const BRACKETS: Array<{ key: Bracket; label: string }> = [
   { key: 'challenger', label: '챌린저'       },
 ];
 
-const MIN_PICKRATE = 0.5;
-
 function laneKr(l: string) {
   return ({ top: '탑', jungle: '정글', mid: '미드', adc: '원딜', support: '서폿' } as Record<string, string>)[l] ?? l;
 }
@@ -35,35 +35,32 @@ interface PageProps {
 
 export default async function ChampionsPage({ searchParams }: PageProps) {
   const sp = await searchParams;
-  const lane = (LANES.find((l) => l.key === sp.lane)?.key ?? 'mid') as Lane | 'all';
-  const bracket = (BRACKETS.find((b) => b.key === sp.bracket)?.key ?? 'diamond+');
+  const lane: Lane | 'all' = LANES.find((l) => l.key === sp.lane)?.key ?? 'all';
+  const bracket: Bracket = BRACKETS.find((b) => b.key === sp.bracket)?.key ?? 'diamond+';
 
-  const params = new URLSearchParams({ bracket });
-  if (lane !== 'all') params.set('lane', lane);
-
-  const [data, meta] = await Promise.all([
-    apiGet<ChampionTierResponse>(`/api/champions/tier?${params.toString()}`, { next: { revalidate: 600 } }),
+  // Use the pick-recommend data endpoint (all-champion view with matchups +
+  // tier_avg_wr) — tier-engine needs the full table to compute PBI properly.
+  const [api, meta] = await Promise.all([
+    apiGet<Parameters<typeof buildPickData>[0]>(
+      `/api/pick-recommend/data?bracket=${encodeURIComponent(bracket)}`,
+      { next: { revalidate: 600 } },
+    ),
     getChampionMeta(),
   ]);
 
-  // Filter + sort on the server (mirrors prototype tier-engine.tierTable basics).
-  const rows = data.rows
-    .filter((r) => r.pickrate >= MIN_PICKRATE && r.n >= 30)
-    .sort((a, b) => b.wr - a.wr)
-    .map((r, i) => {
-      const champ = meta.byId.get(r.championId);
-      return {
-        rank: i + 1,
-        championId: r.championId,
-        championKey: champ?.id ?? `id-${r.championId}`,
-        nameKr: champ?.name ?? `#${r.championId}`,
-        lane: r.lane,
-        wr: r.wr,
-        pickrate: r.pickrate,
-        banrate: r.banrate,
-        n: r.n,
-      };
-    });
+  const data = buildPickData(api, { byId: meta.byId, byKey: meta.byKey });
+  // Attach laneAvgWr from API (tier-engine reads TIER_AVG_WR for PBI).
+  (data as unknown as { TIER_AVG_WR: Record<string, number> }).TIER_AVG_WR = api.laneAvgWr ?? {};
+
+  const engine = createTierEngine(data);
+  const rows = lane === 'all'
+    ? engine.fullTable({ minPickrate: 0.5 })
+    : engine.tierTable(lane, { minPickrate: 0.5 });
+
+  const totalSample = Object.values(data.TIER_DATA).reduce((acc, lanes) => {
+    Object.values(lanes ?? {}).forEach((s) => { acc += (s?.n ?? 0); });
+    return acc;
+  }, 0);
 
   return (
     <main className="page">
@@ -71,11 +68,11 @@ export default async function ChampionsPage({ searchParams }: PageProps) {
         <div>
           <h1 className="page-title">챔피언 티어표</h1>
           <div className="page-subtitle">
-            패치 {data.patch} · {data.bracket} · 표본수 {data.totalSample.toLocaleString('ko-KR')} 게임
+            패치 {data.PATCH} · {bracket} · 표본수 {totalSample.toLocaleString('ko-KR')} 게임
           </div>
         </div>
         <div className="patch-info">
-          패치 <span className="patch-num">{data.patch}</span>
+          패치 <span className="patch-num">{data.PATCH}</span>
         </div>
       </header>
 
@@ -87,11 +84,7 @@ export default async function ChampionsPage({ searchParams }: PageProps) {
             if (l.key !== 'all') next.set('lane', l.key);
             const isActive = lane === l.key;
             return (
-              <Link
-                key={l.key}
-                href={`/champions?${next.toString()}`}
-                className={`filter-chip${isActive ? ' active' : ''}`}
-              >
+              <Link key={l.key} href={`/champions?${next.toString()}`} className={`filter-chip${isActive ? ' active' : ''}`}>
                 {l.label}
               </Link>
             );
@@ -104,16 +97,12 @@ export default async function ChampionsPage({ searchParams }: PageProps) {
             if (lane !== 'all') next.set('lane', lane);
             const isActive = bracket === b.key;
             return (
-              <Link
-                key={b.key}
-                href={`/champions?${next.toString()}`}
-                className={`filter-chip${isActive ? ' active' : ''}`}
-              >
+              <Link key={b.key} href={`/champions?${next.toString()}`} className={`filter-chip${isActive ? ' active' : ''}`}>
                 {b.label}
               </Link>
             );
           })}
-          <span className="filter-meta">픽률 {MIN_PICKRATE}% 이상</span>
+          <span className="filter-meta">픽률 0.5% 이상</span>
         </div>
       </div>
 
@@ -133,32 +122,44 @@ export default async function ChampionsPage({ searchParams }: PageProps) {
         {rows.length === 0 ? (
           <div className="table-footer">표시할 챔프가 없습니다.</div>
         ) : (
-          rows.map((r) => (
-            <Link
-              key={`${r.championId}-${r.lane}`}
-              href={`/champions/${encodeURIComponent(r.championKey)}?lane=${r.lane}&bracket=${encodeURIComponent(bracket)}`}
-              className="data-table-row tier-table-grid"
-            >
-              <div className="rank-cell">{r.rank}</div>
-              <div className="text-tertiary">—</div>
-              <div className="champ-cell">
-                <ChampionIcon championKey={r.championKey} size={32} alt={r.nameKr} />
-                <span className="champ-cell-name">{r.nameKr}</span>
-              </div>
-              <div className="lane-cell">{laneKr(r.lane)}</div>
-              <div className="text-right">—</div>
-              <div className="stat-cell honey">—</div>
-              <div className="stat-cell primary">{r.wr.toFixed(2)}%</div>
-              <div className="stat-cell">{r.pickrate.toFixed(2)}%</div>
-              <div className="stat-cell ban-col">{r.banrate.toFixed(2)}%</div>
-              <div className="stat-cell tertiary">{r.n.toLocaleString('ko-KR')}</div>
-            </Link>
-          ))
+          rows.map((r) => {
+            const ddChamp = meta.byKey.get(r.champion);
+            return (
+              <Link
+                key={`${r.champion}-${r.lane}`}
+                href={`/champions/${encodeURIComponent(r.champion)}?lane=${r.lane}&bracket=${encodeURIComponent(bracket)}`}
+                className="data-table-row tier-table-grid"
+              >
+                <div className="rank-cell">{r.rank}</div>
+                <div className={r.trendClass}>
+                  {r.trendArrow} {r.trend.wrDelta > 0 ? '+' : ''}{Math.abs(r.trend.wrDelta).toFixed(1)}%
+                </div>
+                <div className="champ-cell">
+                  <ChampionIcon championKey={r.champion} size={32} alt={ddChamp?.name ?? r.champion} />
+                  <span className="champ-cell-name">{ddChamp?.name ?? r.champion}</span>
+                </div>
+                <div className="lane-cell">{laneKr(r.lane)}</div>
+                <div className="text-right" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6 }}>
+                  <span className={`tier-badge ${r.letterClass}`} style={{ padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>{r.letter}</span>
+                  <span style={{ fontFeatureSettings: '"tnum" on' }}>{r.psScore.toFixed(2)}</span>
+                </div>
+                <div className="stat-cell honey">{r.honey.toFixed(2)}</div>
+                <div className="stat-cell primary">{r.stats.wr.toFixed(2)}%</div>
+                <div className="stat-cell">{r.stats.pickrate.toFixed(2)}%</div>
+                <div className="stat-cell ban-col">{r.stats.banrate.toFixed(2)}%</div>
+                <div className="stat-cell tertiary">{r.stats.n.toLocaleString('ko-KR')}</div>
+              </Link>
+            );
+          })
         )}
         <div className="table-footer">
           {rows.length}개 챔프 · {lane === 'all' ? '전체 라인' : laneKr(lane)} · {bracket}
         </div>
       </div>
+
+      <p className="text-tertiary" style={{ fontSize: 11, marginTop: 'var(--space-3)', lineHeight: 1.7 }}>
+        PS Score = 0.55 × WR(Wilson) + 0.20 × PBI + 0.15 × log(픽률) + 0.10 × 밴 시그널 − 표본 페널티
+      </p>
     </main>
   );
 }

@@ -16,17 +16,11 @@ export default async function PickPage() {
   ]);
 
   const data = buildPickData(api, { byId: meta.byId, byKey: meta.byKey });
-  // Strip Map-typed function for serialization to client (will be re-attached).
+  // Strip Map-typed function for serialization to client (re-attached there).
   const serializable = JSON.parse(JSON.stringify(data));
 
   return (
-    <main className="page">
-      <header className="tier-page-header">
-        <div>
-          <h1 className="page-title">픽 추천</h1>
-          <div className="page-subtitle">패치 {data.PATCH} · {data.BRACKET}</div>
-        </div>
-      </header>
+    <main className="page page-wide">
       <PickRecommendApp initialData={serializable} />
     </main>
   );

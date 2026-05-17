@@ -1,10 +1,13 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { apiGet, ApiError } from '@/lib/api';
 import { ddragon } from '@/lib/ddragon';
 import { parseRiotIdSlug, formatRiotId } from '@/lib/riot-id';
 import type { SummonerSearchResponse, MatchListResponse } from '@/lib/api-types-summoner';
 import { getDdragonVersion } from '@/lib/ddragon-version';
 import { ChampionIcon } from '@/components/atoms/champion-icon';
+import { getChampionMeta } from '@/lib/champion-meta';
+import { SummonerHeader } from './summoner-header';
 
 interface PageProps {
   params: Promise<{ region: string; riotId: string }>;
@@ -20,17 +23,27 @@ export async function generateMetadata({ params }: PageProps) {
 
 function tierKr(tier: string) {
   const map: Record<string, string> = {
-    IRON: '아이언', BRONZE: '브론즈', SILVER: '실버', GOLD: '골드',
-    PLATINUM: '플래티넘', EMERALD: '에메랄드', DIAMOND: '다이아몬드',
-    MASTER: '마스터', GRANDMASTER: '그랜드마스터', CHALLENGER: '챌린저',
+    IRON: 'Iron', BRONZE: 'Bronze', SILVER: 'Silver', GOLD: 'Gold',
+    PLATINUM: 'Platinum', EMERALD: 'Emerald', DIAMOND: 'Diamond',
+    MASTER: 'Master', GRANDMASTER: 'Grandmaster', CHALLENGER: 'Challenger',
   };
   return map[tier] ?? tier;
 }
-
-function queueKr(q: string) {
-  if (q === 'RANKED_SOLO_5x5') return '솔로 랭크';
-  if (q === 'RANKED_FLEX_SR') return '자유 5:5';
-  return q;
+function tierClass(tier: string) {
+  return 'tier-' + tier.toLowerCase();
+}
+function laneKr(l: string) {
+  return ({ top: '탑', jungle: '정글', mid: '미드', adc: '원딜', support: '서폿' } as Record<string, string>)[l] ?? l;
+}
+function timeAgo(epochMs: number): string {
+  const sec = Math.floor((Date.now() - epochMs) / 1000);
+  if (sec < 60) return `${sec}초 전`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  const d = Math.floor(hr / 24);
+  return `${d}일 전`;
 }
 
 export default async function SummonerPage({ params }: PageProps) {
@@ -39,113 +52,196 @@ export default async function SummonerPage({ params }: PageProps) {
   if (!id) notFound();
 
   const slug = `${encodeURIComponent(id.gameName)}%23${encodeURIComponent(id.tagLine)}`;
-  const summoner = await apiGet<SummonerSearchResponse>(
-    `/api/summoner/${region}/${slug}`,
-  ).catch((e) => {
+  const summoner = await apiGet<SummonerSearchResponse>(`/api/summoner/${region}/${slug}`).catch((e) => {
     if (e instanceof ApiError && e.status === 404) return null;
     throw e;
   });
   if (!summoner) notFound();
 
-  const matches = await apiGet<MatchListResponse>(
-    `/api/summoner/${summoner.account.puuid}/matches?count=20`,
-  ).catch(() => null);
-
+  const matches = await apiGet<MatchListResponse>(`/api/summoner/${summoner.account.puuid}/matches?count=20`).catch(() => null);
+  const meta = await getChampionMeta();
   const version = await getDdragonVersion();
-  const profileIconUrl = summoner.summoner
-    ? ddragon.profileIcon(summoner.summoner.profileIconId, version)
-    : null;
+  const profileIconUrl = summoner.summoner ? ddragon.profileIcon(summoner.summoner.profileIconId, version) : null;
 
   const solo = summoner.leagueEntries.find((e) => e.queueType === 'RANKED_SOLO_5x5');
   const flex = summoner.leagueEntries.find((e) => e.queueType === 'RANKED_FLEX_SR');
 
+  // Recent 20 game stats
+  const recent = matches?.matches ?? [];
+  const wins = recent.filter((m) => m.self.win).length;
+  const losses = recent.length - wins;
+  const wrPct = recent.length > 0 ? (wins / recent.length) * 100 : 0;
+  const ringCirc = 2 * Math.PI * 32;
+  const ringOffset = ringCirc * (1 - wrPct / 100);
+
+  const totalK = recent.reduce((s, m) => s + m.self.kills, 0);
+  const totalD = recent.reduce((s, m) => s + m.self.deaths, 0);
+  const totalA = recent.reduce((s, m) => s + m.self.assists, 0);
+  const avgKda = totalD === 0 ? totalK + totalA : (totalK + totalA) / totalD;
+  const avgKp = recent.length > 0
+    ? Math.round(recent.reduce((s, m) => s + (m.self.kp ?? 0), 0) / recent.length * 100)
+    : 0;
+
+  // Lane distribution
+  const laneCounts: Record<string, number> = {};
+  recent.forEach((m) => { laneCounts[m.self.lane] = (laneCounts[m.self.lane] ?? 0) + 1; });
+
+  // Top champions
+  const champCounts: Record<string, { games: number; wins: number; key: string; name: string }> = {};
+  recent.forEach((m) => {
+    const k = m.self.championKey;
+    if (!champCounts[k]) {
+      champCounts[k] = { games: 0, wins: 0, key: k, name: meta.byKey.get(k)?.name ?? k };
+    }
+    champCounts[k].games += 1;
+    if (m.self.win) champCounts[k].wins += 1;
+  });
+  const topChamps = Object.values(champCounts).sort((a, b) => b.games - a.games).slice(0, 5);
+
   return (
     <main className="page">
-      <header className="card" style={{ display: 'flex', gap: 24, alignItems: 'center', padding: 24, marginBottom: 24 }}>
-        {profileIconUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={profileIconUrl} width={96} height={96} alt="" style={{ borderRadius: 8 }} />
-        )}
-        <div style={{ flex: 1 }}>
-          <h1 className="page-title">
-            {summoner.account.gameName}
-            <span style={{ color: 'var(--text-tertiary)', fontWeight: 400, marginLeft: 8, fontSize: 18 }}>
-              #{summoner.account.tagLine}
-            </span>
-          </h1>
-          <div className="page-subtitle">
-            레벨 {summoner.summoner?.summonerLevel ?? '—'} · {region.toUpperCase()} · 매치 {summoner.matchesAvailable}개 수집됨
-          </div>
-        </div>
-      </header>
+      <SummonerHeader summoner={summoner} region={region} riotId={riotId} tab="overview" />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 24 }}>
-        {[solo, flex].map((entry, i) => (
-          <div key={i} className="card" style={{ padding: 20 }}>
-            <div className="section-title">
-              <span>{entry ? queueKr(entry.queueType) : (i === 0 ? '솔로 랭크' : '자유 5:5')}</span>
+      <div className="summoner-grid">
+        <aside className="sidebar">
+          <div className="card stats-summary">
+            <div className="section-title">최근 {recent.length}게임</div>
+            <div className="winrate-ring-wrap">
+              <div className="winrate-ring">
+                <svg width="80" height="80" viewBox="0 0 80 80" aria-label={`승률 ${wrPct.toFixed(0)}%`}>
+                  <circle className="winrate-ring-track" cx="40" cy="40" r="32" />
+                  <circle className="winrate-ring-progress" cx="40" cy="40" r="32"
+                          strokeDasharray={ringCirc.toFixed(2)} strokeDashoffset={ringOffset.toFixed(2)} />
+                </svg>
+                <div className="winrate-ring-text">{wrPct.toFixed(0)}%</div>
+              </div>
+              <div>
+                <div className="stats-detail-row">
+                  <span className="stats-detail-label">승/패</span>
+                  <span className="stats-detail-value">{wins}W {losses}L</span>
+                </div>
+                <div className="stats-detail-row">
+                  <span className="stats-detail-label">평균 KDA</span>
+                  <span className="stats-detail-value">{avgKda.toFixed(2)} : 1</span>
+                </div>
+                <div className="stats-detail-row">
+                  <span className="stats-detail-label">킬관여</span>
+                  <span className="stats-detail-value">{avgKp}%</span>
+                </div>
+              </div>
             </div>
-            {entry ? (
-              <>
-                <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
-                  {tierKr(entry.tier)} {entry.rank} · {entry.leaguePoints} LP
+            <div style={{ fontSize: 12, marginTop: 'var(--space-3)' }}>
+              <div className="text-tertiary uppercase" style={{ fontSize: 11, marginBottom: 8 }}>자주 가는 라인</div>
+              {Object.entries(laneCounts).sort((a,b)=>b[1]-a[1]).map(([ln, n]) => (
+                <div key={ln} className="stats-detail-row">
+                  <span className="stats-detail-label">{laneKr(ln)}</span>
+                  <span className="stats-detail-value">{n}게임 ({Math.round(n / recent.length * 100)}%)</span>
                 </div>
-                <div className="text-tertiary" style={{ fontSize: 13 }}>
-                  {entry.wins}승 {entry.losses}패 · 승률 {entry.winrate}%
-                </div>
-              </>
-            ) : (
-              <div className="text-tertiary">언랭</div>
-            )}
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
 
-      <div className="card" style={{ padding: 0 }}>
-        <div className="section-title" style={{ padding: 16 }}>
-          <span>최근 매치</span>
-          <span className="meta">{matches?.count ?? 0}개 표시</span>
-        </div>
-        {matches && matches.matches.length > 0 ? (
-          <div>
-            {matches.matches.map((m) => {
-              const kda = m.deaths === 0 ? (m.kills + m.assists) : (m.kills + m.assists) / m.deaths;
-              const minutes = Math.round(m.gameDuration / 60);
+          <div className="card">
+            <div className="section-title">자주 픽한 챔프 <span className="meta">최근 {recent.length}게임</span></div>
+            <div>
+              {topChamps.length === 0 ? (
+                <div className="text-tertiary" style={{ padding: 8 }}>데이터 없음</div>
+              ) : (
+                topChamps.map((c) => {
+                  const wr = c.games > 0 ? (c.wins / c.games) * 100 : 0;
+                  return (
+                    <div key={c.key} className="champ-list-row">
+                      <ChampionIcon championKey={c.key} size={32} alt={c.name} />
+                      <div className="champ-list-info">
+                        <div className="champ-list-name">{c.name}</div>
+                        <div className="text-tertiary" style={{ fontSize: 11 }}>
+                          {c.games}게임 · {wr.toFixed(0)}%
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </aside>
+
+        <div className="match-list">
+          {recent.length === 0 ? (
+            <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+              {summoner.cold ? '데이터 수집 중입니다. 잠시 후 새로고침하세요.' : '아직 수집된 매치가 없습니다.'}
+            </div>
+          ) : (
+            recent.map((m) => {
+              const s = m.self;
+              const kda = s.deaths === 0 ? s.kills + s.assists : (s.kills + s.assists) / s.deaths;
+              const minutes = Math.floor(m.gameDuration / 60);
+              const seconds = m.gameDuration % 60;
+              const cspm = m.gameDuration > 0 ? s.cs / (m.gameDuration / 60) : 0;
+              const blueParticipants = m.participants?.filter((p) => p.team === 'blue') ?? [];
+              const redParticipants = m.participants?.filter((p) => p.team === 'red') ?? [];
+
               return (
-                <div
-                  key={m.matchId}
-                  className="match-card"
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'auto 1fr auto',
-                    gap: 16,
-                    padding: 16,
-                    borderTop: '1px solid var(--border-subtle)',
-                    borderLeft: `3px solid ${m.win ? 'var(--color-win)' : 'var(--color-loss)'}`,
-                    alignItems: 'center',
-                  }}
-                >
-                  <ChampionIcon championKey={m.championKey} size={48} version={version} />
-                  <div>
-                    <div style={{ fontWeight: 600 }}>
-                      {m.win ? '승리' : '패배'} · {m.lane.toUpperCase()} · {minutes}분
-                    </div>
-                    <div className="text-tertiary" style={{ fontSize: 12 }}>
-                      {m.kills}/{m.deaths}/{m.assists} (KDA {kda.toFixed(2)}) · CS {m.cs} · 시야 {m.visionScore} · 패치 {m.patch}
+                <Link key={m.matchId} href={`/match/${m.matchId}`} className={`match-card${s.win ? ' win' : ''}`}>
+                  <div className={`match-result${s.win ? ' win' : ''}`}>
+                    <div className="match-result-label">{s.win ? '승리' : '패배'}</div>
+                    <div className="match-meta">
+                      솔로랭크<br />
+                      {timeAgo(m.gameCreation)}<br />
+                      {minutes}분 {seconds}초
                     </div>
                   </div>
-                  <div className="text-tertiary" style={{ fontSize: 11, textAlign: 'right' }}>
-                    {new Date(m.gameCreation).toLocaleDateString('ko-KR')}
+                  <div className="match-champ-section">
+                    <div className="match-champ-icon-wrap">
+                      <ChampionIcon championKey={s.championKey} size={48} version={version} alt={meta.byKey.get(s.championKey)?.name ?? s.championKey} />
+                      <div className="match-position-badge">{laneKr(s.lane)}</div>
+                    </div>
                   </div>
-                </div>
+                  <div className="match-stats">
+                    <div className="match-kda">{s.kills} / {s.deaths} / {s.assists} <span className="match-kda-ratio">(KDA {kda.toFixed(2)})</span></div>
+                    <div className="match-substats">CS {s.cs} ({cspm.toFixed(1)}/분) · 시야 {s.visionScore}</div>
+                    <div className="match-items">
+                      {s.items.map((id, i) => id > 0 ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} className="item-icon" src={ddragon.itemIcon(id, version)} width={22} height={22} alt="" />
+                      ) : null)}
+                    </div>
+                  </div>
+                  <div className="match-score-box">
+                    <div className="match-score-label">AI Score</div>
+                    <div className={`match-score-value${s.aiScore != null && s.aiScore >= 60 ? ' high' : s.aiScore != null && s.aiScore <= 40 ? ' low' : ''}`}>
+                      {s.aiScore?.toFixed(0) ?? '—'}
+                    </div>
+                    {s.aiScoreLetter && (
+                      <div style={{ fontSize: 10, marginTop: 2 }}>{s.aiScoreLetter}</div>
+                    )}
+                  </div>
+                  {m.participants && m.participants.length === 10 && (
+                    <div className="match-teams">
+                      <div className="match-teams-grid">
+                        {[blueParticipants, redParticipants].map((team, idx) => (
+                          <div key={idx} className="match-teams-col">
+                            <div className="team-label">{idx === 0 ? '블루팀' : '레드팀'}</div>
+                            {team.map((p) => (
+                              <div
+                                key={p.puuid}
+                                className={`player${p.puuid === summoner.account.puuid ? ' is-self' : ''}`}
+                              >
+                                <ChampionIcon championKey={p.championKey} size={14} alt="" />
+                                <span className="player-name">{p.nameKr ?? p.gameName ?? p.puuid.slice(0, 6)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="match-expand" aria-label="펼치기">▾</div>
+                </Link>
               );
-            })}
-          </div>
-        ) : (
-          <div style={{ padding: 24, color: 'var(--text-tertiary)', textAlign: 'center' }}>
-            {summoner.cold ? '데이터 수집 중입니다. 잠시 후 새로고침하세요.' : '매치 데이터가 없습니다.'}
-          </div>
-        )}
+            })
+          )}
+        </div>
       </div>
     </main>
   );

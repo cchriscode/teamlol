@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import { apiGet, ApiError } from '@/lib/api';
 import { ChampionIcon } from '@/components/atoms/champion-icon';
 import { parseRiotIdSlug, formatRiotId } from '@/lib/riot-id';
 import type { SummonerSearchResponse } from '@/lib/api-types-summoner';
 import { getChampionMeta } from '@/lib/champion-meta';
+import { SummonerHeader } from '../summoner-header';
 
 export const revalidate = 300;
 
@@ -55,22 +55,7 @@ export default async function SummonerChampionsPage({ params }: PageProps) {
 
   return (
     <main className="page">
-      <header className="tier-page-header">
-        <div>
-          <h1 className="page-title">
-            {id.gameName}
-            <span style={{ color: 'var(--text-tertiary)', fontWeight: 400, marginLeft: 8, fontSize: 18 }}>#{id.tagLine}</span>
-          </h1>
-          <div className="page-subtitle">챔피언별 통계 · {stats.length}개 챔프</div>
-        </div>
-      </header>
-
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-        <Link href={`/${region}/${riotId}`} className="filter-chip">개요</Link>
-        <Link href={`/${region}/${riotId}/champions`} className="filter-chip active">챔피언</Link>
-        <Link href={`/${region}/${riotId}/seasons`} className="filter-chip">시즌</Link>
-        <Link href={`/${region}/${riotId}/live`} className="filter-chip">라이브</Link>
-      </div>
+      <SummonerHeader summoner={summoner} region={region} riotId={riotId} tab="champions" />
 
       <div className="data-table">
         <div
