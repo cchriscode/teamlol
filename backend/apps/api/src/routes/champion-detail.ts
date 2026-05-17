@@ -11,7 +11,7 @@ import { and, eq, or, desc, gte, inArray } from 'drizzle-orm';
 import { cache } from '../cache.js';
 
 const TTL_SEC = 10 * 60;
-const MIN_GAMES_MATCHUP = 20;       // ignore noisy small-sample matchups
+const MIN_GAMES_MATCHUP = 8;        // post-merge threshold (each pair stored twice in DB so total ≈ 2×)
 const MIN_GAMES_SYNERGY = 30;
 const TOP_N = 10;
 
@@ -45,7 +45,9 @@ export default async function championDetailRoutes(app: FastifyInstance) {
           eq(schema.championStats.championId, championId),
         ));
 
-        // Matchups: filter by lane if specified (most useful), drop noisy small-sample.
+        // Matchups: pull all rows for this champ (don't pre-filter by games —
+        // each pair is stored twice, so the merge below combines them and the
+        // post-merge filter cuts noise).
         const matchupConditions = [
           eq(schema.championMatchups.patch, patch),
           eq(schema.championMatchups.bracket, bracket),
@@ -53,12 +55,11 @@ export default async function championDetailRoutes(app: FastifyInstance) {
             eq(schema.championMatchups.championA, championId),
             eq(schema.championMatchups.championB, championId),
           )!,
-          gte(schema.championMatchups.games, MIN_GAMES_MATCHUP),
         ];
         if (lane) matchupConditions.push(eq(schema.championMatchups.lane, lane));
         const matchups = await db.select().from(schema.championMatchups)
           .where(and(...matchupConditions))
-          .limit(500);
+          .limit(2000);
 
         // Synergies: best synergy delta wins.
         const synergies = await db.select().from(schema.championSynergies).where(and(
@@ -108,21 +109,39 @@ export default async function championDetailRoutes(app: FastifyInstance) {
         }
 
         // Normalize matchups to "this champ vs opponent" view + split best/worst.
-        const matchupsView = matchups.map((r) => {
+        // Each pair is stored twice in champion_matchups (once per blue side),
+        // so merge rows referring to the same opponent before sorting.
+        const merged = new Map<string, { lane: string; oppId: number; wins: number; games: number; csSum: number }>();
+        for (const r of matchups) {
           const isA = r.championA === championId;
           const oppId = isA ? r.championB : r.championA;
-          const wr = isA ? r.aWinrate : Math.round((100 - r.aWinrate) * 100) / 100;
-          const opp = metaById.get(oppId);
-          return {
-            lane: r.lane,
-            opponentId: oppId,
-            opponentKey: opp?.key ?? null,
-            opponentNameKr: opp?.nameKr ?? null,
-            wr,
-            games: r.games,
-            csDiffAt14: r.avgCsDiffAt14,
-          };
-        }).sort((a, b) => b.wr - a.wr);
+          // Convert to wins for THIS champ. A row's aWins counts wins for championA.
+          const myWins = isA ? r.aWins : (r.games - r.aWins);
+          const key = `${r.lane}|${oppId}`;
+          const cur = merged.get(key);
+          if (cur) {
+            cur.wins += myWins;
+            cur.games += r.games;
+            cur.csSum += (r.avgCsDiffAt14 ?? 0) * r.games;
+          } else {
+            merged.set(key, { lane: r.lane, oppId, wins: myWins, games: r.games, csSum: (r.avgCsDiffAt14 ?? 0) * r.games });
+          }
+        }
+        const matchupsView = Array.from(merged.values())
+          .filter((m) => m.games >= MIN_GAMES_MATCHUP)
+          .map((m) => {
+            const opp = metaById.get(m.oppId);
+            return {
+              lane: m.lane,
+              opponentId: m.oppId,
+              opponentKey: opp?.key ?? null,
+              opponentNameKr: opp?.nameKr ?? null,
+              wr: m.games > 0 ? Math.round((m.wins / m.games) * 10000) / 100 : 0,
+              games: m.games,
+              csDiffAt14: m.games > 0 ? Math.round((m.csSum / m.games) * 10) / 10 : null,
+            };
+          })
+          .sort((a, b) => b.wr - a.wr);
 
         const synergiesView = synergies.map((r) => {
           const partnerId = r.championA === championId ? r.championB : r.championA;

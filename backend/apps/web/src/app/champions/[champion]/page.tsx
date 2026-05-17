@@ -251,7 +251,9 @@ export default async function ChampionDetailPage({ params, searchParams }: PageP
                     <div key={s.partnerId} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', gap: 8, alignItems: 'center', padding: 6 }}>
                       <ChampionIcon championKey={partner?.id ?? s.partnerKey} size={28} alt="" />
                       <span>{partner?.name ?? s.partnerKey}</span>
-                      <span className="text-positive fw-semibold" style={{ fontSize: 13 }}>+{s.synergyDelta.toFixed(2)}%</span>
+                      <span className={`${s.synergyDelta >= 0 ? 'text-positive' : 'text-loss'} fw-semibold`} style={{ fontSize: 13 }}>
+                        {s.synergyDelta >= 0 ? '+' : ''}{s.synergyDelta.toFixed(2)}%
+                      </span>
                       <span className="text-tertiary" style={{ fontSize: 11 }}>{s.games}판</span>
                     </div>
                   );
