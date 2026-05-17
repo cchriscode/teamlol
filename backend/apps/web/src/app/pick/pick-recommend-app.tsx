@@ -56,10 +56,27 @@ type ModalTarget =
   | { kind: 'ban';  side: 'my' | 'enemy'; idx: number };
 
 export function PickRecommendApp({ initialData }: Props) {
-  const data = useMemo(() => ({
-    ...initialData,
-    nameKr: (key: string) => initialData.CHAMPIONS[key]?.nameKr ?? key,
-  } as PickData), [initialData]);
+  const data = useMemo(() => {
+    // pick-engine expects several helper functions on PickData. JSON
+    // serialization on the server drops them; re-attach here so the engine
+    // can call D.listChampions(), D.copickProb(), etc.
+    const d = initialData as unknown as Record<string, unknown>;
+    const COPICK = (d.COPICK_PROBS as Record<string, Record<string, Record<string, number>>>) ?? {};
+    return {
+      ...initialData,
+      nameKr: (key: string) => initialData.CHAMPIONS[key]?.nameKr ?? key,
+      listChampions: () => Object.keys(initialData.CHAMPIONS),
+      seasonGames: (_key: string) => 0,
+      isBlindSafe: (key: string) => !!initialData.CHAMPIONS[key]?.blindPickSafe,
+      effectiveDifficulty: (key: string) => initialData.CHAMPIONS[key]?.difficulty ?? 5,
+      laneMetaPrior: (_champ: string, _lane: string) => 0,
+      copickProb: (anchor: string, partnerLane: string, partner: string) => {
+        const a = COPICK[anchor];
+        if (a && a[partnerLane] && a[partnerLane][partner] != null) return a[partnerLane][partner];
+        return null;
+      },
+    } as unknown as PickData;
+  }, [initialData]);
 
   const engine = useMemo(() => createPickEngine(data), [data]);
   const [state, setState] = useState<DraftState>(initialState);
