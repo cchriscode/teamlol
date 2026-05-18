@@ -12,7 +12,11 @@ import { cache } from '../cache.js';
 
 const TTL_SEC = 10 * 60;
 const MIN_GAMES_MATCHUP = 8;        // post-merge threshold (each pair stored twice in DB so total ≈ 2×)
-const MIN_GAMES_SYNERGY = 30;
+// 30 was too tight — Katarina e.g. had 164 total partners but only 16
+// passing the threshold, so the detail page showed maybe 5 meta synergies
+// and missed everything else. 10 expands to ~70 useful partners; engine's
+// confidence(n) attenuates noise.
+const MIN_GAMES_SYNERGY = 10;
 const TOP_N = 10;
 
 interface DetailQuery { lane?: string; bracket?: string; patch?: string; }

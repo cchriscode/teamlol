@@ -137,8 +137,11 @@ export default async function pickRecommendRoutes(app: FastifyInstance) {
       eq(schema.botDuoSynergy.bracket, bracket),
     ));
 
-    // Copick probs — top-N per anchor to keep size sane.
-    // For now we ship every (anchor, partner) row; can paginate later if it grows.
+    // Copick probs — per-anchor cooccurrence partners. LIMIT 5000 was way
+    // too tight: ~750 anchor buckets means each got ~6 partners, so the
+    // predict-enemy-distribution lookup missed most real signals. 25k row
+    // budget gives ~33 partners per anchor — plenty for the top tail
+    // without bloating payload (compresses to ~150KB).
     const copickProbs = await db.execute(sql`
       SELECT anchor_role AS "anchorRole", anchor_id AS "anchorId",
              partner_role AS "partnerRole", partner_id AS "partnerId",
@@ -147,7 +150,7 @@ export default async function pickRecommendRoutes(app: FastifyInstance) {
       WHERE patch = ${patch} AND bracket = ${bracket}
         AND prob > 0.005
       ORDER BY anchor_role, anchor_id, prob DESC
-      LIMIT 5000
+      LIMIT 25000
     `);
 
     return {
