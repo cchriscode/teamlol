@@ -21,38 +21,50 @@ export interface AIScoreResult {
   algoVersion: string;
 }
 
-const ALGO_VERSION = 'ai-score@2.0';
+const ALGO_VERSION = 'ai-score@3.0';
 
 // ---- Component LUTs --------------------------------------------------
 // Each LUT is sorted descending by raw value. Linear-interpolated between
 // adjacent rows; clamped to first/last on either end.
+//
+// Calibrated against actual KR diamond+ patch 16.10 distributions (n≈700k
+// matches). The earlier hand-set values gave the median player ~70 score
+// across the board; now P50 ≈ 50, P90 ≈ 85, P10 ≈ 15, P99 ≈ 100 — so the
+// "absolute, intuition-matching" property holds: 0/10/0 is bad anywhere,
+// 10/0/10 is good anywhere, and your median game lands near 50 (not 70).
 
 type LUT = ReadonlyArray<readonly [number, number]>;
 
-// Extended top end so deathless / carry games actually differentiate
-// (was capped at KDA=6 → 100; perfect 0-death games were indistinguishable
-// from a 6-KDA solid game).
-const KDA_LUT: LUT = [[12, 100], [9, 95], [6, 88], [4, 78], [3, 68], [2.2, 55], [1.5, 42], [1, 28], [0.5, 12], [0, 0]];
-const KP_LUT:  LUT = [[70, 100], [60, 85], [50, 70], [40, 55], [30, 40], [20, 25], [10, 10], [0, 0]];
+// KDA — empirical: P10≈0.64, P50≈2.26, P90≈7.65, P99≈25.
+const KDA_LUT: LUT = [[25, 100], [15, 95], [10, 90], [7.5, 85], [5, 75], [3.5, 65], [2.3, 50], [1.5, 33], [0.8, 18], [0.3, 5], [0, 0]];
 
-// CS per minute (jungle counts neutral monsters too)
-const CS_LUT_LANER: LUT = [[9, 100], [8, 85], [7, 70], [6, 55], [5, 40], [4, 25], [3, 10], [0, 0]];
-const CS_LUT_JUNGLE: LUT = [[6.5, 100], [5.5, 80], [4.5, 60], [3.5, 40], [2.5, 20], [0, 0]];
-const CS_LUT_SUPPORT: LUT = [[4, 100], [3, 80], [2, 60], [1, 40], [0.5, 20], [0, 0]];
+// Kill participation — empirical: P10≈25, P50≈46, P90≈65 (lane-weighted).
+const KP_LUT: LUT = [[85, 100], [70, 90], [60, 75], [46, 50], [35, 30], [25, 15], [10, 5], [0, 0]];
 
-// Damage to champions, share of team
-const DMG_SHARE_LUT: LUT = [[32, 100], [28, 85], [24, 70], [20, 55], [16, 40], [12, 25], [8, 10], [0, 0]];
+// CS per minute. Laner P50≈7.2/P90≈9.0, jungle P50≈6.5/P90≈8.05,
+// support P50≈1.12/P90≈1.85.
+const CS_LUT_LANER:   LUT = [[10.5, 100], [9, 90], [8, 72], [7.2, 50], [6, 28], [5, 15], [4, 8], [3, 3], [0, 0]];
+const CS_LUT_JUNGLE:  LUT = [[8.5, 100], [7.5, 88], [6.5, 50], [5.5, 25], [4.5, 13], [3.5, 6], [2.5, 2], [0, 0]];
+const CS_LUT_SUPPORT: LUT = [[3, 100], [2, 80], [1.2, 50], [0.7, 25], [0.3, 10], [0, 0]];
 
-// Damage taken, share of team (tank metric)
-const TAKEN_SHARE_LUT: LUT = [[30, 100], [25, 80], [20, 60], [15, 40], [10, 20], [0, 0]];
+// Damage to champions, share of team. Lane-agnostic LUT; support weight is
+// low so the support tail (median ~10%) doesn't tank their score.
+// P10≈11, P50≈19, P90≈28 across damage dealers.
+const DMG_SHARE_LUT: LUT = [[40, 100], [32, 90], [28, 80], [24, 65], [19, 50], [14, 30], [9, 15], [5, 5], [0, 0]];
 
-// Vision score per minute
-const VISION_LUT_LANER:   LUT = [[1.5, 100], [1.2, 80], [1.0, 65], [0.8, 50], [0.6, 35], [0.4, 20], [0, 0]];
-const VISION_LUT_JUNGLE:  LUT = [[2.0, 100], [1.6, 80], [1.3, 65], [1.0, 50], [0.7, 35], [0, 0]];
-const VISION_LUT_SUPPORT: LUT = [[3.0, 100], [2.5, 85], [2.0, 70], [1.5, 55], [1.0, 40], [0.7, 25], [0, 0]];
+// Damage taken, share of team — used only for top (10% weight). Top P50≈23.2,
+// P90≈30.
+const TAKEN_SHARE_LUT: LUT = [[35, 100], [30, 90], [25, 70], [23, 50], [18, 25], [13, 10], [0, 0]];
 
-// Damage to objectives per minute (jungle metric)
-const DMG_OBJ_PM_LUT: LUT = [[800, 100], [600, 80], [400, 60], [250, 40], [150, 25], [50, 10], [0, 0]];
+// Vision per minute. Lane structurally differs: support P50≈2.71/P90≈3.57,
+// jungle P50≈1.06/P90≈1.54, laner P50≈0.75/P90≈1.1.
+const VISION_LUT_LANER:   LUT = [[1.8, 100], [1.5, 90], [1.1, 80], [0.75, 50], [0.5, 25], [0.3, 10], [0, 0]];
+const VISION_LUT_JUNGLE:  LUT = [[2.2, 100], [1.8, 90], [1.55, 80], [1.06, 50], [0.7, 25], [0.4, 10], [0, 0]];
+const VISION_LUT_SUPPORT: LUT = [[4.5, 100], [3.8, 90], [3.6, 80], [2.71, 50], [2.0, 25], [1.4, 10], [0, 0]];
+
+// Damage to objectives per minute — jungle-weighted only.
+// Jungle P50≈842, P90≈1664.
+const DMG_OBJ_PM_LUT: LUT = [[2200, 100], [1700, 90], [1300, 75], [842, 50], [550, 25], [300, 12], [100, 3], [0, 0]];
 
 // ---- Lane weights (must sum to 100) ----------------------------------
 
@@ -66,12 +78,14 @@ interface ComponentWeights {
   dmgObj: number;
 }
 
+// Lane weights. Support CS dropped from 5 → 0 (supports legitimately have
+// low CS, scoring it adds noise) and KP picked up the slack.
 const LANE_WEIGHTS: Record<Lane, ComponentWeights> = {
   top:     { kda: 25, kp: 10, cs: 20, dmgShare: 25, takenShare: 10, vision: 10, dmgObj: 0  },
   jungle:  { kda: 25, kp: 15, cs: 10, dmgShare: 15, takenShare: 0,  vision: 15, dmgObj: 20 },
   mid:     { kda: 25, kp: 10, cs: 25, dmgShare: 30, takenShare: 0,  vision: 10, dmgObj: 0  },
   adc:     { kda: 25, kp: 10, cs: 25, dmgShare: 30, takenShare: 0,  vision: 10, dmgObj: 0  },
-  support: { kda: 25, kp: 20, cs: 5,  dmgShare: 15, takenShare: 0,  vision: 35, dmgObj: 0  },
+  support: { kda: 25, kp: 25, cs: 0,  dmgShare: 15, takenShare: 0,  vision: 35, dmgObj: 0  },
 };
 
 const GRADE_BANDS: ReadonlyArray<{ min: number; letter: AIScoreResult['letter'] }> = [
@@ -85,6 +99,9 @@ export function computeAIScore(p: ParsedParticipant, totals: TeamTotals, gameDur
   if (!p.lane) return null;
 
   const minutes = Math.max(1, gameDurationSec / 60);
+  // Sub-12-minute games are typically remakes / early surrenders where every
+  // per-minute metric is noise. Skip rather than dilute the cache with garbage.
+  if (minutes < 12) return null;
   const w = LANE_WEIGHTS[p.lane];
 
   // Floor deaths at 0.5 for true 0-death games so a "perfect game" gets
