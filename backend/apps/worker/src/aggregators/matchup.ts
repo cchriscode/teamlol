@@ -41,6 +41,13 @@ export async function aggregateMatchups(opts: MatchupOpts = {}) {
     if (!patch) { log.warn('no patch'); return { totalRows: 0, bracketsWritten: [] as Bracket[] }; }
   }
 
+  // Note: each match contributes TWO directed rows per lane (one from blue's
+  // perspective, one from red's). The (championA, championB) bucket naturally
+  // averages both sides — A-blue-vs-B-red goes into (A, B) and A-red-vs-B-blue
+  // also goes into (A, B), so the resulting aWinrate is side-neutral.
+  // Previously we filtered `a.team = 'blue'` and mirrored via 100−wr on the
+  // client, which baked the ~2pp solo-queue blue-side advantage into matchup
+  // scores.
   const rows = await db.execute(sql`
     WITH player_tier AS (
       SELECT DISTINCT ON (puuid) puuid, tier
@@ -60,7 +67,7 @@ export async function aggregateMatchups(opts: MatchupOpts = {}) {
     JOIN matches m              ON m.match_id = a.match_id
     JOIN match_participants b   ON b.match_id = a.match_id AND b.lane = a.lane AND b.team <> a.team
     LEFT JOIN player_tier pt    ON pt.puuid = a.puuid
-    WHERE a.team = 'blue' AND m.patch = ${patch} AND m.queue_id = ${queueId}
+    WHERE m.patch = ${patch} AND m.queue_id = ${queueId}
     GROUP BY a.lane, a.champion_id, b.champion_id, pt.tier
   `) as unknown as RawRow[];
 

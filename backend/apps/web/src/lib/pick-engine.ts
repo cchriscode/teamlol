@@ -580,12 +580,45 @@ export function createPickEngine(D: PickData) {
 
   // ---- Stage 3: Expected-value pick recommendation -----------------------
   // For a candidate champion c in lane L on side S, fill all empty slots
-  // (both teams) with the MOST LIKELY pick from predictEnemyDistribution,
-  // then call estimateTeamWR. Returns expected win rate from our side.
+  // (both teams) by sampling from their per-slot prediction distribution,
+  // then call estimateTeamWR. Returns the expected win rate from our side,
+  // averaged across N samples.
   //
-  // This is single-rollout (not full game tree) for speed: each empty slot
-  // is filled with its mode (top-1 prediction) rather than weighted-summed
-  // over all distributions. ~200ms for 20 candidates × 9 fills.
+  // Was single-rollout (top-1 fill). The single sample treated predictions
+  // as deterministic — a candidate good only against the modal enemy laner
+  // looked better than one strong across the distribution. Monte Carlo
+  // approximation here is honest probabilistic EV.
+  const EV_SAMPLES = 6;
+
+  // Cheap deterministic PRNG (mulberry32) so the same draft state always
+  // yields the same EV — otherwise scores would jitter on every render.
+  function makeRng(seed) {
+    let s = seed >>> 0;
+    return function next() {
+      s = (s + 0x6D2B79F5) >>> 0;
+      let t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function hashStr(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+  function sampleFromDist(dist, rng) {
+    let total = 0;
+    for (const it of dist) total += it.prob;
+    if (total <= 0) return dist[0];
+    let r = rng() * total;
+    for (const it of dist) { r -= it.prob; if (r <= 0) return it; }
+    return dist[dist.length - 1];
+  }
+
   function expectedValueForPick(state, side, idx, candidate, candidateLane) {
     // Apply candidate to a deep clone
     const myTeam = state.myTeam.map((s) => ({ ...s }));
@@ -596,20 +629,43 @@ export function createPickEngine(D: PickData) {
 
     const simulated = { ...state, myTeam, enemyTeam };
 
-    // Fill remaining empty slots with most-likely prediction
+    // Precompute distributions for each empty slot once. We resample fills
+    // below; recomputing predictions per sample would be wasteful since
+    // dependencies (own picks, enemy visible picks) don't change.
+    const slotDists = { my: {}, enemy: {} };
     for (const sd of ['my', 'enemy']) {
       const team = sd === 'my' ? myTeam : enemyTeam;
       team.forEach((slot, i) => {
         if (slot.champion) return;
-        const dist = predictEnemyDistribution(simulated, sd, i);
-        if (dist.length === 0) return;
-        slot.champion = dist[0].c;
-        slot.lane = dist[0].lane || slot.lane;
+        const dist = predictEnemyDistribution(simulated, sd, i).slice(0, 5);
+        if (dist.length > 0) slotDists[sd][i] = dist;
       });
     }
 
-    // Score from "side" perspective
-    const wr = estimateTeamWR(myTeam, enemyTeam);
+    // Deterministic seed: candidate + slot + filled-slots signature. Same
+    // state → same EV across renders.
+    const filledSig = [...myTeam, ...enemyTeam]
+      .map((s) => s.champion || '_').join('|');
+    const rng = makeRng(hashStr(`${candidate}|${idx}|${side}|${filledSig}`));
+
+    let wrSum = 0;
+    for (let s = 0; s < EV_SAMPLES; s++) {
+      const my = myTeam.map((x) => ({ ...x }));
+      const en = enemyTeam.map((x) => ({ ...x }));
+      for (const sd of ['my', 'enemy']) {
+        const team = sd === 'my' ? my : en;
+        team.forEach((slot, i) => {
+          if (slot.champion) return;
+          const dist = slotDists[sd][i];
+          if (!dist) return;
+          const pick = sampleFromDist(dist, rng);
+          slot.champion = pick.c;
+          slot.lane = pick.lane || slot.lane;
+        });
+      }
+      wrSum += estimateTeamWR(my, en);
+    }
+    const wr = wrSum / EV_SAMPLES;
     return side === 'my' ? wr : (100 - wr);
   }
 
