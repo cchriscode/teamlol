@@ -3100,3 +3100,53 @@
   text-align: right;
   font-feature-settings: 'tnum' on;
 }
+
+/* ---- Match expand tabs + timeline charts ---------------------------- */
+.match-expand-panel-wrap {
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-top: none;
+}
+.expand-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+}
+.expand-tab {
+  padding: 10px 18px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 100ms ease, border-color 100ms ease;
+}
+.expand-tab:hover { color: var(--text-primary); }
+.expand-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--color-win);
+  background: var(--bg-surface);
+}
+.expand-timeline-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+.expand-chart {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+.expand-chart-title-row {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}

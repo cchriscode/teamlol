@@ -12,6 +12,7 @@ export * from './matches';
 export * from './match-participants';
 export * from './match-timelines';
 export * from './champion-stats';
+export * from './champion-power';
 export * from './champion-matchups';
 export * from './champion-synergies';
 export * from './bot-duo-synergy';

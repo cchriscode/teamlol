@@ -74,6 +74,22 @@ export default async function championDetailRoutes(app: FastifyInstance) {
         .orderBy(desc(schema.championSynergies.synergyDelta))
         .limit(50);
 
+        // Power curve — winrate per game-duration bucket (drives the
+        // "파워 그래프" line chart on the detail page).
+        const powerRows = await db.select({
+          lane: schema.championPower.lane,
+          bucket: schema.championPower.bucket,
+          minMinute: schema.championPower.minMinute,
+          maxMinute: schema.championPower.maxMinute,
+          games: schema.championPower.games,
+          wins: schema.championPower.wins,
+          wr: schema.championPower.wr,
+        }).from(schema.championPower).where(and(
+          eq(schema.championPower.patch, patch),
+          eq(schema.championPower.bracket, bracket),
+          eq(schema.championPower.championId, championId),
+        ));
+
         // Bot duo (only relevant if champ played adc or support).
         const botDuos = await db.select().from(schema.botDuoSynergy).where(and(
           eq(schema.botDuoSynergy.patch, patch),
@@ -172,6 +188,7 @@ export default async function championDetailRoutes(app: FastifyInstance) {
             pickrate: r.pickrate, banrate: r.banrate, n: r.sampleN,
             tierScore: r.tierScore, avgKda: r.avgKda,
           })),
+          power: powerRows,
           // Top of the sorted-by-WR list = best, bottom = worst.
           bestMatchups: matchupsView.slice(0, TOP_N),
           worstMatchups: matchupsView.slice(-TOP_N).reverse(),

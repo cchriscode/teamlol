@@ -12,6 +12,7 @@ interface TierStat { lane: string; wr: number; pickrate: number; banrate: number
 interface Matchup  { lane: string; opponentId: number; opponentKey: string; opponentNameKr: string; wr: number; games: number; csDiffAt14: number | null; }
 interface Synergy  { partnerId: number; partnerKey: string; partnerNameKr: string; pairWr: number; synergyDelta: number; games: number; }
 interface BotDuo   { adcId: number; adcKey: string; supId: number; supKey: string; pairWr: number; games: number; }
+interface PowerRow { lane: string; bucket: string; minMinute: number; maxMinute: number; games: number; wins: number; wr: number; }
 
 interface DetailResponse {
   patch: string;
@@ -19,6 +20,7 @@ interface DetailResponse {
   lane: string | null;
   champion: { id: number; key: string; nameKr: string; tags: string[] };
   tier: TierStat[];
+  power: PowerRow[];
   bestMatchups: Matchup[];
   worstMatchups: Matchup[];
   synergies: Synergy[];
@@ -169,6 +171,9 @@ export default async function ChampionDetailPage({ params, searchParams }: PageP
             </table>
           </section>
 
+          {/* Power curve — wr by game-length bucket */}
+          <PowerCurve power={data.power} lane={lane} />
+
           {/* Best matchups */}
           {data.bestMatchups.length > 0 && (
             <section className="card card-padded">
@@ -288,5 +293,108 @@ export default async function ChampionDetailPage({ params, searchParams }: PageP
         </aside>
       </div>
     </main>
+  );
+}
+
+// ---- Power curve chart ------------------------------------------------
+// Inline SVG so we don't pull in recharts/visx for a single 5-point line.
+const BUCKET_ORDER = ['short', 'mid_short', 'mid', 'mid_long', 'long'] as const;
+const BUCKET_LABEL: Record<string, string> = {
+  short: '~20분', mid_short: '20-25분', mid: '25-30분', mid_long: '30-35분', long: '35분+',
+};
+
+function PowerCurve({ power, lane }: { power: PowerRow[]; lane: Lane }) {
+  // Aggregate across lanes when current view is 'all', otherwise filter to lane.
+  // (PageProps already constrains lane to one of the 5; this is defensive.)
+  const filtered = power.filter((p) => p.lane === lane);
+  if (filtered.length === 0) {
+    return null;
+  }
+  // Re-bucket and aggregate by bucket key.
+  const byBucket = new Map<string, { games: number; wins: number }>();
+  for (const r of filtered) {
+    const cur = byBucket.get(r.bucket) ?? { games: 0, wins: 0 };
+    cur.games += r.games; cur.wins += r.wins;
+    byBucket.set(r.bucket, cur);
+  }
+  const points = BUCKET_ORDER.map((k) => {
+    const v = byBucket.get(k);
+    if (!v || v.games < 20) return { k, wr: null as number | null, games: v?.games ?? 0 };
+    return { k, wr: (v.wins / v.games) * 100, games: v.games };
+  });
+  const valid = points.filter((p) => p.wr != null) as Array<{ k: string; wr: number; games: number }>;
+  if (valid.length < 2) return null;
+
+  const W = 560, H = 180, PAD = { l: 36, r: 16, t: 16, b: 32 };
+  const xs = points.map((_, i) => PAD.l + (i / (points.length - 1)) * (W - PAD.l - PAD.r));
+  const yScale = (wr: number) => {
+    // Center on 50; 40-60 visible range with clamp.
+    const clamped = Math.max(40, Math.min(60, wr));
+    const t = (clamped - 40) / 20;
+    return H - PAD.b - t * (H - PAD.t - PAD.b);
+  };
+  const segments: string[] = [];
+  let pen = '';
+  points.forEach((p, i) => {
+    if (p.wr == null) { pen = ''; return; }
+    const x = xs[i].toFixed(1), y = yScale(p.wr).toFixed(1);
+    if (!pen) { segments.push(`M ${x} ${y}`); pen = 'L'; }
+    else segments.push(`${pen} ${x} ${y}`);
+  });
+
+  // Find peak bucket for the headline summary.
+  const peak = valid.reduce((a, b) => (b.wr > a.wr ? b : a));
+  const trough = valid.reduce((a, b) => (b.wr < a.wr ? b : a));
+  const swing = peak.wr - trough.wr;
+
+  return (
+    <section className="card card-padded">
+      <div className="section-title">
+        <span>파워 그래프 ({laneKr(lane)})</span>
+        <span className="meta">게임 길이별 승률</span>
+      </div>
+      <div className="text-tertiary" style={{ fontSize: 12, marginTop: 4, lineHeight: 1.6 }}>
+        {swing >= 3
+          ? <>강한 시점: <strong>{BUCKET_LABEL[peak.k]}</strong> ({peak.wr.toFixed(1)}%) · 약한 시점: <strong>{BUCKET_LABEL[trough.k]}</strong> ({trough.wr.toFixed(1)}%)</>
+          : '전 구간 비슷 — 파워 스파이크가 약한 챔프'}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', marginTop: 8 }}>
+        {/* 50% baseline */}
+        <line
+          x1={PAD.l} x2={W - PAD.r} y1={yScale(50)} y2={yScale(50)}
+          stroke="var(--border-strong)" strokeDasharray="3 3" strokeWidth="1"
+        />
+        {/* y-axis ticks at 45/50/55 */}
+        {[45, 50, 55].map((wr) => (
+          <text key={wr} x={PAD.l - 6} y={yScale(wr) + 3} fontSize="10"
+                fill="var(--text-tertiary)" textAnchor="end">
+            {wr}%
+          </text>
+        ))}
+        {/* x-axis labels */}
+        {points.map((p, i) => (
+          <text key={p.k} x={xs[i]} y={H - 10} fontSize="10"
+                fill="var(--text-tertiary)" textAnchor="middle">
+            {BUCKET_LABEL[p.k]}
+          </text>
+        ))}
+        {/* main line */}
+        <path d={segments.join(' ')} fill="none" stroke="var(--color-win)" strokeWidth="2" />
+        {/* dots */}
+        {points.map((p, i) => p.wr != null ? (
+          <g key={p.k}>
+            <circle cx={xs[i]} cy={yScale(p.wr)} r="3.5" fill="var(--color-win)" />
+            <text x={xs[i]} y={yScale(p.wr) - 8} fontSize="10"
+                  fill={p.wr >= 51 ? 'var(--color-positive)' : p.wr <= 49 ? 'var(--color-loss)' : 'var(--text-secondary)'}
+                  textAnchor="middle" fontWeight="600">
+              {p.wr.toFixed(1)}%
+            </text>
+          </g>
+        ) : null)}
+      </svg>
+      <div className="text-tertiary" style={{ fontSize: 10, marginTop: 4 }}>
+        표본 적은 구간(&lt;20 게임)은 표시하지 않음 · 전체 {valid.reduce((a, b) => a + b.games, 0).toLocaleString('ko-KR')} 게임 기준
+      </div>
+    </section>
   );
 }
