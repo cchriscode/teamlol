@@ -60,9 +60,9 @@ export function PickRecommendApp({ initialData }: Props) {
     // pick-engine expects several helper functions on PickData. JSON
     // serialization on the server drops them; re-attach here so the engine
     // can call D.listChampions(), D.copickProb(), etc.
-    const d = initialData as unknown as Record<string, unknown>;
-    const COPICK = (d.COPICK_PROBS as Record<string, Record<string, Record<string, number>>>) ?? {};
-    const BOT_DUO = (initialData.BOT_DUO_SYNERGY ?? {}) as Record<string, Record<string, { wr: number; n: number }>>;
+    const COPICK = initialData.COPICK_PROBS ?? {};
+    const PRIORS = initialData.LANE_META_PRIORS ?? {};
+    const BOT_DUO = initialData.BOT_DUO_SYNERGY ?? {};
     return {
       ...initialData,
       nameKr: (key: string) => initialData.CHAMPIONS[key]?.nameKr ?? key,
@@ -70,18 +70,19 @@ export function PickRecommendApp({ initialData }: Props) {
       seasonGames: (_key: string) => 0,
       isBlindSafe: (key: string) => !!initialData.CHAMPIONS[key]?.blindPickSafe,
       effectiveDifficulty: (key: string) => initialData.CHAMPIONS[key]?.difficulty ?? 5,
-      laneMetaPrior: (_champ: string, _lane: string) => 0,
+      laneMetaPrior: (champ: string, lane: string) => {
+        const bucket = (PRIORS as Record<string, Record<string, number>>)[lane];
+        return (bucket && bucket[champ]) || 0;
+      },
       copickProb: (anchor: string, partnerLane: string, partner: string) => {
-        const a = COPICK[anchor];
+        const a = (COPICK as Record<string, Record<string, Record<string, number>>>)[anchor];
         if (a && a[partnerLane] && a[partnerLane][partner] != null) return a[partnerLane][partner];
         return null;
       },
       botDuoSynergy: (adcKey: string, supKey: string) => {
         if (!adcKey || !supKey) return null;
-        const pair = BOT_DUO[adcKey] && BOT_DUO[adcKey][supKey];
-        if (!pair) return null;
-        // Engine expects {delta} (pair WR minus 50 baseline).
-        return { ...pair, delta: pair.wr - 50 };
+        const pair = (BOT_DUO as Record<string, Record<string, { wr: number; n: number; delta: number }>>)[adcKey]?.[supKey];
+        return pair ?? null;
       },
     } as unknown as PickData;
   }, [initialData]);

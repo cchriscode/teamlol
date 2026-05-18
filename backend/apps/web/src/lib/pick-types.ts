@@ -44,12 +44,15 @@ export interface PickData {
   PATCH: string;
   BRACKET: string;
   CHAMPIONS: Record<string, ChampionMeta>;
-  TIER_DATA: Record<string, Partial<Record<Lane, { wr: number; pickrate: number; banrate: number; n: number; psScore: number | null }>>>;
+  TIER_DATA: Record<string, Partial<Record<Lane, { wr: number; pickrate: number; banrate: number; n: number; tierScore: number | null }>>>;
   TIER_AVG_WR: Partial<Record<Lane, number>>;
   MATCHUPS: Record<Lane, Record<string, Record<string, { wr: number; n: number }>>>;
   SYNERGIES: Record<string, Record<string, { wr: number; n: number }>>;
-  BOT_DUO_SYNERGY?: Record<string, Record<string, { wr: number; n: number }>>;
-  COPICK_PROBS?: Record<string, Record<string, number>>;
+  BOT_DUO_SYNERGY?: Record<string, Record<string, { wr: number; n: number; delta: number }>>;
+  // anchorKey → partnerLane → partnerKey → cooccurrence prob (0..1)
+  COPICK_PROBS?: Record<string, Partial<Record<Lane, Record<string, number>>>>;
+  // lane → championKey → normalized pickrate share (0..1; sums to 1 per lane)
+  LANE_META_PRIORS?: Partial<Record<Lane, Record<string, number>>>;
   BOT_DUO_ARCHETYPES?: Record<string, { label: string }>;
   // Functions added by data layer:
   nameKr: (key: string) => string;

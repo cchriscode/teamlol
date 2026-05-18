@@ -9,10 +9,10 @@ interface PickRecommendApi {
   patch: string;
   bracket: string;
   laneAvgWr?: Record<Lane, number>;
-  tier: Array<{ championId: number; lane: Lane; wr: number; pickrate: number; banrate: number; n: number; psScore: number | null; apShare?: number | null; adShare?: number | null }>;
+  tier: Array<{ championId: number; lane: Lane; wr: number; pickrate: number; banrate: number; n: number; tierScore: number | null; apShare?: number | null; adShare?: number | null }>;
   matchups: Array<{ a: number; b: number; lane: Lane; wr: number; n: number }>;
   synergies: Array<{ a: number; b: number; wr: number; n: number }>;
-  botDuos?: Array<{ adc: number; sup: number; wr: number; n: number }>;
+  botDuos?: Array<{ adcId: number; supId: number; wr: number; n: number; delta: number }>;
   copickProbs?: Array<{ anchorRole: string; anchorId: number; partnerRole: string; partnerId: number; prob: number }>;
 }
 
@@ -140,9 +140,9 @@ export function buildPickData(api: PickRecommendApi, meta: DdMeta): PickData {
     if (!TIER_DATA[key]) TIER_DATA[key] = {};
     TIER_DATA[key][t.lane] = {
       wr: t.wr, pickrate: t.pickrate, banrate: t.banrate, n: t.n,
-      // Keep null when the aggregator hasn't populated ps_score yet — engine's
-      // metaScore falls back to raw-stats math (wr/pickrate/ban) in that case.
-      psScore: t.psScore ?? null,
+      // Aggregator now writes tier_score directly; fall through to null only
+      // when no rated participants existed yet (engine has a raw-stats path).
+      tierScore: t.tierScore ?? null,
     };
     if (CHAMPIONS[key] && t.pickrate >= MIN_LANE_PICKRATE && t.n >= MIN_LANE_GAMES && !CHAMPIONS[key].lanes.includes(t.lane)) {
       CHAMPIONS[key].lanes.push(t.lane);
@@ -185,14 +185,53 @@ export function buildPickData(api: PickRecommendApi, meta: DdMeta): PickData {
     SYNERGIES[bKey][aKey] = { wr: s.wr, n: s.n };
   }
 
-  // BOT_DUO_SYNERGY
+  // BOT_DUO_SYNERGY — keyed by champion KEY (ddragon string id).
+  // API field names are `adcId`/`supId`/`delta`; previously this used `adc`/`sup`
+  // and recomputed delta on the client, so the duo signal was effectively dead.
   const BOT_DUO_SYNERGY: PickData['BOT_DUO_SYNERGY'] = {};
   for (const d of api.botDuos ?? []) {
-    const adcKey = meta.byId.get(d.adc)?.id;
-    const supKey = meta.byId.get(d.sup)?.id;
+    const adcKey = meta.byId.get(d.adcId)?.id;
+    const supKey = meta.byId.get(d.supId)?.id;
     if (!adcKey || !supKey) continue;
     if (!BOT_DUO_SYNERGY[adcKey]) BOT_DUO_SYNERGY[adcKey] = {};
-    BOT_DUO_SYNERGY[adcKey][supKey] = { wr: d.wr, n: d.n };
+    BOT_DUO_SYNERGY[adcKey][supKey] = { wr: d.wr, n: d.n, delta: d.delta };
+  }
+
+  // COPICK_PROBS — flatten API array into nested
+  // { anchorKey: { partnerLane: { partnerKey: prob } } } shape that the engine
+  // expects. Previously the engine got an empty object so D.copickProb()
+  // always returned null and the predicted-pick distribution lost the "this
+  // jungler tends to go with this mid" signal entirely.
+  const COPICK_PROBS: NonNullable<PickData['COPICK_PROBS']> = {};
+  for (const c of api.copickProbs ?? []) {
+    const anchorKey = meta.byId.get(c.anchorId)?.id;
+    const partnerKey = meta.byId.get(c.partnerId)?.id;
+    if (!anchorKey || !partnerKey) continue;
+    const partnerLane = c.partnerRole as Lane;
+    if (!LANES.includes(partnerLane)) continue;
+    if (!COPICK_PROBS[anchorKey]) COPICK_PROBS[anchorKey] = {};
+    const byLane = COPICK_PROBS[anchorKey]!;
+    if (!byLane[partnerLane]) byLane[partnerLane] = {};
+    byLane[partnerLane]![partnerKey] = c.prob;
+  }
+
+  // LANE_META_PRIORS — per-lane normalized pickrate share (sums to 1 per
+  // lane). Used as fallback popularity prior in predictEnemyDistribution
+  // when no copick anchor exists.
+  const LANE_META_PRIORS: NonNullable<PickData['LANE_META_PRIORS']> = {};
+  for (const ln of LANES) LANE_META_PRIORS[ln] = {};
+  for (const t of api.tier) {
+    const champ = meta.byId.get(t.championId);
+    if (!champ) continue;
+    const bucket = LANE_META_PRIORS[t.lane];
+    if (!bucket) continue;
+    bucket[champ.id] = t.pickrate || 0.01;
+  }
+  for (const ln of LANES) {
+    const bucket = LANE_META_PRIORS[ln];
+    if (!bucket) continue;
+    const total = Object.values(bucket).reduce((a, b) => a + b, 0);
+    if (total > 0) for (const k of Object.keys(bucket)) bucket[k] = bucket[k]! / total;
   }
 
   return {
@@ -204,6 +243,8 @@ export function buildPickData(api: PickRecommendApi, meta: DdMeta): PickData {
     MATCHUPS,
     SYNERGIES,
     BOT_DUO_SYNERGY,
+    COPICK_PROBS,
+    LANE_META_PRIORS,
     nameKr: (key: string) => CHAMPIONS[key]?.nameKr ?? key,
   };
 }

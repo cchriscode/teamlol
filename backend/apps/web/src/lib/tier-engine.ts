@@ -198,7 +198,7 @@ export function createTierEngine(D: PickData) {
       champion: champKey,
       lane,
       stats,
-      psScore: ps.score,
+      tierScore: ps.score,
       letter: ps.letter,
       letterClass: ps.letterClass,
       breakdown: ps.breakdown,
@@ -223,7 +223,7 @@ export function createTierEngine(D: PickData) {
       const r = rowFor(c, lane);
       if (r) rows.push(r);
     });
-    rows.sort((a, b) => b.psScore - a.psScore);
+    rows.sort((a, b) => b.tierScore - a.tierScore);
     rows.forEach((r, i) => { r.rank = i + 1; });
     return rows;
   }
@@ -233,7 +233,7 @@ export function createTierEngine(D: PickData) {
     ['top', 'jungle', 'mid', 'adc', 'support'].forEach((lane) => {
       all.push(...tierTable(lane, options));
     });
-    all.sort((a, b) => b.psScore - a.psScore);
+    all.sort((a, b) => b.tierScore - a.tierScore);
     all.forEach((r, i) => { r.rank = i + 1; });
     return all;
   }

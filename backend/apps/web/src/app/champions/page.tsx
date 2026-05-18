@@ -141,7 +141,7 @@ export default async function ChampionsPage({ searchParams }: PageProps) {
                 <div className="lane-cell">{laneKr(r.lane)}</div>
                 <div className="text-right" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6 }}>
                   <span className={`tier-badge ${r.letterClass}`} style={{ padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>{r.letter}</span>
-                  <span style={{ fontFeatureSettings: '"tnum" on' }}>{r.psScore.toFixed(2)}</span>
+                  <span style={{ fontFeatureSettings: '"tnum" on' }}>{r.tierScore.toFixed(2)}</span>
                 </div>
                 <div className="stat-cell honey">{r.honey.toFixed(2)}</div>
                 <div className="stat-cell primary">{r.stats.wr.toFixed(2)}%</div>

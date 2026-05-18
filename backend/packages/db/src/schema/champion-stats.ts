@@ -13,7 +13,11 @@ export const championStats = pgTable(
     pickrate: real('pickrate').notNull(),     // %
     banrate: real('banrate').notNull(),       // %
     avgKda: real('avg_kda'),
-    psScore: real('ps_score'),                 // computed by tier-engine, cached
+    // Composite meta strength on a 0~100 scale (Wilson-WR + lane-relative
+    // advantage + log-pickrate + ban signal − sample penalty, mapped through
+    // tanh). Computed by the tier aggregator. Was 'ps_score'; renamed because
+    // PS Score is another site's brand mark.
+    tierScore: real('tier_score'),
     // Real-build damage profile: avg AP and AD stat totals from completed item
     // sets. Frontend composition uses (ap / (ap + ad)) instead of binary
     // AD/AP/Mixed buckets. NULL until damage-profile aggregator runs.
@@ -24,6 +28,6 @@ export const championStats = pgTable(
   },
   (t) => ({
     pk: primaryKey({ columns: [t.patch, t.bracket, t.lane, t.championId] }),
-    bracketLaneIdx: index('cs_bracket_lane_idx').on(t.bracket, t.lane, t.psScore),
+    bracketLaneIdx: index('cs_bracket_lane_idx').on(t.bracket, t.lane, t.tierScore),
   }),
 );

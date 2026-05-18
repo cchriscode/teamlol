@@ -55,6 +55,7 @@ export default async function pickRecommendRoutes(app: FastifyInstance) {
       pickrate: schema.championStats.pickrate,
       banrate: schema.championStats.banrate,
       n: schema.championStats.sampleN,
+      tierScore: schema.championStats.tierScore,
       apShare: schema.championStats.apShare,
       adShare: schema.championStats.adShare,
     }).from(schema.championStats).where(and(
@@ -87,15 +88,17 @@ export default async function pickRecommendRoutes(app: FastifyInstance) {
       eq(schema.championMatchups.bracket, bracket),
     ));
 
-    // Synergies — top-N to keep payload small.
+    // Synergies — both ends of the distribution. Sorting by ABS keeps the
+    // strongest positive AND negative pairs so the engine can also penalise
+    // bad combos ("don't pair these"), not just upweight good ones.
     const synergies = await db.execute(sql`
       SELECT champion_a AS a, champion_b AS b, pair_winrate AS wr,
              games AS n, synergy_delta AS delta
       FROM champion_synergies
       WHERE patch = ${patch} AND bracket = ${bracket}
         AND games >= 50
-      ORDER BY synergy_delta DESC
-      LIMIT 2000
+      ORDER BY ABS(synergy_delta) DESC
+      LIMIT 3000
     `);
 
     // Bot duo synergies — full (much smaller).
@@ -131,6 +134,7 @@ export default async function pickRecommendRoutes(app: FastifyInstance) {
         championId: r.championId, lane: r.lane,
         wr: r.games > 0 ? Math.round((r.wins / r.games) * 10000) / 100 : 0,
         pickrate: r.pickrate, banrate: r.banrate, n: r.n,
+        tierScore: r.tierScore ?? null,
         apShare: r.apShare ?? null, adShare: r.adShare ?? null,
       })),
       matchups,

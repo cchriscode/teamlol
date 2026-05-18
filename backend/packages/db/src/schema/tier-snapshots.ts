@@ -14,7 +14,7 @@ export const tierSnapshots = pgTable(
     wins: integer('wins').notNull(),
     pickrate: real('pickrate').notNull(),
     banrate: real('banrate').notNull(),
-    psScore: real('ps_score'),
+    tierScore: real('tier_score'),
     capturedAt: timestamp('captured_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({

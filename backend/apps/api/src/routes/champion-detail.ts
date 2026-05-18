@@ -170,7 +170,7 @@ export default async function championDetailRoutes(app: FastifyInstance) {
             lane: r.lane,
             wr: r.games > 0 ? Math.round((r.wins / r.games) * 10000) / 100 : 0,
             pickrate: r.pickrate, banrate: r.banrate, n: r.sampleN,
-            psScore: r.psScore, avgKda: r.avgKda,
+            tierScore: r.tierScore, avgKda: r.avgKda,
           })),
           // Top of the sorted-by-WR list = best, bottom = worst.
           bestMatchups: matchupsView.slice(0, TOP_N),

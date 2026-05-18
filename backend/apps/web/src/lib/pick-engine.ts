@@ -92,9 +92,10 @@ export function createPickEngine(D: PickData) {
     const tier = D.TIER_DATA[c];
     if (!tier || !tier[lane]) return 0;
     const stats = tier[lane];
-    if (stats.psScore != null) {
-      // Prefer the same PS centered-±50 mapping the prototype used.
-      return (stats.psScore - 50) * 1.0;
+    if (stats.tierScore != null) {
+      // Centered-±50 mapping: row's 0~100 score maps linearly into the
+      // engine's ±50 meta contribution.
+      return (stats.tierScore - 50) * 1.0;
     }
     const avgWr = (D.TIER_AVG_WR && D.TIER_AVG_WR[lane]) || 50;
     const wrDelta = (stats.wr - avgWr) * 100;
@@ -787,10 +788,10 @@ export function createPickEngine(D: PickData) {
     if (breakdown.M > 20) {
       const tier = D.TIER_DATA[c] && D.TIER_DATA[c][ctx.myLane];
       if (tier) {
-        const psPart = tier.psScore != null ? `PS ${tier.psScore.toFixed(1)}, ` : '';
+        const scorePart = tier.tierScore != null ? `점수 ${tier.tierScore.toFixed(1)}, ` : '';
         reasons.push({
           weight: breakdown.M * 0.5,
-          natural: `패치 메타 강자 (${psPart}WR ${tier.wr.toFixed(1)}%)`,
+          natural: `패치 메타 강자 (${scorePart}WR ${tier.wr.toFixed(1)}%)`,
           tag: '#메타강자',
         });
       }
@@ -965,7 +966,7 @@ export function createPickEngine(D: PickData) {
   function bestBanReason(c) {
     const lanes = D.TIER_DATA[c];
     if (!lanes) return '';
-    const best = Object.entries(lanes).sort((a, b) => b[1].psScore - a[1].psScore)[0];
+    const best = Object.entries(lanes).sort((a, b) => (b[1].tierScore ?? 0) - (a[1].tierScore ?? 0))[0];
     if (!best) return '';
     return `${laneKr(best[0])} ${best[1].wr.toFixed(1)}% · 밴 ${best[1].banrate.toFixed(1)}%`;
   }

@@ -15,6 +15,52 @@ import { db, sql, schema } from '@lol-tracker/db';
 import { logger } from '../logger.js';
 import { Bracket, BRACKETS, TIERS_FOR_BRACKET, RankedTier } from '@lol-tracker/shared';
 
+// --- Tier score (Wilson + lane-relative advantage + log-pick + ban − penalty).
+// Mirrors the frontend tier-engine.ts formula so the score is identical
+// whether read from the DB or computed client-side. Mapped through tanh into
+// 0~100 centered on 50.
+const SCORE_WEIGHTS = { wr: 0.55, pbi: 0.20, pick: 0.15, ban: 0.10 };
+const SAMPLE_PENALTY_HALF_K = 2000;
+const BAN_CAP_PCT = 30;
+const PBI_BAN_FLOOR = 50;
+const Z_95 = 1.96;
+
+function wilsonLowerBound(wins: number, n: number): number {
+  if (!n || n <= 0) return 0;
+  const p = wins / n;
+  const z2 = Z_95 * Z_95;
+  const denom = 1 + z2 / n;
+  const center = p + z2 / (2 * n);
+  const margin = Z_95 * Math.sqrt((p * (1 - p) + z2 / (4 * n)) / n);
+  return Math.max(0, (center - margin) / denom);
+}
+function samplePenalty(n: number): number {
+  if (!n || n <= 0) return 5;
+  return 5 * Math.max(0, 1 - Math.sqrt(n) / Math.sqrt(n + SAMPLE_PENALTY_HALF_K));
+}
+function clip(x: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, x)); }
+
+function computeTierScore(
+  wr: number, wins: number, n: number, pickPct: number, banPct: number, laneAvgWr: number,
+): number {
+  const wrWilson = wilsonLowerBound(wins, n) * 100;
+  const wrComponent  = (wrWilson - 50) * 5;
+  const banAdjusted  = 100 - Math.min(banPct, PBI_BAN_FLOOR);
+  const pbiRaw       = (wr - laneAvgWr) * (pickPct || 0.1) * 100 / banAdjusted;
+  const pbiComponent = clip(pbiRaw, -50, 50);
+  const pickComponent = Math.log10(1 + pickPct) * 12;
+  const banComponent  = Math.min(banPct / BAN_CAP_PCT, 1.0) * 6;
+  const penalty       = samplePenalty(n);
+  const raw =
+      SCORE_WEIGHTS.wr   * wrComponent
+    + SCORE_WEIGHTS.pbi  * pbiComponent
+    + SCORE_WEIGHTS.pick * pickComponent
+    + SCORE_WEIGHTS.ban  * banComponent
+    - penalty;
+  const score = 50 + 50 * Math.tanh(raw / 25);
+  return Math.round(score * 100) / 100;
+}
+
 export interface TierAggregateOptions {
   patch?: string;             // default: latest patch in matches table
   brackets?: readonly Bracket[]; // default: all 9 brackets
@@ -174,10 +220,23 @@ export async function aggregateTier(opts: TierAggregateOptions = {}): Promise<{
     // (Each match has up to 10 bans; using bans/10 normalizes across patches.)
     const banDenom = Math.max(1, Math.round(totalBanGames / 10));
 
+    // Lane avg WR for this bracket — denominator of the PBI advantage term.
+    type LaneAcc = { wins: number; games: number };
+    const laneAcc = new Map<string, LaneAcc>();
+    for (const b of buckets.values()) {
+      const a = laneAcc.get(b.lane) ?? { wins: 0, games: 0 };
+      a.wins += b.wins; a.games += b.games;
+      laneAcc.set(b.lane, a);
+    }
+    const laneAvgWr = new Map<string, number>();
+    for (const [ln, a] of laneAcc) {
+      laneAvgWr.set(ln, a.games > 0 ? (a.wins / a.games) * 100 : 50);
+    }
+
     type Row = {
       patch: string; bracket: Bracket; lane: string; championId: number;
       games: number; wins: number; pickrate: number; banrate: number;
-      avgKda: number | null; psScore: number | null; sampleN: number;
+      avgKda: number | null; tierScore: number | null; sampleN: number;
     };
     const valuesToInsert: Row[] = [];
     for (const b of buckets.values()) {
@@ -185,6 +244,10 @@ export async function aggregateTier(opts: TierAggregateOptions = {}): Promise<{
       const pickrate = laneTotal > 0 ? Math.round((b.games / laneTotal) * 10000) / 100 : 0;
       const banrate = Math.round(((banByChamp.get(b.championId) ?? 0) / banDenom) * 10000) / 100;
       const avgKda = b.games > 0 ? Math.round((b.kdaSum / b.games) * 100) / 100 : null;
+      const wr = b.games > 0 ? (b.wins / b.games) * 100 : 0;
+      const tierScore = b.games > 0
+        ? computeTierScore(wr, b.wins, b.games, pickrate, banrate, laneAvgWr.get(b.lane) ?? 50)
+        : null;
       valuesToInsert.push({
         patch: patch!,
         bracket,
@@ -195,7 +258,7 @@ export async function aggregateTier(opts: TierAggregateOptions = {}): Promise<{
         pickrate,
         banrate,
         avgKda,
-        psScore: null as number | null,
+        tierScore,
         sampleN: b.games,
       });
     }

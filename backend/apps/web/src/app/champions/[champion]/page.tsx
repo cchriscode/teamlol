@@ -8,7 +8,7 @@ import type { Lane, Bracket } from '@/lib/types';
 
 export const revalidate = 600;
 
-interface TierStat { lane: string; wr: number; pickrate: number; banrate: number; n: number; psScore: number | null; avgKda: number | null; }
+interface TierStat { lane: string; wr: number; pickrate: number; banrate: number; n: number; tierScore: number | null; avgKda: number | null; }
 interface Matchup  { lane: string; opponentId: number; opponentKey: string; opponentNameKr: string; wr: number; games: number; csDiffAt14: number | null; }
 interface Synergy  { partnerId: number; partnerKey: string; partnerNameKr: string; pairWr: number; synergyDelta: number; games: number; }
 interface BotDuo   { adcId: number; adcKey: string; supId: number; supKey: string; pairWr: number; games: number; }
