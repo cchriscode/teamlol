@@ -2998,6 +2998,12 @@
 
 /* ---- Search suggest dropdown --------------------------------------- */
 .header-search-wrap { position: relative; }
+/* Hero variant — constrain wrapper to match the .hero-search input row. */
+.hero-search-wrap {
+  position: relative;
+  max-width: 520px;
+  margin: 0 auto;
+}
 .search-suggest {
   position: absolute;
   top: calc(100% + 4px);
@@ -3007,14 +3013,14 @@
   border: 1px solid var(--border-default);
   border-radius: 4px;
   z-index: 50;
-  max-height: 320px;
+  max-height: 360px;
   overflow-y: auto;
 }
 .search-suggest-row {
   display: flex;
   width: 100%;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
   padding: 8px 12px;
   background: transparent;
   border: none;
@@ -3026,8 +3032,25 @@
 }
 .search-suggest-row:last-child { border-bottom: none; }
 .search-suggest-row:hover { background: var(--bg-elevated); }
-.search-suggest-name { font-weight: 500; }
-.search-suggest-tag { color: var(--text-tertiary); font-size: 11px; }
+.search-suggest-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.search-suggest-tag { color: var(--text-tertiary); font-size: 11px; flex-shrink: 0; }
+.search-suggest-tier {
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-feature-settings: 'tnum' on;
+  flex-shrink: 0;
+}
 
 /* ---- Match card inline expand panel -------------------------------- */
 .match-card { cursor: pointer; }

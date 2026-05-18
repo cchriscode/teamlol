@@ -7,6 +7,9 @@ export interface SuggestMatch {
   gameName: string;
   tagLine: string;
   region: string;
+  tier?: string | null;
+  rank?: string | null;
+  lp?: number | null;
 }
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';

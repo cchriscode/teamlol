@@ -5,6 +5,12 @@ import { useState, useRef, useEffect } from 'react';
 import { useSearchSuggest } from './use-search-suggest';
 import { slugFromRiotId } from '@/lib/riot-id';
 
+const TIER_SHORT: Record<string, string> = {
+  IRON: 'I', BRONZE: 'B', SILVER: 'S', GOLD: 'G', PLATINUM: 'P',
+  EMERALD: 'E', DIAMOND: 'D', MASTER: 'M', GRANDMASTER: 'GM', CHALLENGER: 'CH',
+};
+const tierShort = (t: string) => TIER_SHORT[t] ?? t;
+
 interface Props {
   placeholder?: string;
 }
@@ -70,6 +76,11 @@ export function HeaderSearch({ placeholder = '소환사명 또는 이름#태그'
             >
               <span className="search-suggest-name">{m.gameName}</span>
               <span className="search-suggest-tag">#{m.tagLine}</span>
+              {m.tier && (
+                <span className={`search-suggest-tier tier-${m.tier.toLowerCase()}`}>
+                  {tierShort(m.tier)}{m.rank ? ` ${m.rank}` : ''}
+                </span>
+              )}
             </button>
           ))}
         </div>

@@ -396,26 +396,38 @@ export default async function summonerRoutes(app: FastifyInstance) {
   });
 
   // ---- GET /api/summoner/suggest ----------------------------------------
-  // Fuzzy gameName prefix match for search autocomplete. Only suggests
-  // accounts we've already seen (ingested via BFS or prior search), so
-  // typos that match nothing in DB just return an empty list.
+  // Substring match on gameName with tier info for autocomplete. Limited to
+  // accounts we've ingested (Riot has no fuzzy search API), so a query that
+  // matches nothing in our DB falls back to "type 이름#태그 directly" in UI.
+  // Prefix matches are surfaced above substring matches.
   app.get<{ Querystring: { q?: string; region?: string; limit?: string } }>(
     '/api/summoner/suggest',
     async (req) => {
       const q = (req.query.q ?? '').trim();
       if (q.length < 2) return { matches: [] };
-      const region = (req.query.q && req.query.region) ? req.query.region : 'kr';
-      const limit = Math.min(Number(req.query.limit ?? 8) || 8, 20);
+      const region = req.query.region || 'kr';
+      const limit = Math.min(Number(req.query.limit ?? 10) || 10, 20);
 
-      // ILIKE prefix match on gameName. Order by levenshtein-ish proxy
-      // (shorter names first, then alphabetical) so an exact-name typo
-      // surfaces the most-specific candidates near the top.
       const rows = await db.execute(sql`
-        SELECT puuid, game_name AS "gameName", tag_line AS "tagLine", region
-        FROM accounts
-        WHERE region = ${region}
-          AND game_name ILIKE ${q + '%'}
-        ORDER BY LENGTH(game_name), game_name
+        SELECT a.puuid,
+               a.game_name AS "gameName",
+               a.tag_line  AS "tagLine",
+               a.region,
+               le.tier, le.rank, le.league_points AS "lp"
+        FROM accounts a
+        LEFT JOIN LATERAL (
+          SELECT tier, rank, league_points
+          FROM league_entries
+          WHERE puuid = a.puuid AND queue_type = 'RANKED_SOLO_5x5'
+          ORDER BY refreshed_at DESC LIMIT 1
+        ) le ON true
+        WHERE a.region = ${region}
+          AND a.game_name ILIKE ${'%' + q + '%'}
+        ORDER BY
+          CASE WHEN a.game_name ILIKE ${q + '%'} THEN 0 ELSE 1 END,
+          CASE WHEN le.tier IS NULL THEN 1 ELSE 0 END,
+          LENGTH(a.game_name),
+          a.game_name
         LIMIT ${limit}
       `);
       return { matches: rows };

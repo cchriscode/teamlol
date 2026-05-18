@@ -5,6 +5,12 @@ import { useState, useRef, useEffect } from 'react';
 import { useSearchSuggest } from '@/components/layout/use-search-suggest';
 import { slugFromRiotId } from '@/lib/riot-id';
 
+const TIER_SHORT: Record<string, string> = {
+  IRON: 'I', BRONZE: 'B', SILVER: 'S', GOLD: 'G', PLATINUM: 'P',
+  EMERALD: 'E', DIAMOND: 'D', MASTER: 'M', GRANDMASTER: 'GM', CHALLENGER: 'CH',
+};
+const tierShort = (t: string) => TIER_SHORT[t] ?? t;
+
 export function HeroSearch() {
   const router = useRouter();
   const [value, setValue] = useState('');
@@ -46,7 +52,7 @@ export function HeroSearch() {
   };
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative' }}>
+    <div ref={wrapRef} className="hero-search-wrap">
       <form className="hero-search" role="search" onSubmit={onSubmit}>
         <label className="sr-only" htmlFor="hero-input">소환사 검색</label>
         <input
@@ -60,7 +66,7 @@ export function HeroSearch() {
         />
         <button className="primary" type="submit">검색</button>
       </form>
-      {open && matches.length > 0 && (
+      {open && (matches.length > 0 || (value.trim().length >= 2 && !value.includes('#'))) && (
         <div className="search-suggest" role="listbox">
           {matches.map((m) => (
             <button
@@ -71,9 +77,19 @@ export function HeroSearch() {
             >
               <span className="search-suggest-name">{m.gameName}</span>
               <span className="search-suggest-tag">#{m.tagLine}</span>
+              {m.tier && (
+                <span className={`search-suggest-tier tier-${m.tier.toLowerCase()}`}>
+                  {tierShort(m.tier)}{m.rank ? ` ${m.rank}` : ''}
+                </span>
+              )}
             </button>
           ))}
-          {loading && <div className="search-suggest-row text-tertiary">…</div>}
+          {matches.length === 0 && !loading && (
+            <div className="search-suggest-row text-tertiary" style={{ cursor: 'default' }}>
+              일치 없음 — 이름#태그 형식으로 직접 입력하세요
+            </div>
+          )}
+          {loading && <div className="search-suggest-row text-tertiary" style={{ cursor: 'default' }}>…</div>}
         </div>
       )}
       {error && <div className="hero-hint" style={{ color: 'var(--color-loss)' }}>{error}</div>}
