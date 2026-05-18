@@ -110,15 +110,19 @@ export default async function pickRecommendRoutes(app: FastifyInstance) {
 
     // Synergies — both ends of the distribution. Sorting by ABS keeps the
     // strongest positive AND negative pairs so the engine can also penalise
-    // bad combos ("don't pair these"), not just upweight good ones.
+    // bad combos. Threshold 20 (not 50) because most champion-ally pairs at
+    // 50+ games are popular meta only — 1.6% coverage was the reason S
+    // collapsed to 0 for non-meta picks. Engine's confidence(n) factor
+    // already attenuates small-sample pairs (~30% weight at n=20 vs ~70%
+    // at n=200).
     const synergies = await db.execute(sql`
       SELECT champion_a AS a, champion_b AS b, pair_winrate AS wr,
              games AS n, synergy_delta AS delta
       FROM champion_synergies
       WHERE patch = ${patch} AND bracket = ${bracket}
-        AND games >= 50
+        AND games >= 20
       ORDER BY ABS(synergy_delta) DESC
-      LIMIT 3000
+      LIMIT 5000
     `);
 
     // Bot duo synergies — full (much smaller).
