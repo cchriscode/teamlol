@@ -13,6 +13,7 @@ import { syncStaticData } from './static-data.js';
 import { aggregateDamageProfile } from './damage-profile.js';
 import { snapshotTier } from './tier-snapshot.js';
 import { aggregateChampionPower } from './champion-power.js';
+import { snapshotRankHistory } from './rank-history.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -37,6 +38,7 @@ export function startAggregators() {
     // Daily snapshot of champion_stats — feeds the "변동" / wrDelta columns.
     { name: 'tierSnap', intervalMs: DAY_MS,  run: () => snapshotTier() },
     { name: 'chPower',  intervalMs: HOUR_MS, run: () => aggregateChampionPower() },
+    { name: 'rankHist', intervalMs: DAY_MS,  run: () => snapshotRankHistory() },
   ];
 
   for (const agg of all) {

@@ -19,5 +19,6 @@ export * from './bot-duo-synergy';
 export * from './copick-probs';
 export * from './champion-masteries';
 export * from './tier-snapshots';
+export * from './player-rank-history';
 export * from './search-logs';
 export * from './static-data';

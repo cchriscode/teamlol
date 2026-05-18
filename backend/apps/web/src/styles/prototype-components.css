@@ -3151,6 +3151,98 @@
   margin-bottom: 4px;
 }
 
+/* ---- AI prediction badges (탑 of match list) ---------------------- */
+.ai-prediction-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.ai-prediction-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.ai-prediction-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.ai-prediction-tiers, .ai-prediction-luck {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.ai-prediction-arrow {
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+.luck-pill {
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.luck-good    { background: rgba(93, 201, 148, 0.12); color: var(--color-positive); }
+.luck-neutral { background: var(--bg-elevated); color: var(--text-secondary); }
+.luck-bad     { background: rgba(226, 92, 92, 0.12); color: var(--color-loss); }
+
+/* ---- Rank progression dots ---------------------------------------- */
+.rank-progression-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 6px 0;
+}
+.rank-progression-dot {
+  flex: 1;
+  text-align: center;
+  padding: 4px 0;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 3px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  font-feature-settings: 'tnum' on;
+}
+.rank-progression-dot.current {
+  background: var(--bg-input);
+  border-color: var(--color-win);
+  color: var(--color-win);
+}
+
+/* ---- Co-player sidebar rows ---------------------------------------- */
+.co-player-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.co-player-row:last-child { border-bottom: none; }
+.co-player-row:hover { background: var(--bg-elevated); }
+.co-player-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.co-player-name {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.co-player-meta {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* ---- Match list toolbar (filter + search + share) ------------------ */
 .match-toolbar {
   display: flex;

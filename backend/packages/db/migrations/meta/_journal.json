@@ -50,6 +50,13 @@
       "when": 1779110000000,
       "tag": "0006_champion_power",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779120000000,
+      "tag": "0007_player_rank_history",
+      "breakpoints": true
     }
   ]
 }

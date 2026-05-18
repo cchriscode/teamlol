@@ -9,6 +9,9 @@ import { ChampionIcon } from '@/components/atoms/champion-icon';
 import { getChampionMeta } from '@/lib/champion-meta';
 import { SummonerHeader } from './summoner-header';
 import { MatchListClient } from './match-list-client';
+import { CoPlayersCard } from './co-players';
+import { RankHistoryCard } from './rank-history';
+import { AIPredictionBadges } from './ai-prediction';
 
 interface PageProps {
   params: Promise<{ region: string; riotId: string }>;
@@ -60,6 +63,9 @@ export default async function SummonerPage({ params }: PageProps) {
   if (!summoner) notFound();
 
   const matches = await apiGet<MatchListResponse>(`/api/summoner/${summoner.account.puuid}/matches?count=20`).catch(() => null);
+  const coPlayers = await apiGet<{ sampleMatches: number; sameTeam: Parameters<typeof CoPlayersCard>[0]['sameTeam']; oppTeam: Parameters<typeof CoPlayersCard>[0]['oppTeam'] }>(
+    `/api/summoner/${summoner.account.puuid}/co-players?count=20`,
+  ).catch(() => null);
   const meta = await getChampionMeta();
   const version = await getDdragonVersion();
   const profileIconUrl = summoner.summoner ? ddragon.profileIcon(summoner.summoner.profileIconId, version) : null;
@@ -105,6 +111,8 @@ export default async function SummonerPage({ params }: PageProps) {
 
       <div className="summoner-grid">
         <aside className="sidebar">
+          <RankHistoryCard puuid={summoner.account.puuid} days={30} />
+
           <div className="card stats-summary">
             <div className="section-title">최근 {recent.length}게임</div>
             <div className="winrate-ring-wrap">
@@ -165,9 +173,24 @@ export default async function SummonerPage({ params }: PageProps) {
               )}
             </div>
           </div>
+
+          {coPlayers && (
+            <CoPlayersCard
+              sameTeam={coPlayers.sameTeam}
+              oppTeam={coPlayers.oppTeam}
+              region={region}
+              version={version}
+              sampleMatches={coPlayers.sampleMatches}
+            />
+          )}
         </aside>
 
         <div className="match-list">
+          <AIPredictionBadges
+            matches={recent}
+            selfPuuid={summoner.account.puuid}
+            currentTier={solo?.tier}
+          />
           <MatchListClient
             matches={recent}
             selfPuuid={summoner.account.puuid}

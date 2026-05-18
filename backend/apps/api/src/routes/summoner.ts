@@ -408,6 +408,131 @@ export default async function summonerRoutes(app: FastifyInstance) {
     },
   );
 
+  // ---- GET /api/summoner/:puuid/rank-history ---------------------------
+  // Last N days of daily league_entries snapshots. Drives the tier-
+  // progression dots + LP trend chart on the summoner overview.
+  app.get<{ Params: PuuidParams; Querystring: { days?: string; queue?: string } }>(
+    '/api/summoner/:puuid/rank-history',
+    async (req) => {
+      const puuid = req.params.puuid;
+      const days = Math.min(120, Math.max(1, Number(req.query.days ?? 30)));
+      const queue = req.query.queue || 'RANKED_SOLO_5x5';
+
+      const rows = await db.execute(sql`
+        SELECT snapshot_date::text AS "snapshotDate",
+               tier, rank, lp, wins, losses
+        FROM player_rank_history
+        WHERE puuid = ${puuid}
+          AND queue_type = ${queue}
+          AND snapshot_date >= CURRENT_DATE - ${days}::int
+        ORDER BY snapshot_date ASC
+      `);
+      return { puuid, queue, days, history: rows };
+    },
+  );
+
+  // ---- GET /api/summoner/:puuid/co-players ------------------------------
+  // For the "함께 플레이한 소환사" sidebar widget. Counts how often each
+  // other puuid showed up in the requester's last N solo-queue matches,
+  // split by same-team vs opposing.
+  app.get<{ Params: PuuidParams; Querystring: { count?: string } }>(
+    '/api/summoner/:puuid/co-players',
+    async (req) => {
+      const puuid = req.params.puuid;
+      const count = Math.min(50, Math.max(1, Number(req.query.count ?? 20)));
+
+      const rows = await db.execute(sql`
+        WITH my_matches AS (
+          SELECT mp.match_id, mp.team AS my_team, mp.win AS my_win
+          FROM match_participants mp
+          JOIN matches m ON m.match_id = mp.match_id
+          WHERE mp.puuid = ${puuid} AND m.queue_id = 420
+          ORDER BY m.game_creation DESC
+          LIMIT ${count}
+        )
+        SELECT
+          op.puuid                                                    AS "puuid",
+          (op.team = mm.my_team)                                      AS "sameTeam",
+          COUNT(*)::int                                               AS games,
+          COUNT(*) FILTER (WHERE op.win = mm.my_win)::int             AS shared_outcome
+        FROM my_matches mm
+        JOIN match_participants op ON op.match_id = mm.match_id
+        WHERE op.puuid <> ${puuid}
+        GROUP BY op.puuid, (op.team = mm.my_team)
+      `);
+
+      type Row = { puuid: string; sameTeam: boolean; games: number; shared_outcome: number };
+      const list = rows as unknown as Row[];
+      const puuids = Array.from(new Set(list.map((r) => r.puuid)));
+
+      // Resolve names + summoner level/icon.
+      const acctRows = puuids.length > 0 ? await db
+        .select({ puuid: schema.accounts.puuid, gameName: schema.accounts.gameName, tagLine: schema.accounts.tagLine })
+        .from(schema.accounts)
+        .where(inArray(schema.accounts.puuid, puuids)) : [];
+      const sumRows = puuids.length > 0 ? await db
+        .select({ puuid: schema.summoners.puuid, profileIconId: schema.summoners.profileIconId })
+        .from(schema.summoners)
+        .where(inArray(schema.summoners.puuid, puuids)) : [];
+      const acctMap = new Map(acctRows.map((r) => [r.puuid, r]));
+      const sumMap = new Map(sumRows.map((r) => [r.puuid, r]));
+
+      // Pull latest ranked-solo tier from raw_participant (always present in
+      // recent matches), with fallback to league_entries.
+      const leRows = puuids.length > 0 ? await db.execute(sql`
+        SELECT DISTINCT ON (puuid) puuid, tier, rank
+        FROM league_entries
+        WHERE puuid = ANY(${puuids}::text[]) AND queue_type = 'RANKED_SOLO_5x5'
+        ORDER BY puuid, refreshed_at DESC
+      `) : [];
+      const tierMap = new Map<string, { tier: string; rank: string }>();
+      for (const r of leRows as unknown as Array<{ puuid: string; tier: string; rank: string }>) {
+        tierMap.set(r.puuid, { tier: r.tier, rank: r.rank });
+      }
+
+      // Merge by puuid + sameTeam bucket. Frontend toggles between the two.
+      type Entry = {
+        puuid: string; gameName: string | null; tagLine: string | null;
+        profileIconId: number | null;
+        tier: string | null; rank: string | null;
+        sameTeam: { games: number; wins: number };
+        oppTeam:  { games: number; wins: number };
+      };
+      const merged = new Map<string, Entry>();
+      for (const r of list) {
+        const cur = merged.get(r.puuid) ?? {
+          puuid: r.puuid,
+          gameName: acctMap.get(r.puuid)?.gameName ?? null,
+          tagLine: acctMap.get(r.puuid)?.tagLine ?? null,
+          profileIconId: sumMap.get(r.puuid)?.profileIconId ?? null,
+          tier: tierMap.get(r.puuid)?.tier ?? null,
+          rank: tierMap.get(r.puuid)?.rank ?? null,
+          sameTeam: { games: 0, wins: 0 },
+          oppTeam:  { games: 0, wins: 0 },
+        };
+        const bucket = r.sameTeam ? cur.sameTeam : cur.oppTeam;
+        bucket.games += r.games;
+        // For same-team: shared_outcome == both win. For opp-team: shared_outcome == I won (they lost).
+        // Track "my wins together" not "their wins" — more useful for "duo with X went well N times".
+        if (r.sameTeam) bucket.wins += r.shared_outcome;
+        merged.set(r.puuid, cur);
+      }
+
+      // Sort by total games desc within each bucket; take top 10 per bucket.
+      const all = Array.from(merged.values());
+      const sameTeam = all
+        .filter((e) => e.sameTeam.games > 0)
+        .sort((a, b) => b.sameTeam.games - a.sameTeam.games)
+        .slice(0, 10);
+      const oppTeam = all
+        .filter((e) => e.oppTeam.games > 0)
+        .sort((a, b) => b.oppTeam.games - a.oppTeam.games)
+        .slice(0, 10);
+
+      return { puuid, sampleMatches: count, sameTeam, oppTeam };
+    },
+  );
+
   // ---- GET /api/summoner/:puuid/match-count -----------------------------
   // Fast count for the deep-collect polling UI (no expensive joins).
   app.get<{ Params: PuuidParams }>('/api/summoner/:puuid/match-count', async (req) => {
