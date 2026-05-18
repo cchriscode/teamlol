@@ -45,6 +45,10 @@ export interface PickData {
   BRACKET: string;
   CHAMPIONS: Record<string, ChampionMeta>;
   TIER_DATA: Record<string, Partial<Record<Lane, { wr: number; pickrate: number; banrate: number; n: number; tierScore: number | null }>>>;
+  // Snapshot from N days ago, same shape; tier-engine diffs current vs prev
+  // for the "변동" trend column. Undefined when no snapshot is available yet
+  // (system needs ≥3 daily snapshots before trend means anything).
+  TIER_DATA_PREV?: Record<string, Partial<Record<Lane, { wr: number; pickrate: number; banrate: number; n: number }>>>;
   TIER_AVG_WR: Partial<Record<Lane, number>>;
   MATCHUPS: Record<Lane, Record<string, Record<string, { wr: number; n: number }>>>;
   SYNERGIES: Record<string, Record<string, { wr: number; n: number }>>;

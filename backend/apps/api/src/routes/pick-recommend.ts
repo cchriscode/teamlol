@@ -63,6 +63,26 @@ export default async function pickRecommendRoutes(app: FastifyInstance) {
       eq(schema.championStats.bracket, bracket),
     ));
 
+    // Previous snapshot for trend deltas (≥3 days old, newest available).
+    // Schema mirrors current tier rows so build-pick-data can reshape into
+    // TIER_DATA_PREV without special-casing.
+    const tierPrev = await db.execute(sql`
+      WITH snap AS (
+        SELECT snapshot_date
+        FROM tier_snapshots
+        WHERE patch = ${patch} AND bracket = ${bracket}
+          AND snapshot_date <= CURRENT_DATE - 3
+        ORDER BY snapshot_date DESC LIMIT 1
+      )
+      SELECT champion_id AS "championId", lane,
+             CASE WHEN games > 0 THEN (wins::float / games) * 100 ELSE 0 END AS wr,
+             pickrate, banrate, games AS n
+      FROM tier_snapshots, snap
+      WHERE tier_snapshots.snapshot_date = snap.snapshot_date
+        AND tier_snapshots.patch = ${patch}
+        AND tier_snapshots.bracket = ${bracket}
+    `);
+
     // Lane average WR (denominator for Δ in pick-engine).
     const laneAvg = await db.execute(sql`
       SELECT lane,
@@ -137,6 +157,7 @@ export default async function pickRecommendRoutes(app: FastifyInstance) {
         tierScore: r.tierScore ?? null,
         apShare: r.apShare ?? null, adShare: r.adShare ?? null,
       })),
+      tierPrev,
       matchups,
       synergies,
       botDuos,

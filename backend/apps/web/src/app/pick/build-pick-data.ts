@@ -10,6 +10,7 @@ interface PickRecommendApi {
   bracket: string;
   laneAvgWr?: Record<Lane, number>;
   tier: Array<{ championId: number; lane: Lane; wr: number; pickrate: number; banrate: number; n: number; tierScore: number | null; apShare?: number | null; adShare?: number | null }>;
+  tierPrev?: Array<{ championId: number; lane: Lane; wr: number; pickrate: number; banrate: number; n: number }>;
   matchups: Array<{ a: number; b: number; lane: Lane; wr: number; n: number }>;
   synergies: Array<{ a: number; b: number; wr: number; n: number }>;
   botDuos?: Array<{ adcId: number; supId: number; wr: number; n: number; delta: number }>;
@@ -161,6 +162,20 @@ export function buildPickData(api: PickRecommendApi, meta: DdMeta): PickData {
     }
   }
 
+  // TIER_DATA_PREV from snapshot (≥3 days old) — tier-engine.detectTrend
+  // diffs current vs this. Without it, trend was stuck at "stable / 0%".
+  let TIER_DATA_PREV: PickData['TIER_DATA_PREV'];
+  if (api.tierPrev && api.tierPrev.length > 0) {
+    TIER_DATA_PREV = {};
+    for (const t of api.tierPrev) {
+      const champ = meta.byId.get(t.championId);
+      if (!champ) continue;
+      const key = champ.id;
+      if (!TIER_DATA_PREV[key]) TIER_DATA_PREV[key] = {};
+      TIER_DATA_PREV[key][t.lane] = { wr: t.wr, pickrate: t.pickrate, banrate: t.banrate, n: t.n };
+    }
+  }
+
   // MATCHUPS — { lane: { a: { b: {wr, n} } } }, mirrored.
   const MATCHUPS: PickData['MATCHUPS'] = { top: {}, jungle: {}, mid: {}, adc: {}, support: {} };
   for (const m of api.matchups) {
@@ -239,6 +254,7 @@ export function buildPickData(api: PickRecommendApi, meta: DdMeta): PickData {
     BRACKET: api.bracket,
     CHAMPIONS,
     TIER_DATA,
+    TIER_DATA_PREV,
     TIER_AVG_WR: (api.laneAvgWr ?? {}) as Partial<Record<Lane, number>>,
     MATCHUPS,
     SYNERGIES,

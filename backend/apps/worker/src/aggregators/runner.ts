@@ -11,6 +11,7 @@ import { aggregateBotDuos } from './bot-duo.js';
 import { aggregateCopick } from './copick.js';
 import { syncStaticData } from './static-data.js';
 import { aggregateDamageProfile } from './damage-profile.js';
+import { snapshotTier } from './tier-snapshot.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -32,6 +33,8 @@ export function startAggregators() {
     { name: 'botDuo',  intervalMs: DAY_MS,  run: () => aggregateBotDuos() },
     { name: 'copick',  intervalMs: DAY_MS,  run: () => aggregateCopick() },
     { name: 'static',  intervalMs: HOUR_MS, run: () => syncStaticData() },
+    // Daily snapshot of champion_stats — feeds the "변동" / wrDelta columns.
+    { name: 'tierSnap', intervalMs: DAY_MS,  run: () => snapshotTier() },
   ];
 
   for (const agg of all) {
