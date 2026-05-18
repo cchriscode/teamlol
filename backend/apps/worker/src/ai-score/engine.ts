@@ -29,7 +29,10 @@ const ALGO_VERSION = 'ai-score@2.0';
 
 type LUT = ReadonlyArray<readonly [number, number]>;
 
-const KDA_LUT: LUT = [[6, 100], [4, 82], [3, 68], [2.2, 55], [1.5, 42], [1, 28], [0.5, 12], [0, 0]];
+// Extended top end so deathless / carry games actually differentiate
+// (was capped at KDA=6 → 100; perfect 0-death games were indistinguishable
+// from a 6-KDA solid game).
+const KDA_LUT: LUT = [[12, 100], [9, 95], [6, 88], [4, 78], [3, 68], [2.2, 55], [1.5, 42], [1, 28], [0.5, 12], [0, 0]];
 const KP_LUT:  LUT = [[70, 100], [60, 85], [50, 70], [40, 55], [30, 40], [20, 25], [10, 10], [0, 0]];
 
 // CS per minute (jungle counts neutral monsters too)
@@ -84,7 +87,11 @@ export function computeAIScore(p: ParsedParticipant, totals: TeamTotals, gameDur
   const minutes = Math.max(1, gameDurationSec / 60);
   const w = LANE_WEIGHTS[p.lane];
 
-  const kdaRatio = (p.kills + p.assists) / Math.max(1, p.deaths);
+  // Floor deaths at 0.5 for true 0-death games so a "perfect game" gets
+  // recognized (vs 6/0/4 and 12/0/8 both reading as KDA 10 with deaths=1
+  // floor). Then hard-cap the ratio at 15 so absurd outliers (25/0/15 etc.)
+  // don't blow past the LUT's documented top.
+  const kdaRatio = Math.min(15, (p.kills + p.assists) / Math.max(0.5, p.deaths));
   const csPerMin = p.cs / minutes;
   const visionPm = p.visionScore / minutes;
   const dmgObjPm = p.dmgToObj / minutes;

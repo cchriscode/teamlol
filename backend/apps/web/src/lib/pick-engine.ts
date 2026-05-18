@@ -179,9 +179,15 @@ export function createPickEngine(D: PickData) {
   function fitStrength(meta, gapType) {
     switch (gapType) {
       case 'ap':
-        return meta.damageType === 'AP' ? 1.0 : meta.damageType === 'Mixed' ? 0.4 : 0;
+        // Continuous AP contribution from real builds (Katarina ≈ 0.83, Yasuo
+        // 0). Falls back to the binary tag if damageRatio missing.
+        return meta.damageRatio?.ap != null
+          ? meta.damageRatio.ap
+          : (meta.damageType === 'AP' ? 1.0 : meta.damageType === 'Mixed' ? 0.5 : 0);
       case 'ad':
-        return meta.damageType === 'AD' ? 1.0 : meta.damageType === 'Mixed' ? 0.4 : 0;
+        return meta.damageRatio?.ad != null
+          ? meta.damageRatio.ad
+          : (meta.damageType === 'AD' ? 1.0 : meta.damageType === 'Mixed' ? 0.5 : 0);
       case 'tank':
         return meta.role.includes('Tank') ? 1.0 : meta.role.includes('Bruiser') ? 0.6 : 0;
       case 'cc':
