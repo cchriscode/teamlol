@@ -107,10 +107,13 @@ export function createPickEngine(D: PickData) {
 
   // Counter score considers BOTH confirmed enemy picks (1.0 weight) and
   // predicted picks for empty enemy slots (PREDICTED_COUNTER_DISCOUNT weight).
+  // Tracks the SAME-LANE direct laner result as the primary signal (can be
+  // negative when our pick gets countered) and adds cross-lane influences as
+  // a smaller side-signal. Previously the score floored at 0 so "I'd lose
+  // lane to this enemy" never showed up.
   // `predictions[idx]` is null or [{c, prob}, ...] for enemyTeam[idx].
   function counterScore(c, myLane, enemyTeam, predictions) {
     if (!myLane) return 0;
-    let best = 0;
 
     function applyAgainst(enemyChamp, enemyLane, conf, weight) {
       const sameLane = enemyLane === myLane;
@@ -123,20 +126,34 @@ export function createPickEngine(D: PickData) {
       return delta * confidence(m.n) * laneWeight * conf * weight;
     }
 
+    // The same-lane direct laner dominates; everyone else only nudges.
+    let laneResult = 0;        // signed (positive when we counter them)
+    let crossSum = 0;          // signed sum of cross-lane influences
+
     enemyTeam.forEach((slot, idx) => {
       if (slot.champion) {
-        const s = applyAgainst(slot.champion, slot.lane, 1.0, 1.0);
-        if (s > best) best = s;
+        const score = applyAgainst(slot.champion, slot.lane, 1.0, 1.0);
+        if (slot.lane === myLane) laneResult = score;
+        else crossSum += score;
       } else if (predictions && predictions[idx] && predictions[idx].length) {
-        // Sum expected counter weighted by prediction probability.
         let expected = 0;
         predictions[idx].forEach((p) => {
           expected += applyAgainst(p.c, p.lane, 1.0, p.prob);
         });
-        const s = expected * PREDICTED_COUNTER_DISCOUNT;
-        if (s > best) best = s;
+        const scaled = expected * PREDICTED_COUNTER_DISCOUNT;
+        // Use top-1 prediction's lane to decide same-vs-cross bucket.
+        const predLane = predictions[idx][0]?.lane;
+        if (predLane === myLane) {
+          // Don't overwrite a confirmed same-lane signal; only fill in when
+          // we have no direct laner yet.
+          if (laneResult === 0) laneResult = scaled;
+        } else {
+          crossSum += scaled;
+        }
       }
     });
+
+    const best = laneResult + crossSum;
     return best;
   }
 

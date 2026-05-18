@@ -129,7 +129,22 @@ export function PickRecommendApp({ initialData }: Props) {
     });
   };
   const setPick = (side: 'my' | 'enemy', idx: number, champion: string | undefined) => {
-    setTeamSlot(side, idx, { champion, status: champion ? 'confirmed' : 'empty' });
+    if (!champion) {
+      setTeamSlot(side, idx, { champion: undefined, status: 'empty' });
+      return;
+    }
+    // Auto-infer lane from the champ's most-pickrate lane unless the user
+    // already pinned a lane via the dropdown. Without this, the engine's
+    // counterScore can't match same-lane (laneWeight 1.0 → 0.2) and the C
+    // column collapses to a token value.
+    setState((prev) => {
+      const key = side === 'my' ? 'myTeam' : 'enemyTeam';
+      const team = [...prev[key]];
+      const existingLane = team[idx].lane;
+      const newLane = existingLane ?? (inferLane(champion) as Lane | undefined) ?? undefined;
+      team[idx] = { ...team[idx], champion, status: 'confirmed', lane: newLane };
+      return { ...prev, [key]: team };
+    });
   };
 
   const physicalSideOf = (side: 'my' | 'enemy') =>
