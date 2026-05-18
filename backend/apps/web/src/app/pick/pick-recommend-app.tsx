@@ -62,6 +62,7 @@ export function PickRecommendApp({ initialData }: Props) {
     // can call D.listChampions(), D.copickProb(), etc.
     const d = initialData as unknown as Record<string, unknown>;
     const COPICK = (d.COPICK_PROBS as Record<string, Record<string, Record<string, number>>>) ?? {};
+    const BOT_DUO = (initialData.BOT_DUO_SYNERGY ?? {}) as Record<string, Record<string, { wr: number; n: number }>>;
     return {
       ...initialData,
       nameKr: (key: string) => initialData.CHAMPIONS[key]?.nameKr ?? key,
@@ -75,6 +76,13 @@ export function PickRecommendApp({ initialData }: Props) {
         if (a && a[partnerLane] && a[partnerLane][partner] != null) return a[partnerLane][partner];
         return null;
       },
+      botDuoSynergy: (adcKey: string, supKey: string) => {
+        if (!adcKey || !supKey) return null;
+        const pair = BOT_DUO[adcKey] && BOT_DUO[adcKey][supKey];
+        if (!pair) return null;
+        // Engine expects {delta} (pair WR minus 50 baseline).
+        return { ...pair, delta: pair.wr - 50 };
+      },
     } as unknown as PickData;
   }, [initialData]);
 
@@ -83,7 +91,8 @@ export function PickRecommendApp({ initialData }: Props) {
   const [modalFor, setModalFor] = useState<ModalTarget | null>(null);
 
   const result = useMemo(() => {
-    try { return engine.recommend(state) as any; } catch { return null; }
+    try { return engine.recommend(state) as any; }
+    catch (e) { console.error('[pick-engine] recommend failed', e); return null; }
   }, [engine, state]);
 
   const setTeamSlot = useCallback((side: 'my' | 'enemy', idx: number, patch: Partial<SlotState>) => {
@@ -324,7 +333,7 @@ export function PickRecommendApp({ initialData }: Props) {
           <div className="pick-recommend-grid">
             {!result || result.candidates.length === 0 ? (
               <div className="card" style={{ gridColumn: '1/-1', padding: 32, textAlign: 'center', color: 'var(--text-tertiary)' }}>
-                본인 자리(★)와 라인을 입력하면 추천이 표시됩니다.
+                슬롯에 라인을 입력하면 추천이 표시됩니다. (★는 자기 자리 강조용)
               </div>
             ) : (
               result.candidates.map((c: any) => (

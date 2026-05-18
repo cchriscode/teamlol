@@ -20,6 +20,7 @@ import summonerChampionStatsRoutes from './routes/summoner-champion-stats.js';
 import summonerSeasonsRoutes from './routes/summoner-seasons.js';
 import masteryRoutes from './routes/mastery.js';
 import matchTimelineRoutes from './routes/match-timeline.js';
+import patchNotesRoutes from './routes/patch-notes.js';
 
 async function main() {
   const app = Fastify({
@@ -76,6 +77,7 @@ async function main() {
   await app.register(summonerSeasonsRoutes);
   await app.register(masteryRoutes);
   await app.register(matchTimelineRoutes);
+  await app.register(patchNotesRoutes);
 
   app.setNotFoundHandler((req, reply) => {
     reply.status(404).send({ error: 'not found', path: req.url });

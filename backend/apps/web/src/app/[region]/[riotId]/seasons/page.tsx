@@ -72,11 +72,11 @@ export default async function SummonerSeasonsPage({ params }: PageProps) {
                 </div>
                 <div>
                   <div className="text-tertiary" style={{ fontSize: 11 }}>승률</div>
-                  <div className="stat-cell primary" style={{ fontSize: 18 }}>{p.winrate}%</div>
+                  <div className="stat-cell primary" style={{ fontSize: 18 }}>{(p.winrate ?? 0).toFixed(1)}%</div>
                 </div>
                 <div>
                   <div className="text-tertiary" style={{ fontSize: 11 }}>AI 점수</div>
-                  <div className="stat-cell" style={{ fontSize: 18 }}>{p.avgAiScore}</div>
+                  <div className="stat-cell" style={{ fontSize: 18 }}>{(p.avgAiScore ?? 0).toFixed(1)}</div>
                 </div>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
                   <span className="text-tertiary" style={{ fontSize: 11 }}>주력 챔프</span>

@@ -7,5 +7,6 @@ export function activeKeyForPath(pathname: string): NavKey | undefined {
   if (pathname.startsWith('/leaderboard')) return 'leaderboard';
   if (pathname.startsWith('/multi')) return 'multi-search';
   if (pathname.startsWith('/pick')) return 'pick-recommend';
+  if (pathname.startsWith('/patches')) return 'patches';
   return undefined;
 }

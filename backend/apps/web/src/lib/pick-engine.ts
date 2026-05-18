@@ -23,7 +23,16 @@ export function createPickEngine(D: PickData) {
   }
 
   // ---- Scenario classifier (spec §5.3) ------------------------------------
+  // Resolve "my slot" for scoring purposes. Priority:
+  //   1) Explicit ★ slot that also has a lane (full UX)
+  //   2) First empty my-team slot in pick order with a lane set
+  //      (so users can get recs by just setting a lane, no ★ needed)
+  //   3) Explicit ★ slot even without lane (preserves legacy behavior)
   function mySlot(state) {
+    const starredWithLane = state.myTeam.find((s) => s.isMine && s.lane);
+    if (starredWithLane) return starredWithLane;
+    const nextLaned = state.myTeam.find((s) => !s.champion && s.lane);
+    if (nextLaned) return nextLaned;
     return state.myTeam.find((s) => s.isMine) || null;
   }
 
@@ -80,17 +89,14 @@ export function createPickEngine(D: PickData) {
   // arithmetic in recommend() keeps its scale.
   function metaScore(c, lane) {
     if (!lane) return 0;
-    if (window.TierEngine) {
-      const row = window.TierEngine.rowFor(c, lane);
-      if (!row) return 0;
-      // PS score is 0~100 centered ~50 → map to ±50 contribution
-      return (row.psScore - 50) * 1.0;
-    }
-    // Fallback if TierEngine not loaded — same shape as before
     const tier = D.TIER_DATA[c];
     if (!tier || !tier[lane]) return 0;
     const stats = tier[lane];
-    const avgWr = D.TIER_AVG_WR[lane] || 50;
+    if (stats.psScore != null) {
+      // Prefer the same PS centered-±50 mapping the prototype used.
+      return (stats.psScore - 50) * 1.0;
+    }
+    const avgWr = (D.TIER_AVG_WR && D.TIER_AVG_WR[lane]) || 50;
     const wrDelta = (stats.wr - avgWr) * 100;
     const conf = confidence(stats.n);
     const pickBonus = Math.log10(Math.max(stats.pickrate, 0.5) + 1) * 8;
@@ -985,8 +991,9 @@ export function createPickEngine(D: PickData) {
       return D.MATCHUPS[myLane] && Object.values(D.MATCHUPS[myLane] || {}).some((m) => m[c] && m[c].wr < 47);
     });
 
-    // Locate the user's slot for EV-based scoring (Stage 3)
-    const mySlotIdx = state.myTeam.findIndex((s) => s.isMine);
+    // Locate the user's slot for EV-based scoring (Stage 3).
+    // Use the same resolution as mySlot() so users get scoring even without ★.
+    const mySlotIdx = me ? state.myTeam.indexOf(me) : -1;
     const enableEV = mySlotIdx >= 0;
 
     const candidates = [];

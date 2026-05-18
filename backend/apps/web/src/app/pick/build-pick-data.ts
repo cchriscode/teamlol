@@ -117,6 +117,7 @@ export function buildPickData(api: PickRecommendApi, meta: DdMeta): PickData {
     BRACKET: api.bracket,
     CHAMPIONS,
     TIER_DATA,
+    TIER_AVG_WR: (api.laneAvgWr ?? {}) as Partial<Record<Lane, number>>,
     MATCHUPS,
     SYNERGIES,
     BOT_DUO_SYNERGY,

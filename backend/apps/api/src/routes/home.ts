@@ -39,14 +39,23 @@ export default async function homeRoutes(app: FastifyInstance) {
     const cached = await redis.get('home:trending');
     if (cached) return JSON.parse(cached);
 
+    // Only consider the patch with the largest sample (the live patch).
+    // Threshold cuts off-meta noise (e.g. Singed adc with 10 games / 0.08% pr).
     const rows = await db.execute(sql`
-      WITH cur AS (
+      WITH latest_patch AS (
+        SELECT patch FROM champion_stats
+        WHERE bracket = 'diamond+'
+        GROUP BY patch ORDER BY SUM(games) DESC LIMIT 1
+      ),
+      cur AS (
         SELECT champion_id, lane,
                (wins::float / NULLIF(games, 0)) * 100 AS wr,
-               pickrate, banrate, sample_n,
-               MAX(updated_at) OVER () AS as_of
+               pickrate, banrate, sample_n
         FROM champion_stats
-        WHERE bracket = 'diamond+' AND sample_n >= 5
+        WHERE bracket = 'diamond+'
+          AND patch = (SELECT patch FROM latest_patch)
+          AND sample_n >= 100
+          AND pickrate >= 1.0
       ),
       prev AS (
         SELECT champion_id, lane,

@@ -40,6 +40,7 @@ export interface PickData {
   BRACKET: string;
   CHAMPIONS: Record<string, ChampionMeta>;
   TIER_DATA: Record<string, Partial<Record<Lane, { wr: number; pickrate: number; banrate: number; n: number; psScore?: number }>>>;
+  TIER_AVG_WR: Partial<Record<Lane, number>>;
   MATCHUPS: Record<Lane, Record<string, Record<string, { wr: number; n: number }>>>;
   SYNERGIES: Record<string, Record<string, { wr: number; n: number }>>;
   BOT_DUO_SYNERGY?: Record<string, Record<string, { wr: number; n: number }>>;
