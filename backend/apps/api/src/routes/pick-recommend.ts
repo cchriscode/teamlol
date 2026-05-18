@@ -55,6 +55,8 @@ export default async function pickRecommendRoutes(app: FastifyInstance) {
       pickrate: schema.championStats.pickrate,
       banrate: schema.championStats.banrate,
       n: schema.championStats.sampleN,
+      apShare: schema.championStats.apShare,
+      adShare: schema.championStats.adShare,
     }).from(schema.championStats).where(and(
       eq(schema.championStats.patch, patch),
       eq(schema.championStats.bracket, bracket),
@@ -129,6 +131,7 @@ export default async function pickRecommendRoutes(app: FastifyInstance) {
         championId: r.championId, lane: r.lane,
         wr: r.games > 0 ? Math.round((r.wins / r.games) * 10000) / 100 : 0,
         pickrate: r.pickrate, banrate: r.banrate, n: r.n,
+        apShare: r.apShare ?? null, adShare: r.adShare ?? null,
       })),
       matchups,
       synergies,

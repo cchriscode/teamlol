@@ -25,6 +25,11 @@ export interface ChampionMeta {
   nameKr: string;
   lanes: string[];
   damageType: 'AD' | 'AP' | 'Mixed' | 'True';
+  // Real per-champion AP/AD share from item builds (sums to 1). When the
+  // aggregator hasn't populated it (or champion never picked at scale), this
+  // is derived from `damageType` instead so old composition logic keeps
+  // working (AD→{1,0}, AP→{0,1}, Mixed→{0.5,0.5}, True→{0.5,0.5}).
+  damageRatio: { ap: number; ad: number };
   role: string[];
   ccLevel: number;
   engageType: 'none' | 'soft' | 'pick' | 'engage' | 'hard';

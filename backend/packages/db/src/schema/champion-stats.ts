@@ -14,6 +14,11 @@ export const championStats = pgTable(
     banrate: real('banrate').notNull(),       // %
     avgKda: real('avg_kda'),
     psScore: real('ps_score'),                 // computed by tier-engine, cached
+    // Real-build damage profile: avg AP and AD stat totals from completed item
+    // sets. Frontend composition uses (ap / (ap + ad)) instead of binary
+    // AD/AP/Mixed buckets. NULL until damage-profile aggregator runs.
+    apShare: real('ap_share'),                 // 0..1
+    adShare: real('ad_share'),                 // 0..1
     sampleN: integer('sample_n').notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },

@@ -625,7 +625,10 @@ export function createPickEngine(D: PickData) {
       return emptyComposition();
     }
 
-    const dmg = { AD: 0, AP: 0, Mixed: 0, True: 0 };
+    // Accumulate weighted AP/AD using each champ's real damageRatio (from
+    // item builds) instead of the old binary AD/AP/Mixed buckets, so a champ
+    // like Katarina (real ~70/30) doesn't get rounded to 50/50.
+    let apW = 0, adW = 0;
     let hardCc = 0;
     let tank = 0;
     let bruiser = 0;
@@ -639,7 +642,9 @@ export function createPickEngine(D: PickData) {
       const meta = D.CHAMPIONS[s.champion];
       if (!meta) return;
       const w = weights[i];
-      dmg[meta.damageType] = (dmg[meta.damageType] || 0) + w;
+      const ratio = meta.damageRatio || { ap: 0.5, ad: 0.5 };
+      apW += ratio.ap * w;
+      adW += ratio.ad * w;
       if (meta.ccLevel >= 2) hardCc += w * meta.ccLevel;
       if (meta.role.includes('Tank')) tank += w;
       if (meta.role.includes('Bruiser')) bruiser += w;
@@ -651,8 +656,8 @@ export function createPickEngine(D: PickData) {
       });
     });
 
-    const adShare = Math.round(((dmg.AD + dmg.Mixed * 0.5) / totalWeight) * 100);
-    const apShare = Math.round(((dmg.AP + dmg.Mixed * 0.5) / totalWeight) * 100);
+    const adShare = Math.round((adW / totalWeight) * 100);
+    const apShare = Math.round((apW / totalWeight) * 100);
     const trueShare = Math.max(0, 100 - adShare - apShare);
 
     let archetype = 'unknown';

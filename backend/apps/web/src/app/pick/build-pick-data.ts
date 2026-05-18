@@ -9,7 +9,7 @@ interface PickRecommendApi {
   patch: string;
   bracket: string;
   laneAvgWr?: Record<Lane, number>;
-  tier: Array<{ championId: number; lane: Lane; wr: number; pickrate: number; banrate: number; n: number; psScore: number | null }>;
+  tier: Array<{ championId: number; lane: Lane; wr: number; pickrate: number; banrate: number; n: number; psScore: number | null; apShare?: number | null; adShare?: number | null }>;
   matchups: Array<{ a: number; b: number; lane: Lane; wr: number; n: number }>;
   synergies: Array<{ a: number; b: number; wr: number; n: number }>;
   botDuos?: Array<{ adc: number; sup: number; wr: number; n: number }>;
@@ -86,6 +86,13 @@ export function buildPickData(api: PickRecommendApi, meta: DdMeta): PickData {
   // Build CHAMPIONS — one entry per known champion in the dd meta. Lanes are
   // populated from the API tier rows (only lanes the champ actually plays).
   const CHAMPIONS: Record<string, ChampionMeta> = {};
+  // Default damageRatio from binary damageType — overridden below when real
+  // build data is available.
+  const fallbackRatio = (dt: ChampionMeta['damageType']) =>
+    dt === 'AD' ? { ap: 0, ad: 1 } :
+    dt === 'AP' ? { ap: 1, ad: 0 } :
+                  { ap: 0.5, ad: 0.5 };
+
   for (const c of meta.byKey.values()) {
     const tags = c.tags ?? [];
     const inferred = inferMeta(tags);
@@ -95,7 +102,31 @@ export function buildPickData(api: PickRecommendApi, meta: DdMeta): PickData {
       role: tags.map((t) => ROLE_MAP[t] ?? t),
       difficulty: c.info?.difficulty ?? 5,
       ...inferred,
+      damageRatio: fallbackRatio(inferred.damageType),
     };
+  }
+
+  // Aggregate per-champion ap/ad shares (weighted average across lanes by
+  // games), then overwrite damageRatio when the aggregator has populated it.
+  const ratioAccum = new Map<string, { apW: number; adW: number; total: number }>();
+  for (const t of api.tier) {
+    if (t.apShare == null || t.adShare == null) continue;
+    const champ = meta.byId.get(t.championId);
+    if (!champ) continue;
+    const cur = ratioAccum.get(champ.id) ?? { apW: 0, adW: 0, total: 0 };
+    cur.apW += t.apShare * t.n;
+    cur.adW += t.adShare * t.n;
+    cur.total += t.n;
+    ratioAccum.set(champ.id, cur);
+  }
+  for (const [key, v] of ratioAccum) {
+    if (v.total <= 0) continue;
+    const ap = v.apW / v.total;
+    const ad = v.adW / v.total;
+    const sum = ap + ad;
+    if (sum > 0 && CHAMPIONS[key]) {
+      CHAMPIONS[key].damageRatio = { ap: ap / sum, ad: ad / sum };
+    }
   }
 
   // TIER_DATA + populate CHAMPIONS.lanes

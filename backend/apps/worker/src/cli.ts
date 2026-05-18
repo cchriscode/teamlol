@@ -14,6 +14,7 @@ import { seedFromHighElo } from './seed/challenger-bfs.js';
 import { enqueuePuuid, closeAllQueues } from './queues.js';
 import { redis } from './redis.js';
 import { aggregateTier } from './aggregators/tier.js';
+import { aggregateDamageProfile } from './aggregators/damage-profile.js';
 import { aggregateMatchups } from './aggregators/matchup.js';
 import { aggregateSynergies } from './aggregators/synergy.js';
 import { aggregateBotDuos } from './aggregators/bot-duo.js';
@@ -178,6 +179,11 @@ async function main() {
       case 'agg-copick': {
         const r = await aggregateCopick();
         logger.info(r, 'agg-copick complete'); break;
+      }
+      case 'agg-dmg':
+      case 'agg-damage-profile': {
+        const r = await aggregateDamageProfile();
+        logger.info(r, 'agg-damage-profile complete'); break;
       }
       case 'status': {
         const snap = await snapshotStatus();

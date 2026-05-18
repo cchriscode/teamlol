@@ -10,6 +10,7 @@ import { aggregateSynergies } from './synergy.js';
 import { aggregateBotDuos } from './bot-duo.js';
 import { aggregateCopick } from './copick.js';
 import { syncStaticData } from './static-data.js';
+import { aggregateDamageProfile } from './damage-profile.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -23,6 +24,9 @@ export function startAggregators() {
   // (chal/gm+/master+/diamond+/emerald+) in one pass. No bracket param needed.
   const all: Aggregator[] = [
     { name: 'tier',    intervalMs: HOUR_MS, run: () => aggregateTier() },
+    // Damage profile depends on champion_stats rows existing (it UPDATEs),
+    // so schedule it shortly after tier with the same cadence.
+    { name: 'dmgProfile', intervalMs: HOUR_MS, run: () => aggregateDamageProfile() },
     { name: 'matchup', intervalMs: DAY_MS,  run: () => aggregateMatchups() },
     { name: 'synergy', intervalMs: DAY_MS,  run: () => aggregateSynergies() },
     { name: 'botDuo',  intervalMs: DAY_MS,  run: () => aggregateBotDuos() },
