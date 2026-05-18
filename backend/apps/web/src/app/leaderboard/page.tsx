@@ -11,6 +11,8 @@ interface LeaderboardEntry {
   puuid: string;
   gameName: string | null;
   tagLine: string | null;
+  profileIconId: number | null;
+  summonerLevel: number | null;
   tier: string;
   division: string;
   lp: number;
@@ -144,7 +146,7 @@ export default async function LeaderboardPage({ searchParams }: PageProps) {
             const hasAccount = e.gameName && e.tagLine;
             const tierClass = ({ CHALLENGER: 'tier-challenger', GRANDMASTER: 'tier-grandmaster', MASTER: 'tier-master' } as Record<string, string>)[e.tier] ?? '';
             const tierKr = ({ CHALLENGER: 'Challenger', GRANDMASTER: 'Grandmaster', MASTER: 'Master' } as Record<string, string>)[e.tier] ?? e.tier;
-            const profileUrl = ddragon.profileIcon(1, version);
+            const profileUrl = ddragon.profileIcon(e.profileIconId ?? 29, version);
             const inner = (
               <>
                 <div className="rank-cell">{e.rank}</div>

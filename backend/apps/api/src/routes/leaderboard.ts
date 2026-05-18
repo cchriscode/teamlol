@@ -44,6 +44,17 @@ export default async function leaderboardRoutes(app: FastifyInstance) {
           }).from(schema.accounts).where(inArray(schema.accounts.puuid, puuids))
         : [];
       const accountMap = new Map(accountRows.map((r) => [r.puuid, r]));
+      // Per-puuid profile icon + level — icons were rendering as the
+      // default (ID 1) for every leaderboard row because we never fetched
+      // the summoner row here.
+      const summonerRows = puuids.length > 0
+        ? await db.select({
+            puuid: schema.summoners.puuid,
+            profileIconId: schema.summoners.profileIconId,
+            summonerLevel: schema.summoners.summonerLevel,
+          }).from(schema.summoners).where(inArray(schema.summoners.puuid, puuids))
+        : [];
+      const summonerMap = new Map(summonerRows.map((r) => [r.puuid, r]));
 
       const out = {
         region, queue, tier: league.tier,
@@ -52,11 +63,14 @@ export default async function leaderboardRoutes(app: FastifyInstance) {
         count: sorted.length,
         entries: sorted.map((e, i) => {
           const acct = accountMap.get(e.puuid);
+          const sm = summonerMap.get(e.puuid);
           return {
             rank: i + 1,
             puuid: e.puuid,
             gameName: acct?.gameName || null,
             tagLine: acct?.tagLine || null,
+            profileIconId: sm?.profileIconId ?? null,
+            summonerLevel: sm?.summonerLevel ?? null,
             tier: league.tier, division: e.rank,
             lp: e.leaguePoints,
             wins: e.wins, losses: e.losses,
