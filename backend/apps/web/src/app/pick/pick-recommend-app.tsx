@@ -508,6 +508,7 @@ function ChampionPickerModal({
   onClear: () => void;
 }) {
   const [query, setQuery] = useState('');
+  const [laneFilter, setLaneFilter] = useState<Lane | 'all'>('all');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -528,12 +529,22 @@ function ChampionPickerModal({
     const q = query.toLowerCase().trim();
     return Object.keys(data.CHAMPIONS)
       .filter((c) => {
-        if (!q) return true;
         const meta = data.CHAMPIONS[c];
+        if (laneFilter !== 'all' && !meta.lanes.includes(laneFilter)) return false;
+        if (!q) return true;
         return c.toLowerCase().includes(q) || meta.nameKr.includes(q);
       })
       .sort((a, b) => data.nameKr(a).localeCompare(data.nameKr(b), 'ko'));
-  }, [data, query]);
+  }, [data, query, laneFilter]);
+
+  const LANE_TABS: Array<{ key: Lane | 'all'; label: string }> = [
+    { key: 'all',     label: '전체' },
+    { key: 'top',     label: '탑' },
+    { key: 'jungle',  label: '정글' },
+    { key: 'mid',     label: '미드' },
+    { key: 'adc',     label: '원딜' },
+    { key: 'support', label: '서폿' },
+  ];
 
   return (
     <div className="champ-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -548,6 +559,20 @@ function ChampionPickerModal({
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
           />
+        </div>
+        <div className="champ-modal-tabs" role="tablist" aria-label="라인 필터">
+          {LANE_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={laneFilter === tab.key}
+              className={`champ-modal-tab${laneFilter === tab.key ? ' active' : ''}`}
+              onClick={() => setLaneFilter(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
         <div className="champ-modal-body">
           <div className="champ-modal-grid">

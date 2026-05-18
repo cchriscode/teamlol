@@ -28,23 +28,73 @@ const ROLE_MAP: Record<string, string> = {
 
 const LANES: Lane[] = ['top', 'jungle', 'mid', 'adc', 'support'];
 
+// Heuristic champion archetype defaults from Riot tags. Composition analysis
+// (engage / hard-CC / AD-AP balance) was always reading zeros because the
+// previous build only set the cosmetic `role` field. This is rougher than the
+// hand-curated table in lib/pick-data.ts but covers all 170+ champs.
+type MetaShape = Pick<ChampionMeta,
+  'damageType' | 'ccLevel' | 'engageType' | 'scaling' | 'waveClear' | 'archetypeAffinity' | 'blindPickSafe'>;
+function inferMeta(tags: string[]): MetaShape {
+  const t = new Set(tags);
+  const isTank = t.has('Tank');
+  const isFighter = t.has('Fighter');
+  const isMage = t.has('Mage');
+  const isMarksman = t.has('Marksman');
+  const isAssassin = t.has('Assassin');
+  const isSupport = t.has('Support');
+
+  let damageType: ChampionMeta['damageType'] = 'Mixed';
+  if (isMarksman) damageType = 'AD';
+  else if (isMage) damageType = isAssassin || isFighter ? 'Mixed' : 'AP';
+  else if (isFighter || isAssassin) damageType = 'AD';
+  else if (isSupport) damageType = isTank ? 'Mixed' : 'AP';
+  else if (isTank) damageType = 'Mixed';
+
+  let ccLevel = 0;
+  if (isTank) ccLevel = 3;
+  else if (isSupport && !isMarksman) ccLevel = 2;
+  else if (isMage) ccLevel = 1;
+  else if (isFighter) ccLevel = 1;
+
+  let engageType: ChampionMeta['engageType'] = 'none';
+  if (isTank) engageType = 'hard';
+  else if (isFighter && !isMarksman) engageType = 'soft';
+  else if (isAssassin) engageType = 'pick';
+  else if (isMage && isSupport) engageType = 'soft';
+
+  const archetypeAffinity: string[] = [];
+  if (isTank) archetypeAffinity.push('engage');
+  if (isAssassin) archetypeAffinity.push('pick');
+  if (isMage && !isAssassin) archetypeAffinity.push('poke');
+  if (isSupport && !isTank) archetypeAffinity.push('protect');
+  if (isFighter && !isTank) archetypeAffinity.push('split');
+
+  return {
+    damageType,
+    ccLevel,
+    engageType,
+    scaling: isMarksman || (isMage && !isAssassin) ? 'late' : 'mid',
+    waveClear: isMage ? 2 : isMarksman ? 1 : isFighter ? 1 : 0,
+    archetypeAffinity,
+    // Mage / Marksman / Enchanter-y picks tend to be blind-pick safer; melee
+    // fighters/assassins less so. Rough cutoff.
+    blindPickSafe: isMage || isMarksman || (isSupport && !isFighter),
+  };
+}
+
 export function buildPickData(api: PickRecommendApi, meta: DdMeta): PickData {
   // Build CHAMPIONS — one entry per known champion in the dd meta. Lanes are
   // populated from the API tier rows (only lanes the champ actually plays).
   const CHAMPIONS: Record<string, ChampionMeta> = {};
   for (const c of meta.byKey.values()) {
+    const tags = c.tags ?? [];
+    const inferred = inferMeta(tags);
     CHAMPIONS[c.id] = {
       nameKr: c.name,
       lanes: [],
-      damageType: 'Mixed',
-      role: (c.tags ?? []).map((t) => ROLE_MAP[t] ?? t),
-      ccLevel: 0,
-      engageType: 'none',
-      scaling: 'mid',
-      waveClear: 1,
-      blindPickSafe: false,
+      role: tags.map((t) => ROLE_MAP[t] ?? t),
       difficulty: c.info?.difficulty ?? 5,
-      archetypeAffinity: [],
+      ...inferred,
     };
   }
 
