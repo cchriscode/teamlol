@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ChampionIcon } from '@/components/atoms/champion-icon';
 import { ddragon } from '@/lib/ddragon';
+import { spellKey } from '@/lib/summoner-spells';
 import type { MatchListItem } from '@/lib/api-types-summoner';
 
 interface Props {
@@ -17,6 +18,12 @@ interface Props {
 function laneKr(l: string) {
   return ({ top: '탑', jungle: '정글', mid: '미드', adc: '원딜', support: '서폿' } as Record<string, string>)[l] ?? l;
 }
+
+// Render-time name lookup honouring the anonymous toggle (still shows self).
+function displayName(p: { puuid: string; nameKr?: string; gameName?: string }, selfPuuid: string, anonymous: boolean): string {
+  if (anonymous && p.puuid !== selfPuuid) return '소환사 ' + p.puuid.slice(0, 4).toUpperCase();
+  return p.nameKr ?? p.gameName ?? p.puuid.slice(0, 6);
+}
 function timeAgo(epochMs: number): string {
   const sec = Math.floor((Date.now() - epochMs) / 1000);
   if (sec < 60) return `${sec}초 전`;
@@ -27,6 +34,21 @@ function timeAgo(epochMs: number): string {
 
 export function MatchListClient({ matches, selfPuuid, version, championNameByKey, cold }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [queueFilter, setQueueFilter] = useState<'all' | 'solo'>('all');
+  const [champQuery, setChampQuery] = useState('');
+  const [anonymous, setAnonymous] = useState(false);
+
+  // Filter pipeline: queue → champion name substring.
+  const filtered = matches.filter((m) => {
+    if (queueFilter === 'solo' && m.queueId !== 420) return false;
+    if (champQuery.trim()) {
+      const q = champQuery.trim().toLowerCase();
+      const k = m.self.championKey.toLowerCase();
+      const kr = (championNameByKey[m.self.championKey] ?? '').toLowerCase();
+      if (!k.includes(q) && !kr.includes(q)) return false;
+    }
+    return true;
+  });
 
   if (matches.length === 0) {
     return (
@@ -38,7 +60,36 @@ export function MatchListClient({ matches, selfPuuid, version, championNameByKey
 
   return (
     <>
-      {matches.map((m) => {
+      <div className="match-toolbar">
+        <div className="match-toolbar-tabs" role="tablist">
+          <button type="button" role="tab" aria-selected={queueFilter === 'all'}
+                  className={`filter-chip${queueFilter === 'all' ? ' active' : ''}`}
+                  onClick={() => setQueueFilter('all')}>전체</button>
+          <button type="button" role="tab" aria-selected={queueFilter === 'solo'}
+                  className={`filter-chip${queueFilter === 'solo' ? ' active' : ''}`}
+                  onClick={() => setQueueFilter('solo')}>솔로랭크</button>
+        </div>
+        <div className="match-toolbar-actions">
+          <input
+            type="text"
+            placeholder="챔피언 검색"
+            className="match-champ-search"
+            value={champQuery}
+            onChange={(e) => setChampQuery(e.target.value)}
+          />
+          <button type="button" className="filter-chip" onClick={() => setAnonymous((v) => !v)}
+                  aria-pressed={anonymous}>
+            {anonymous ? '소환사명 표시' : '소환사명 숨기기'}
+          </button>
+          <ShareButton />
+        </div>
+      </div>
+      {filtered.length === 0 && (
+        <div className="card" style={{ padding: 16, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+          필터에 맞는 매치가 없습니다.
+        </div>
+      )}
+      {filtered.map((m) => {
         const s = m.self;
         const kda = s.deaths === 0 ? s.kills + s.assists : (s.kills + s.assists) / s.deaths;
         const minutes = Math.floor(m.gameDuration / 60);
@@ -71,6 +122,12 @@ export function MatchListClient({ matches, selfPuuid, version, championNameByKey
                   <ChampionIcon championKey={s.championKey} size={48} version={version} alt={championNameByKey[s.championKey] ?? s.championKey} />
                   <div className="match-position-badge">{laneKr(s.lane)}</div>
                 </div>
+                <RuneSpellStack
+                  spells={s.spells}
+                  keystoneIcon={s.keystoneIcon ?? null}
+                  subStyleId={s.subStyleId ?? null}
+                  version={version}
+                />
               </div>
               <div className="match-stats">
                 <div className="match-kda">{s.kills} / {s.deaths} / {s.assists} <span className="match-kda-ratio">(KDA {kda.toFixed(2)})</span></div>
@@ -100,7 +157,7 @@ export function MatchListClient({ matches, selfPuuid, version, championNameByKey
                         {team.map((p) => (
                           <div key={p.puuid} className={`player${p.puuid === selfPuuid ? ' is-self' : ''}`}>
                             <ChampionIcon championKey={p.championKey} size={14} alt="" />
-                            <span className="player-name">{p.nameKr ?? p.gameName ?? p.puuid.slice(0, 6)}</span>
+                            <span className="player-name">{displayName(p, selfPuuid, anonymous)}</span>
                           </div>
                         ))}
                       </div>
@@ -119,6 +176,7 @@ export function MatchListClient({ matches, selfPuuid, version, championNameByKey
                 selfPuuid={selfPuuid}
                 version={version}
                 championNameByKey={championNameByKey}
+                anonymous={anonymous}
               />
             )}
           </div>
@@ -132,7 +190,7 @@ export function MatchListClient({ matches, selfPuuid, version, championNameByKey
 // Replaces the original prototype's three-tab panel. "빌드" tab is a follow-
 // up; timeline tab fetches `/api/match/:id/timeline-summary` lazily so
 // expanding a card doesn't pay the cost until you click into the chart.
-type Tab = 'basic' | 'timeline';
+type Tab = 'basic' | 'timeline' | 'build';
 
 type Participant = NonNullable<MatchListItem['participants']>[number];
 
@@ -143,9 +201,10 @@ interface ExpandPanelProps {
   selfPuuid: string;
   version: string;
   championNameByKey: Record<string, string>;
+  anonymous: boolean;
 }
 
-function ExpandPanel({ match: m, blueParts, redParts, selfPuuid, version, championNameByKey }: ExpandPanelProps) {
+function ExpandPanel({ match: m, blueParts, redParts, selfPuuid, version, championNameByKey, anonymous }: ExpandPanelProps) {
   const [tab, setTab] = useState<Tab>('basic');
 
   return (
@@ -154,6 +213,7 @@ function ExpandPanel({ match: m, blueParts, redParts, selfPuuid, version, champi
         {([
           { k: 'basic', label: '기본 분석' },
           { k: 'timeline', label: '시간대별 분석' },
+          { k: 'build', label: '빌드' },
         ] as Array<{ k: Tab; label: string }>).map((t) => (
           <button
             key={t.k}
@@ -169,55 +229,190 @@ function ExpandPanel({ match: m, blueParts, redParts, selfPuuid, version, champi
       </div>
 
       {tab === 'basic' && (
-        <div className="match-expand-panel" onClick={(e) => e.stopPropagation()}>
-          {[blueParts, redParts].map((team, idx) => (
-            <div key={idx} className={`match-detail-team team-${idx === 0 ? 'blue' : 'red'}`}>
-              <div className="match-detail-team-header">
-                {idx === 0 ? '블루팀' : '레드팀'} {team[0]?.win ? '승리' : '패배'}
-              </div>
-              {team.map((p) => {
-                const pkda = (p.deaths ?? 0) === 0
-                  ? ((p.kills ?? 0) + (p.assists ?? 0))
-                  : ((p.kills ?? 0) + (p.assists ?? 0)) / (p.deaths ?? 1);
-                return (
-                  <div key={p.puuid} className={`match-detail-row${p.puuid === selfPuuid ? ' is-self' : ''}`}>
-                    <ChampionIcon championKey={p.championKey} size={28} version={version} alt={championNameByKey[p.championKey] ?? p.championKey} />
-                    <div className="match-detail-name">
-                      <div className="name-line">
-                        {p.nameKr ?? p.gameName ?? p.puuid.slice(0, 8)}
-                        {p.tagLine && <span className="text-tertiary"> #{p.tagLine}</span>}
-                      </div>
-                      <div className="text-tertiary" style={{ fontSize: 10 }}>{laneKr(p.lane ?? '')}</div>
-                    </div>
-                    <div className="match-detail-kda">
-                      {p.kills}/{p.deaths}/{p.assists}
-                      <span className="text-tertiary" style={{ marginLeft: 4 }}>({pkda.toFixed(2)})</span>
-                    </div>
-                    <div className="match-detail-cs">
-                      CS {p.cs ?? 0}
-                      <span className="text-tertiary" style={{ marginLeft: 4 }}>({(p.csPerMin ?? 0).toFixed(1)}/분)</span>
-                    </div>
-                    <div className="match-detail-items">
-                      {(p.items ?? []).map((id, i) => id > 0 ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img key={i} className="item-icon" src={ddragon.itemIcon(id, version)} width={20} height={20} alt="" />
-                      ) : null)}
-                    </div>
-                    <div className="match-detail-score">
-                      {p.aiScore != null ? p.aiScore.toFixed(0) : '—'}
-                      {p.aiScoreLetter && <span className="text-tertiary" style={{ marginLeft: 4 }}>{p.aiScoreLetter}</span>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+        <BasicTab
+          blueParts={blueParts} redParts={redParts}
+          selfPuuid={selfPuuid} version={version}
+          championNameByKey={championNameByKey}
+          anonymous={anonymous}
+        />
       )}
 
       {tab === 'timeline' && (
         <TimelineTab matchId={m.matchId} duration={m.gameDuration} />
       )}
+
+      {tab === 'build' && (
+        <BuildTab matchId={m.matchId} duration={m.gameDuration} version={version}
+                  participants={m.participants ?? []} selfPuuid={selfPuuid}
+                  championNameByKey={championNameByKey} anonymous={anonymous} />
+      )}
+    </div>
+  );
+}
+
+// --- Basic tab — full per-team scoreboard with runes/spells/dmg/rank.
+function BasicTab({ blueParts, redParts, selfPuuid, version, championNameByKey, anonymous }: {
+  blueParts: Participant[]; redParts: Participant[]; selfPuuid: string;
+  version: string; championNameByKey: Record<string, string>;
+  anonymous: boolean;
+}) {
+  // Rank within team by AI score (1등/2등/...).
+  const rankIn = (team: Participant[], puuid: string): number => {
+    const sorted = [...team].sort((a, b) => (b.aiScore ?? -1) - (a.aiScore ?? -1));
+    return sorted.findIndex((p) => p.puuid === puuid) + 1;
+  };
+  return (
+    <div className="match-expand-panel" onClick={(e) => e.stopPropagation()}>
+      {[blueParts, redParts].map((team, idx) => (
+        <div key={idx} className={`match-detail-team team-${idx === 0 ? 'blue' : 'red'}`}>
+          <div className="match-detail-team-header">
+            {idx === 0 ? '블루팀' : '레드팀'} {team[0]?.win ? '승리' : '패배'}
+          </div>
+          {team.map((p) => {
+            const pkda = (p.deaths ?? 0) === 0
+              ? ((p.kills ?? 0) + (p.assists ?? 0))
+              : ((p.kills ?? 0) + (p.assists ?? 0)) / (p.deaths ?? 1);
+            const rk = rankIn(team, p.puuid);
+            return (
+              <div key={p.puuid} className={`match-detail-row${p.puuid === selfPuuid ? ' is-self' : ''}`}>
+                <RuneSpellStack spells={p.spells} keystoneIcon={p.keystoneIcon ?? null}
+                                subStyleId={p.subStyleId ?? null} version={version} compact />
+                <ChampionIcon championKey={p.championKey} size={28} version={version} alt={championNameByKey[p.championKey] ?? p.championKey} />
+                <div className="match-detail-name">
+                  <div className="name-line">
+                    {displayName(p, selfPuuid, anonymous)}
+                    {p.tagLine && !anonymous && <span className="text-tertiary"> #{p.tagLine}</span>}
+                  </div>
+                  <div className="text-tertiary" style={{ fontSize: 10 }}>{laneKr(p.lane ?? '')}</div>
+                </div>
+                <div className="match-detail-kda">
+                  {p.kills}/{p.deaths}/{p.assists}
+                  <span className="text-tertiary" style={{ marginLeft: 4 }}>({pkda.toFixed(2)})</span>
+                </div>
+                <div className="match-detail-dmg">
+                  {p.dmgToChampPerMin != null ? `${Math.round(p.dmgToChampPerMin)}/분` : '—'}
+                </div>
+                <div className="match-detail-cs">
+                  CS {p.cs ?? 0}
+                  <span className="text-tertiary" style={{ marginLeft: 4 }}>({(p.csPerMin ?? 0).toFixed(1)}/분)</span>
+                </div>
+                <div className="match-detail-items">
+                  {(p.items ?? []).map((id, i) => id > 0 ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={i} className="item-icon" src={ddragon.itemIcon(id, version)} width={20} height={20} alt="" />
+                  ) : null)}
+                </div>
+                <div className="match-detail-score">
+                  <div>{p.aiScore != null ? p.aiScore.toFixed(0) : '—'}</div>
+                  {rk > 0 && <div className="text-tertiary" style={{ fontSize: 9 }}>{rk}등</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// --- Rune + spell vertical stack (compact mode for scoreboard rows).
+function RuneSpellStack({ spells, keystoneIcon, subStyleId, version, compact }: {
+  spells?: number[]; keystoneIcon?: string | null; subStyleId?: number | null;
+  version: string; compact?: boolean;
+}) {
+  const sz = compact ? 14 : 18;
+  return (
+    <div className={`rune-spell-stack${compact ? ' compact' : ''}`}>
+      {keystoneIcon && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="rune-icon" src={ddragon.runeIcon(keystoneIcon)} width={sz} height={sz} alt="" />
+      )}
+      {subStyleId != null && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="rune-style-icon" src={ddragon.runeStyleIcon(subStyleId)} width={sz - 2} height={sz - 2} alt="" />
+      )}
+      {(spells ?? []).slice(0, 2).map((id, i) => {
+        const k = spellKey(id);
+        if (!k) return null;
+        // eslint-disable-next-line @next/next/no-img-element
+        return <img key={i} className="spell-icon" src={ddragon.spellIcon(k, version)} width={sz} height={sz} alt="" />;
+      })}
+    </div>
+  );
+}
+
+// --- Build tab — per-player item purchase sequence over time.
+interface BuildParticipant {
+  slot: number; participantId?: number; puuid?: string;
+  itemEvents?: Array<{ ts: number; itemId: number; type: 'BUY' | 'SELL' | 'UNDO' }>;
+}
+interface BuildTimelineResp {
+  perPlayer: BuildParticipant[];
+}
+function BuildTab({ matchId, version, participants, selfPuuid, championNameByKey, anonymous }: {
+  matchId: string; duration: number; version: string;
+  participants: Participant[]; selfPuuid: string;
+  championNameByKey: Record<string, string>;
+  anonymous: boolean;
+}) {
+  const [data, setData] = useState<BuildTimelineResp | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetch(`${API_BASE}/api/match/${encodeURIComponent(matchId)}/timeline-summary`)
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error('no timeline')))
+      .then((j) => { if (alive) setData(j as BuildTimelineResp); })
+      .catch((e) => { if (alive) setError(e.message ?? '오류'); });
+    return () => { alive = false; };
+  }, [matchId]);
+
+  if (error) return <div className="text-tertiary" style={{ padding: 32, textAlign: 'center' }}>빌드 데이터 없음</div>;
+  if (!data) return <div className="text-tertiary" style={{ padding: 32, textAlign: 'center' }}>로딩 중...</div>;
+
+  // perPlayer is indexed by participantId (1..10); align to participants by slot+1.
+  // Participants array sorted slot 0..9 maps to participantId 1..10.
+  const buildBySlot = new Map<number, BuildParticipant>();
+  for (const b of data.perPlayer ?? []) buildBySlot.set(b.slot, b);
+
+  const blue = participants.filter((p) => p.team === 'blue');
+  const red  = participants.filter((p) => p.team === 'red');
+
+  return (
+    <div className="match-build-stack" onClick={(e) => e.stopPropagation()}>
+      {[blue, red].map((team, ti) => (
+        <div key={ti} className={`match-detail-team team-${ti === 0 ? 'blue' : 'red'}`}>
+          <div className="match-detail-team-header">{ti === 0 ? '블루팀' : '레드팀'}</div>
+          {team.map((p, i) => {
+            // Participants in summoner API are sorted by team then slot, so blue gets slots 0-4 or 5-9.
+            // Match by slot from the per-team subset: participantId in timeline = slot+1.
+            const slot = (p as Participant & { slot?: number }).slot;
+            const bp = slot != null ? buildBySlot.get(slot) : undefined;
+            const events = (bp?.itemEvents ?? []).filter((e) => e.type === 'BUY');
+            return (
+              <div key={p.puuid} className={`match-build-row${p.puuid === selfPuuid ? ' is-self' : ''}`}>
+                <ChampionIcon championKey={p.championKey} size={24} version={version} alt={championNameByKey[p.championKey] ?? p.championKey} />
+                <div className="match-build-name">
+                  {displayName(p, selfPuuid, anonymous)}
+                </div>
+                <div className="match-build-sequence">
+                  {events.length === 0 ? (
+                    <span className="text-tertiary" style={{ fontSize: 10 }}>—</span>
+                  ) : (
+                    events.map((e, k) => (
+                      <div key={k} className="match-build-step">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img className="item-icon" src={ddragon.itemIcon(e.itemId, version)} width={22} height={22} alt="" />
+                        <span className="build-step-ts">{Math.floor(e.ts / 60)}분</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }
@@ -335,5 +530,29 @@ function TimelineChart({ title, frames, getValue, duration, showRed = true, sign
         {showRed && <path d={linePath(redVals)} fill="none" stroke="var(--color-loss)" strokeWidth="2" />}
       </svg>
     </div>
+  );
+}
+
+// --- Copy-current-URL share button. Web Share API → clipboard fallback.
+function ShareButton() {
+  const [copied, setCopied] = useState(false);
+  const onClick = async () => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    try {
+      if (typeof navigator !== 'undefined' && (navigator as Navigator & { share?: (data: ShareData) => Promise<void> }).share) {
+        await (navigator as Navigator & { share: (data: ShareData) => Promise<void> }).share({ url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // user cancelled or browser doesn't support; no-op
+    }
+  };
+  return (
+    <button type="button" className="filter-chip" onClick={onClick} aria-label="공유">
+      {copied ? '복사됨' : '공유'}
+    </button>
   );
 }

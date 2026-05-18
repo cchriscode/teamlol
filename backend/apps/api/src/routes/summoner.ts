@@ -224,6 +224,16 @@ export default async function summonerRoutes(app: FastifyInstance) {
         byMatch.set(m.matchId, arr);
       }
 
+      // Static runes map (perk id → icon path) for keystone resolution.
+      // Cheap query; cached implicitly by Postgres after first call per process.
+      const runeRows = await db.execute(sql`
+        SELECT DISTINCT ON (id) id, icon_path FROM static_runes ORDER BY id, patch DESC
+      `);
+      const runeIconById = new Map<number, string>();
+      for (const r of runeRows as unknown as Array<{ id: number; icon_path: string }>) {
+        runeIconById.set(r.id, r.icon_path);
+      }
+
       // Resolve gameName/tagLine for every participant puuid (one query).
       const allPuuids = Array.from(new Set(allMembers.map((m) => m.puuid)));
       const accountRows = allPuuids.length === 0 ? [] : await db
@@ -255,6 +265,9 @@ export default async function summonerRoutes(app: FastifyInstance) {
           const all = byMatch.get(r.m.matchId) ?? [];
           const expanded = all.map((p) => {
             const acct = nameByPuuid.get(p.puuid);
+            const rn = p.runes as { styles?: Array<{ style: number; selections: Array<{ perk: number }> }> } | null;
+            const keystonePerk = rn?.styles?.[0]?.selections?.[0]?.perk;
+            const subStyle = rn?.styles?.[1]?.style;
             return {
               puuid: p.puuid,
               gameName: acct?.gameName || '',
@@ -273,6 +286,9 @@ export default async function summonerRoutes(app: FastifyInstance) {
               visionScore: p.visionScore,
               dmgToChampPerMin: Math.round(p.dmgToChampPerMin),
               items: p.items, spells: p.spells,
+              keystoneId: keystonePerk ?? null,
+              keystoneIcon: keystonePerk ? (runeIconById.get(keystonePerk) ?? null) : null,
+              subStyleId: subStyle ?? null,
               aiScore: p.aiScoreCached,
               aiScoreLetter: p.aiScoreLetter,
             };
@@ -301,6 +317,12 @@ export default async function summonerRoutes(app: FastifyInstance) {
               visionScore: me.visionScore,
               dmgToChampPerMin: Math.round(me.dmgToChampPerMin),
               items: me.items, spells: me.spells, runes: me.runes,
+              keystoneId: (me.runes as { styles?: Array<{ selections: Array<{ perk: number }> }> } | null)?.styles?.[0]?.selections?.[0]?.perk ?? null,
+              keystoneIcon: (() => {
+                const k = (me.runes as { styles?: Array<{ selections: Array<{ perk: number }> }> } | null)?.styles?.[0]?.selections?.[0]?.perk;
+                return k ? (runeIconById.get(k) ?? null) : null;
+              })(),
+              subStyleId: (me.runes as { styles?: Array<{ style: number }> } | null)?.styles?.[1]?.style ?? null,
               aiScore: me.aiScoreCached,
               aiScoreLetter: me.aiScoreLetter,
               aiScoreVersion: me.aiScoreAlgoVersion,

@@ -61,6 +61,9 @@ export interface MatchListItem {
     items: number[];
     spells: number[];
     runes?: unknown;
+    keystoneId?: number | null;
+    keystoneIcon?: string | null;
+    subStyleId?: number | null;
     aiScore: number | null;
     aiScoreLetter: string | null;
   };
@@ -83,6 +86,10 @@ export interface MatchListItem {
     visionScore?: number;
     dmgToChampPerMin?: number;
     items?: number[];
+    spells?: number[];
+    keystoneId?: number | null;
+    keystoneIcon?: string | null;
+    subStyleId?: number | null;
     aiScore?: number | null;
     aiScoreLetter?: string | null;
   }>;

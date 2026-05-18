@@ -42,7 +42,16 @@ export const ddragon = {
     return `${BASE}/cdn/img/champion/splash/${encodeURIComponent(canonicalChampionKey(key))}_0.jpg`;
   },
   runeIcon(path: string): string {
-    return `${BASE}/cdn/img/perk-images/Styles/${path}.png`;
+    // path is the static_runes.icon_path value (e.g. "perk-images/Styles/Domination/Electrocute/Electrocute.png").
+    return `${BASE}/cdn/img/${path}`;
+  },
+  // Secondary style tree icon (the small tree-color emblem).
+  runeStyleIcon(styleId: number): string {
+    // Style IDs: 8000 Precision, 8100 Domination, 8200 Sorcery, 8300 Inspiration, 8400 Resolve.
+    const slug = ({ 8000: '7201_Precision', 8100: '7200_Domination', 8200: '7202_Sorcery',
+                    8300: '7203_Whimsy', 8400: '7204_Resolve' } as Record<number, string>)[styleId];
+    if (!slug) return `${BASE}/cdn/img/perk-images/Styles/RunesIcon.png`;
+    return `${BASE}/cdn/img/perk-images/Styles/${slug}.png`;
   },
   // Community Dragon — square champion tile.
   championSquareCCDN(key: string): string {

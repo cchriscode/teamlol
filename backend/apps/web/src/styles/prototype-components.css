@@ -3150,3 +3150,74 @@
   color: var(--text-primary);
   margin-bottom: 4px;
 }
+
+/* ---- Match list toolbar (filter + search + share) ------------------ */
+.match-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+.match-toolbar-tabs { display: flex; gap: 4px; }
+.match-toolbar-actions { display: flex; gap: 6px; align-items: center; }
+.match-champ-search {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  border-radius: 4px;
+  width: 140px;
+}
+.match-champ-search:focus { outline: none; border-color: var(--color-win); }
+
+/* ---- Rune+spell stack (next to champion icon) ---------------------- */
+.rune-spell-stack {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 2px;
+  align-items: center;
+}
+.rune-spell-stack.compact { grid-template-columns: auto auto; }
+.rune-icon, .rune-style-icon, .spell-icon {
+  display: block;
+  border-radius: 2px;
+  background: var(--bg-elevated);
+}
+
+/* ---- Build tab ----------------------------------------------------- */
+.match-build-stack {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+@media (max-width: 760px) { .match-build-stack { grid-template-columns: 1fr; } }
+.match-build-row {
+  display: grid;
+  grid-template-columns: 24px 1.2fr 5fr;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 11px;
+  border-bottom: 1px dashed var(--border-subtle);
+}
+.match-build-row.is-self { background: var(--bg-input); }
+.match-build-name { font-size: 11px; color: var(--text-primary); }
+.match-build-sequence { display: flex; flex-wrap: wrap; gap: 6px; }
+.match-build-step { display: flex; flex-direction: column; align-items: center; }
+.build-step-ts { font-size: 9px; color: var(--text-tertiary); font-feature-settings: 'tnum' on; }
+
+/* dmg column in scoreboard row */
+.match-detail-dmg {
+  color: var(--text-secondary);
+  font-feature-settings: 'tnum' on;
+  text-align: right;
+}
+/* tighten scoreboard grid: add runes col + dmg col */
+.match-detail-row {
+  grid-template-columns: 38px 28px 1.6fr 1fr 0.9fr 1fr 2.2fr 0.7fr;
+}
