@@ -69,8 +69,21 @@ export interface MatchListItem {
     puuid: string;
     team: string;
     championKey: string;
+    championId?: number;
+    lane?: string;
+    isSelf?: boolean;
+    win?: boolean;
     nameKr?: string;
     gameName?: string;
     tagLine?: string;
+    kills?: number; deaths?: number; assists?: number;
+    kp?: number | null;
+    cs?: number;
+    csPerMin?: number | null;
+    visionScore?: number;
+    dmgToChampPerMin?: number;
+    items?: number[];
+    aiScore?: number | null;
+    aiScoreLetter?: string | null;
   }>;
 }

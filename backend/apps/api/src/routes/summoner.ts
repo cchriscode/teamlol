@@ -230,7 +230,21 @@ export default async function summonerRoutes(app: FastifyInstance) {
         .select({ puuid: schema.accounts.puuid, gameName: schema.accounts.gameName, tagLine: schema.accounts.tagLine })
         .from(schema.accounts)
         .where(inArray(schema.accounts.puuid, allPuuids));
-      const nameByPuuid = new Map(accountRows.map((a) => [a.puuid, a]));
+      const nameByPuuid = new Map<string, { puuid: string; gameName: string; tagLine: string }>(
+        accountRows.map((a) => [a.puuid, a]),
+      );
+      // Backfill from raw_participant — Riot match data includes
+      // riotIdGameName / riotIdTagline per player, so names show up even
+      // before BFS has imported the participant into our accounts table.
+      for (const m of allMembers) {
+        if (nameByPuuid.has(m.puuid)) continue;
+        const raw = (m.rawParticipant ?? {}) as Record<string, unknown>;
+        const gn = raw.riotIdGameName;
+        const tl = raw.riotIdTagline;
+        if (typeof gn === 'string' && gn) {
+          nameByPuuid.set(m.puuid, { puuid: m.puuid, gameName: gn, tagLine: typeof tl === 'string' ? tl : '' });
+        }
+      }
 
       return {
         puuid,
@@ -380,4 +394,31 @@ export default async function summonerRoutes(app: FastifyInstance) {
     const count = Number((r as unknown as Array<{ n: number }>)[0]?.n ?? 0);
     return { puuid, count };
   });
+
+  // ---- GET /api/summoner/suggest ----------------------------------------
+  // Fuzzy gameName prefix match for search autocomplete. Only suggests
+  // accounts we've already seen (ingested via BFS or prior search), so
+  // typos that match nothing in DB just return an empty list.
+  app.get<{ Querystring: { q?: string; region?: string; limit?: string } }>(
+    '/api/summoner/suggest',
+    async (req) => {
+      const q = (req.query.q ?? '').trim();
+      if (q.length < 2) return { matches: [] };
+      const region = (req.query.q && req.query.region) ? req.query.region : 'kr';
+      const limit = Math.min(Number(req.query.limit ?? 8) || 8, 20);
+
+      // ILIKE prefix match on gameName. Order by levenshtein-ish proxy
+      // (shorter names first, then alphabetical) so an exact-name typo
+      // surfaces the most-specific candidates near the top.
+      const rows = await db.execute(sql`
+        SELECT puuid, game_name AS "gameName", tag_line AS "tagLine", region
+        FROM accounts
+        WHERE region = ${region}
+          AND game_name ILIKE ${q + '%'}
+        ORDER BY LENGTH(game_name), game_name
+        LIMIT ${limit}
+      `);
+      return { matches: rows };
+    },
+  );
 }

@@ -2995,3 +2995,85 @@
   margin: var(--space-3) 0;
   color: var(--text-tertiary);
 }
+
+/* ---- Search suggest dropdown --------------------------------------- */
+.header-search-wrap { position: relative; }
+.search-suggest {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  z-index: 50;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.search-suggest-row {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.search-suggest-row:last-child { border-bottom: none; }
+.search-suggest-row:hover { background: var(--bg-elevated); }
+.search-suggest-name { font-weight: 500; }
+.search-suggest-tag { color: var(--text-tertiary); font-size: 11px; }
+
+/* ---- Match card inline expand panel -------------------------------- */
+.match-card { cursor: pointer; }
+.match-card.open { border-color: var(--border-strong); }
+.match-expand-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-top: none;
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+@media (max-width: 760px) { .match-expand-panel { grid-template-columns: 1fr; } }
+
+.match-detail-team-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.match-detail-team.team-blue .match-detail-team-header { color: var(--color-win); }
+.match-detail-team.team-red  .match-detail-team-header { color: var(--color-loss); }
+
+.match-detail-row {
+  display: grid;
+  grid-template-columns: 28px 1.5fr 1fr 1fr 2.2fr 0.6fr;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 11px;
+  border-bottom: 1px dashed var(--border-subtle);
+}
+.match-detail-row:last-child { border-bottom: none; }
+.match-detail-row.is-self { background: var(--bg-input); }
+
+.match-detail-name .name-line { color: var(--text-primary); font-weight: 500; font-size: 12px; }
+.match-detail-kda { color: var(--text-primary); font-feature-settings: 'tnum' on; }
+.match-detail-cs { color: var(--text-secondary); font-feature-settings: 'tnum' on; }
+.match-detail-items { display: flex; gap: 2px; flex-wrap: wrap; }
+.match-detail-score {
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: right;
+  font-feature-settings: 'tnum' on;
+}

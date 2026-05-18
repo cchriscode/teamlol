@@ -8,6 +8,7 @@ import { getDdragonVersion } from '@/lib/ddragon-version';
 import { ChampionIcon } from '@/components/atoms/champion-icon';
 import { getChampionMeta } from '@/lib/champion-meta';
 import { SummonerHeader } from './summoner-header';
+import { MatchListClient } from './match-list-client';
 
 interface PageProps {
   params: Promise<{ region: string; riotId: string }>;
@@ -167,80 +168,14 @@ export default async function SummonerPage({ params }: PageProps) {
         </aside>
 
         <div className="match-list">
-          {recent.length === 0 ? (
-            <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-tertiary)' }}>
-              {summoner.cold ? '데이터 수집 중입니다. 잠시 후 새로고침하세요.' : '아직 수집된 매치가 없습니다.'}
-            </div>
-          ) : (
-            recent.map((m) => {
-              const s = m.self;
-              const kda = s.deaths === 0 ? s.kills + s.assists : (s.kills + s.assists) / s.deaths;
-              const minutes = Math.floor(m.gameDuration / 60);
-              const seconds = m.gameDuration % 60;
-              const cspm = m.gameDuration > 0 ? s.cs / (m.gameDuration / 60) : 0;
-              const blueParticipants = m.participants?.filter((p) => p.team === 'blue') ?? [];
-              const redParticipants = m.participants?.filter((p) => p.team === 'red') ?? [];
-
-              return (
-                <Link key={m.matchId} href={`/match/${m.matchId}`} className={`match-card${s.win ? ' win' : ''}`}>
-                  <div className={`match-result${s.win ? ' win' : ''}`}>
-                    <div className="match-result-label">{s.win ? '승리' : '패배'}</div>
-                    <div className="match-meta">
-                      솔로랭크<br />
-                      {timeAgo(m.gameCreation)}<br />
-                      {minutes}분 {seconds}초
-                    </div>
-                  </div>
-                  <div className="match-champ-section">
-                    <div className="match-champ-icon-wrap">
-                      <ChampionIcon championKey={s.championKey} size={48} version={version} alt={meta.byKey.get(s.championKey)?.name ?? s.championKey} />
-                      <div className="match-position-badge">{laneKr(s.lane)}</div>
-                    </div>
-                  </div>
-                  <div className="match-stats">
-                    <div className="match-kda">{s.kills} / {s.deaths} / {s.assists} <span className="match-kda-ratio">(KDA {kda.toFixed(2)})</span></div>
-                    <div className="match-substats">CS {s.cs} ({cspm.toFixed(1)}/분) · 시야 {s.visionScore}</div>
-                    <div className="match-items">
-                      {s.items.map((id, i) => id > 0 ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img key={i} className="item-icon" src={ddragon.itemIcon(id, version)} width={22} height={22} alt="" />
-                      ) : null)}
-                    </div>
-                  </div>
-                  <div className="match-score-box">
-                    <div className="match-score-label">AI Score</div>
-                    <div className={`match-score-value${s.aiScore != null && s.aiScore >= 60 ? ' high' : s.aiScore != null && s.aiScore <= 40 ? ' low' : ''}`}>
-                      {s.aiScore?.toFixed(0) ?? '—'}
-                    </div>
-                    {s.aiScoreLetter && (
-                      <div style={{ fontSize: 10, marginTop: 2 }}>{s.aiScoreLetter}</div>
-                    )}
-                  </div>
-                  {m.participants && m.participants.length === 10 && (
-                    <div className="match-teams">
-                      <div className="match-teams-grid">
-                        {[blueParticipants, redParticipants].map((team, idx) => (
-                          <div key={idx} className="match-teams-col">
-                            <div className="team-label">{idx === 0 ? '블루팀' : '레드팀'}</div>
-                            {team.map((p) => (
-                              <div
-                                key={p.puuid}
-                                className={`player${p.puuid === summoner.account.puuid ? ' is-self' : ''}`}
-                              >
-                                <ChampionIcon championKey={p.championKey} size={14} alt="" />
-                                <span className="player-name">{p.nameKr ?? p.gameName ?? p.puuid.slice(0, 6)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <div className="match-expand" aria-label="펼치기">▾</div>
-                </Link>
-              );
-            })
-          )}
+          <MatchListClient
+            matches={recent}
+            selfPuuid={summoner.account.puuid}
+            version={version}
+            championNameByKey={Object.fromEntries(Array.from(meta.byKey.entries()).map(([k, v]) => [k, v.name]))}
+            region={region}
+            cold={summoner.cold}
+          />
         </div>
       </div>
     </main>

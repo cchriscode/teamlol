@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ddragon } from '@/lib/ddragon';
 import type { SummonerSearchResponse } from '@/lib/api-types-summoner';
 import { getDdragonVersion } from '@/lib/ddragon-version';
+import { RefreshButton } from './refresh-button';
 
 type Tab = 'overview' | 'champions' | 'live' | 'seasons';
 
@@ -55,7 +56,7 @@ export async function SummonerHeader({ summoner, region, riotId, tab }: Props) {
               · 매치 {summoner.matchesAvailable}개 수집됨
             </div>
             <div className="profile-actions">
-              <button className="primary" type="button">전적 갱신</button>
+              <RefreshButton puuid={summoner.account.puuid} />
             </div>
           </div>
         </div>
