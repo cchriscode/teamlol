@@ -21,7 +21,7 @@ export interface AIScoreResult {
   algoVersion: string;
 }
 
-const ALGO_VERSION = 'ai-score@3.0';
+const ALGO_VERSION = 'ai-score@3.1';
 
 // ---- Component LUTs --------------------------------------------------
 // Each LUT is sorted descending by raw value. Linear-interpolated between
@@ -139,6 +139,17 @@ export function computeAIScore(p: ParsedParticipant, totals: TeamTotals, gameDur
   for (const k of Object.keys(componentScores) as Array<keyof typeof componentScores>) {
     score += componentScores[k] * w[k] / 100;
   }
+
+  // Additive skill / impact bonus, capped at +10. Recognizes plays that
+  // don't show up in per-minute averages — solo kills, first blood, first
+  // tower, objective secures. Designed so a typical game contributes 0–3
+  // and a true carry-impact game contributes 5–10.
+  const skillBonus =
+      Math.min(5,   (p.soloKills ?? 0) * 1.5)                        // up to +5
+    + (p.firstBloodKill ? 2 : p.firstBloodAssist ? 1 : 0)            // up to +2
+    + (p.firstTowerKill ? 1.5 : 0)                                   // up to +1.5
+    + Math.min(2,   ((p.dragonTakedowns ?? 0) + (p.baronTakedowns ?? 0)) * 0.3); // up to +2
+  score = Math.min(100, score + Math.min(10, skillBonus));
 
   return {
     score: Math.round(score * 10) / 10,

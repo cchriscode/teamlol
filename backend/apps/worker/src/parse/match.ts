@@ -77,6 +77,14 @@ export interface ParsedParticipant {
   soloKills: number;
   multiKills: number;
 
+  // Skill / impact signals (from Riot challenges)
+  firstBloodKill: boolean;
+  firstBloodAssist: boolean;
+  firstTowerKill: boolean;
+  dragonTakedowns: number;
+  baronTakedowns: number;
+  heraldTakedowns: number;
+
   // Items + spells
   items: number[];
   spells: number[];
@@ -143,6 +151,15 @@ export function parseMatch(
       timeDeadPct: round2((p.totalTimeSpentDead / info.gameDuration) * 100),
       soloKills: p.soloKills ?? ts?.soloKills ?? 0,
       multiKills: p.doubleKills + p.tripleKills + p.quadraKills + p.pentaKills,
+      // Riot challenges block carries first-blood / first-tower booleans
+      // and per-objective takedown counts. Optional chaining because the
+      // block can be missing on old/edge matches.
+      firstBloodKill:   !!(p as any).firstBloodKill,
+      firstBloodAssist: !!(p as any).firstBloodAssist,
+      firstTowerKill:   !!(p as any).firstTowerKill,
+      dragonTakedowns:  Number((p as any).challenges?.dragonTakedowns ?? 0),
+      baronTakedowns:   Number((p as any).challenges?.baronTakedowns ?? 0),
+      heraldTakedowns:  Number((p as any).challenges?.riftHeraldTakedowns ?? 0),
       items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6],
       spells: [p.summoner1Id, p.summoner2Id],
       runes: p.perks,

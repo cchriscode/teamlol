@@ -207,18 +207,21 @@ async function main() {
         break;
       }
       case 'backfill-ai-scores': {
-        // Recompute AI Scores for participants with NULL cached score.
-        // Pure DB op, no Riot calls — fast even for large backlogs.
+        // Recompute AI Scores for participants whose cached algo version is
+        // stale. Also re-extracts the skill-signal columns (first_blood_*,
+        // *_takedowns) from raw_participant since those were added in
+        // migration 0005 and old rows default to 0/false.
         const { db, schema, sql: dbsql } = await import('@lol-tracker/db');
         const { computeAIScore, teamTotalsFrom } = await import('./ai-score/engine.js');
         const { eq } = await import('drizzle-orm');
 
-        // Find candidate match_ids (those with at least one NULL score).
+        const ALGO = 'ai-score@3.1';
         const matchRows = await db.execute(dbsql`
           SELECT DISTINCT mp.match_id, m.game_duration
           FROM match_participants mp
           JOIN matches m ON m.match_id = mp.match_id
-          WHERE mp.ai_score_cached IS NULL
+          WHERE mp.ai_score_algo_version IS DISTINCT FROM ${ALGO}
+          LIMIT ${Number(args[0]) || 200000}
         `);
         const matches = matchRows as unknown as Array<{ match_id: string; game_duration: number }>;
         logger.info({ matches: matches.length }, 'ai-score backfill starting');
@@ -228,32 +231,47 @@ async function main() {
             const parts = await db.select().from(schema.matchParticipants)
               .where(eq(schema.matchParticipants.matchId, m.match_id));
             if (parts.length === 0) continue;
-            // Map DB row → ParsedParticipant-like shape the engine expects.
-            const mapped = parts.map((p) => ({
-              matchId: p.matchId, puuid: p.puuid, slot: p.slot,
-              team: p.team as 'blue' | 'red',
-              lane: p.lane as 'top' | 'jungle' | 'mid' | 'adc' | 'support' | null,
-              role: p.role, championId: p.championId, championKey: p.championKey,
-              win: p.win,
-              kills: p.kills, deaths: p.deaths, assists: p.assists, kp: p.kp,
-              cs: p.cs, csAt14: p.csAt14, csDiffAt14: p.csDiffAt14,
-              goldPerMin: p.goldPerMin, xpPerMin: p.xpPerMin,
-              dmgToChampPerMin: p.dmgToChampPerMin, dmgToObj: p.dmgToObj,
-              damageTakenPerMin: p.damageTakenPerMin, dmgMitigatedPerMin: p.dmgMitigatedPerMin ?? 0,
-              visionScore: p.visionScore, wardsPlaced: p.wardsPlaced, wardsKilled: p.wardsKilled,
-              timeDeadPct: p.timeDeadPct,
-              soloKills: p.soloKills, multiKills: p.multiKills,
-              items: p.items as number[], spells: p.spells as number[], runes: p.runes,
-              rawParticipant: p.rawParticipant,
-            }));
+            const mapped = parts.map((p) => {
+              const raw = (p.rawParticipant ?? {}) as Record<string, unknown>;
+              const ch  = (raw.challenges as Record<string, unknown> | undefined) ?? {};
+              return {
+                matchId: p.matchId, puuid: p.puuid, slot: p.slot,
+                team: p.team as 'blue' | 'red',
+                lane: p.lane as 'top' | 'jungle' | 'mid' | 'adc' | 'support' | null,
+                role: p.role, championId: p.championId, championKey: p.championKey,
+                win: p.win,
+                kills: p.kills, deaths: p.deaths, assists: p.assists, kp: p.kp,
+                cs: p.cs, csAt14: p.csAt14, csDiffAt14: p.csDiffAt14,
+                goldPerMin: p.goldPerMin, xpPerMin: p.xpPerMin,
+                dmgToChampPerMin: p.dmgToChampPerMin, dmgToObj: p.dmgToObj,
+                damageTakenPerMin: p.damageTakenPerMin, dmgMitigatedPerMin: p.dmgMitigatedPerMin ?? 0,
+                visionScore: p.visionScore, wardsPlaced: p.wardsPlaced, wardsKilled: p.wardsKilled,
+                timeDeadPct: p.timeDeadPct,
+                soloKills: p.soloKills, multiKills: p.multiKills,
+                // Re-extract skill signals from raw — columns added later default to 0/false.
+                firstBloodKill:   !!raw.firstBloodKill,
+                firstBloodAssist: !!raw.firstBloodAssist,
+                firstTowerKill:   !!raw.firstTowerKill,
+                dragonTakedowns:  Number(ch.dragonTakedowns ?? 0),
+                baronTakedowns:   Number(ch.baronTakedowns ?? 0),
+                heraldTakedowns:  Number(ch.riftHeraldTakedowns ?? 0),
+                items: p.items as number[], spells: p.spells as number[], runes: p.runes,
+                rawParticipant: p.rawParticipant,
+              };
+            });
             const totals = teamTotalsFrom(mapped);
             for (const part of mapped) {
               const r = computeAIScore(part, totals, m.game_duration);
-              if (!r) continue;
               await db.update(schema.matchParticipants).set({
-                aiScoreCached: r.score,
-                aiScoreLetter: r.letter,
-                aiScoreAlgoVersion: r.algoVersion,
+                aiScoreCached: r?.score ?? null,
+                aiScoreLetter: r?.letter ?? null,
+                aiScoreAlgoVersion: r?.algoVersion ?? ALGO,
+                firstBloodKill: part.firstBloodKill,
+                firstBloodAssist: part.firstBloodAssist,
+                firstTowerKill: part.firstTowerKill,
+                dragonTakedowns: part.dragonTakedowns,
+                baronTakedowns: part.baronTakedowns,
+                heraldTakedowns: part.heraldTakedowns,
               }).where(dbsql`match_id = ${part.matchId} AND puuid = ${part.puuid}`);
             }
             scored += 1;

@@ -49,6 +49,14 @@ export const matchParticipants = pgTable(
     soloKills: integer('solo_kills').default(0).notNull(),
     multiKills: integer('multi_kills').default(0).notNull(),
 
+    // Skill / impact signals (Riot challenges + objective takedowns).
+    firstBloodKill:   boolean('first_blood_kill').default(false).notNull(),
+    firstBloodAssist: boolean('first_blood_assist').default(false).notNull(),
+    firstTowerKill:   boolean('first_tower_kill').default(false).notNull(),
+    dragonTakedowns:  integer('dragon_takedowns').default(0).notNull(),
+    baronTakedowns:   integer('baron_takedowns').default(0).notNull(),
+    heraldTakedowns:  integer('herald_takedowns').default(0).notNull(),
+
     // Items + spells (denormalized arrays)
     items: jsonb('items').notNull(),               // number[7]
     spells: jsonb('spells').notNull(),             // [d, f]
