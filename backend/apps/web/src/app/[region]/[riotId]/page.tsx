@@ -140,13 +140,37 @@ export default async function SummonerPage({ params }: PageProps) {
               </div>
             </div>
             <div style={{ fontSize: 12, marginTop: 'var(--space-3)' }}>
-              <div className="text-tertiary uppercase" style={{ fontSize: 11, marginBottom: 8 }}>자주 가는 라인</div>
-              {Object.entries(laneCounts).sort((a,b)=>b[1]-a[1]).map(([ln, n]) => (
-                <div key={ln} className="stats-detail-row">
-                  <span className="stats-detail-label">{laneKr(ln)}</span>
-                  <span className="stats-detail-value">{n}게임 ({Math.round(n / recent.length * 100)}%)</span>
-                </div>
-              ))}
+              <div className="text-tertiary uppercase" style={{ fontSize: 11, marginBottom: 8 }}>포지션 분포</div>
+              {(() => {
+                const lanes: Array<'top' | 'jungle' | 'mid' | 'adc' | 'support'> = ['top','jungle','mid','adc','support'];
+                const maxN = Math.max(1, ...Object.values(laneCounts));
+                // Per-lane win/loss split for the stacked bar.
+                const winByLane: Record<string, number> = {};
+                recent.forEach((m) => {
+                  if (m.self.win) winByLane[m.self.lane] = (winByLane[m.self.lane] ?? 0) + 1;
+                });
+                return (
+                  <div className="lane-bar-grid">
+                    {lanes.map((ln) => {
+                      const n = laneCounts[ln] ?? 0;
+                      const w = winByLane[ln] ?? 0;
+                      const heightPct = (n / maxN) * 100;
+                      const winPct = n > 0 ? (w / n) * 100 : 0;
+                      return (
+                        <div key={ln} className="lane-bar-col" title={`${laneKr(ln)} ${n}게임 (${w}승 ${n - w}패)`}>
+                          <div className="lane-bar-track">
+                            <div className="lane-bar-fill" style={{ height: `${heightPct}%` }}>
+                              <div className="lane-bar-win" style={{ height: `${winPct}%` }} />
+                            </div>
+                          </div>
+                          <div className="lane-bar-label">{laneKr(ln)}</div>
+                          <div className="lane-bar-count">{n > 0 ? `${n}` : '—'}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
