@@ -59,7 +59,9 @@ export function buildPickData(api: PickRecommendApi, meta: DdMeta): PickData {
     if (!TIER_DATA[key]) TIER_DATA[key] = {};
     TIER_DATA[key][t.lane] = {
       wr: t.wr, pickrate: t.pickrate, banrate: t.banrate, n: t.n,
-      psScore: t.psScore ?? 50,
+      // Keep null when the aggregator hasn't populated ps_score yet — engine's
+      // metaScore falls back to raw-stats math (wr/pickrate/ban) in that case.
+      psScore: t.psScore ?? null,
     };
     if (CHAMPIONS[key] && t.pickrate >= MIN_LANE_PICKRATE && t.n >= MIN_LANE_GAMES && !CHAMPIONS[key].lanes.includes(t.lane)) {
       CHAMPIONS[key].lanes.push(t.lane);

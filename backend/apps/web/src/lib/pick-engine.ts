@@ -782,9 +782,10 @@ export function createPickEngine(D: PickData) {
     if (breakdown.M > 20) {
       const tier = D.TIER_DATA[c] && D.TIER_DATA[c][ctx.myLane];
       if (tier) {
+        const psPart = tier.psScore != null ? `PS ${tier.psScore.toFixed(1)}, ` : '';
         reasons.push({
           weight: breakdown.M * 0.5,
-          natural: `패치 메타 강자 (PS ${tier.psScore.toFixed(1)}, WR ${tier.wr.toFixed(1)}%)`,
+          natural: `패치 메타 강자 (${psPart}WR ${tier.wr.toFixed(1)}%)`,
           tag: '#메타강자',
         });
       }
