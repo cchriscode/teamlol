@@ -36,21 +36,30 @@ export function createPickEngine(D: PickData) {
     return state.myTeam.find((s) => s.isMine) || null;
   }
 
+  // Scenario from actual board state, not the unused pickPhaseGlobal field.
+  // The UI never advanced pickPhaseGlobal past 1, so every recommendation
+  // was scored with first_blind weights (C=0, D=0) regardless of how many
+  // enemies you'd typed in — counter / duo signals collapsed to 0 at the
+  // weighting step even when the raw scores were correctly computed.
   function pickScenario(state) {
-    const phase = state.pickPhaseGlobal;
     const me = mySlot(state);
     const myLane = me && me.lane;
+    const enemyFilled = state.enemyTeam.filter((s) => s.champion).length;
+    const myFilled = state.myTeam.filter((s) => s.champion).length;
+    const totalFilled = enemyFilled + myFilled;
     const sameLaneEnemyPicked = state.enemyTeam.some(
-      (s) => s.status === 'confirmed' && s.lane === myLane && s.champion
+      (s) => s.champion && s.lane === myLane
     );
     const allyIntents = state.myTeam.filter(
       (s) => s.status === 'intent' && !s.isMine && s.champion
     ).length;
 
-    if (phase <= 1) return allyIntents > 0 ? 'first_with_intent' : 'first_blind';
-    if (phase >= 8 && sameLaneEnemyPicked) return 'last_counter_clear';
-    if (phase >= 8) return 'last_general';
-    return 'middle';
+    // Late: most picks in OR our direct laner is locked in (counter info we
+    // can fully exploit). Mid: any enemy info at all. Otherwise: blind.
+    if (sameLaneEnemyPicked) return 'last_counter_clear';
+    if (totalFilled >= 7) return 'last_general';
+    if (enemyFilled >= 1 || myFilled >= 2) return 'middle';
+    return allyIntents > 0 ? 'first_with_intent' : 'first_blind';
   }
 
   // Weights per scenario. D = bot-duo bonus (active only when myLane is bot).
