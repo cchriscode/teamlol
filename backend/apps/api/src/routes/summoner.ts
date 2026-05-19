@@ -304,6 +304,12 @@ export default async function summonerRoutes(app: FastifyInstance) {
               visionScore: p.visionScore,
               dmgToChampPerMin: Math.round(p.dmgToChampPerMin),
               items: p.items, spells: p.spells,
+              // Role-bound item: new Riot 2025+ extra slot (ADC boots /
+              // support ward upgrade etc.) — separate from items[0..6].
+              roleBoundItem: (() => {
+                const rb = (p.rawParticipant as Record<string, unknown> | null)?.roleBoundItem;
+                return typeof rb === 'number' && rb > 0 ? rb : null;
+              })(),
               keystoneId: keystonePerk ?? null,
               keystoneIcon: keystonePerk ? (runeIconById.get(keystonePerk) ?? null) : null,
               subStyleId: subStyle ?? null,
@@ -335,6 +341,10 @@ export default async function summonerRoutes(app: FastifyInstance) {
               visionScore: me.visionScore,
               dmgToChampPerMin: Math.round(me.dmgToChampPerMin),
               items: me.items, spells: me.spells, runes: me.runes,
+              roleBoundItem: (() => {
+                const rb = (me.rawParticipant as Record<string, unknown> | null)?.roleBoundItem;
+                return typeof rb === 'number' && rb > 0 ? rb : null;
+              })(),
               runesFull: (() => {
                 const rn = me.runes as {
                   styles?: Array<{ style: number; selections: Array<{ perk: number }> }>;

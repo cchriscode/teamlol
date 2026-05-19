@@ -771,7 +771,8 @@
 }
 .match-items {
   display: grid;
-  grid-template-columns: repeat(6, 24px) 12px 24px;  /* 6 items + gap + trinket */
+  /* 6 inventory items | gap | trinket | small gap | role-bound (ADC boots/sup ward) */
+  grid-template-columns: repeat(6, 24px) 12px 24px 6px 24px;
   gap: 3px;
   align-items: center;
 }
@@ -791,6 +792,10 @@
   grid-column: 8;
   border-radius: 50%;
   border: 1px solid var(--border-default);
+}
+.match-items .item-icon.role-bound {
+  grid-column: 10;
+  border-color: var(--color-warning);   /* subtle gold accent so it reads as special */
 }
 
 .match-score-box {
@@ -3559,6 +3564,11 @@
   width: 22px;
   height: 22px;
   display: inline-block;
+}
+.sb-items .item-icon.trinket { border-radius: 50%; margin-left: 4px; }
+.sb-items .item-icon.role-bound {
+  border-color: var(--color-warning);
+  margin-left: 4px;
 }
 
 @media (max-width: 760px) {

@@ -59,6 +59,8 @@ export interface MatchListItem {
     visionScore: number;
     dmgToChampPerMin: number;
     items: number[];
+    /** Role-bound extra slot (Riot 2025+ — ADC boots / support upgrade). */
+    roleBoundItem?: number | null;
     spells: number[];
     runes?: unknown;
     runesFull?: {
@@ -92,6 +94,7 @@ export interface MatchListItem {
     visionScore?: number;
     dmgToChampPerMin?: number;
     items?: number[];
+    roleBoundItem?: number | null;
     spells?: number[];
     keystoneId?: number | null;
     keystoneIcon?: string | null;

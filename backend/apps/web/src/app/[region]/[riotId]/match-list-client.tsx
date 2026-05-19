@@ -131,8 +131,12 @@ export function MatchListClient({ matches, selfPuuid, version, championNameByKey
                 <div className="match-items">
                   {s.items.map((id, i) => id > 0 ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img key={i} className="item-icon" src={ddragon.itemIcon(id, version)} width={22} height={22} alt="" />
+                    <img key={i} className={`item-icon${i === 6 ? ' trinket' : ''}`} src={ddragon.itemIcon(id, version)} width={22} height={22} alt="" />
                   ) : null)}
+                  {s.roleBoundItem ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img className="item-icon role-bound" src={ddragon.itemIcon(s.roleBoundItem, version)} width={22} height={22} alt="" title="역할 전용 아이템" />
+                  ) : null}
                 </div>
               </div>
               <div className="match-score-box">
@@ -330,10 +334,14 @@ function BasicTab({ blueParts, redParts, selfPuuid, version, championNameByKey, 
                 <div className="sb-items">
                   {(p.items ?? []).map((id, i) => id > 0 ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img key={i} className="item-icon" src={ddragon.itemIcon(id, version)} width={22} height={22} alt="" />
+                    <img key={i} className={`item-icon${i === 6 ? ' trinket' : ''}`} src={ddragon.itemIcon(id, version)} width={22} height={22} alt="" />
                   ) : (
                     <span key={i} className="item-icon empty" />
                   ))}
+                  {p.roleBoundItem ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img className="item-icon role-bound" src={ddragon.itemIcon(p.roleBoundItem, version)} width={22} height={22} alt="" title="역할 전용 아이템" />
+                  ) : null}
                 </div>
               </div>
             );
