@@ -4,6 +4,7 @@
 
 import type { FastifyInstance } from 'fastify';
 import { db, sql } from '@lol-tracker/db';
+import { cache } from '../cache.js';
 
 interface Query { lane?: string; minGames?: string; }
 
@@ -15,6 +16,12 @@ export default async function summonerChampionStatsRoutes(app: FastifyInstance) 
       const minGames = Math.max(1, Number(req.query.minGames ?? 1));
       const laneFilter = req.query.lane && req.query.lane !== 'all' ? req.query.lane : null;
 
+      // Per-puuid cache (5 min). The aggregation re-scans this player's match
+      // history every call, but the result changes at most every few minutes
+      // (new game ingested), so a short cache eliminates repeat scans during
+      // tab navigation / refresh bursts.
+      const cacheKey = `champ-stats:${puuid}:${laneFilter ?? 'all'}:${minGames}`;
+      return cache(cacheKey, 300, async () => {
       const rows = await db.execute(sql`
         SELECT
           mp.champion_id AS "championId",
@@ -59,6 +66,7 @@ export default async function summonerChampionStatsRoutes(app: FastifyInstance) 
           avgAiScore: round1(r.avgAiScore),
         })),
       };
+      });
     },
   );
 }

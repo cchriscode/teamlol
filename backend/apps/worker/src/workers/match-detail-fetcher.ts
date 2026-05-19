@@ -84,9 +84,10 @@ async function handleJob(job: Job<MatchIdJob>, signal: AbortSignal) {
     newPuuidsCount = newPuuids.length;
     const reason = bfsEnabled ? 'bfs' : 'rank-only';
     const skipMatchIds = !bfsEnabled;
-    for (const puuid of newPuuids) {
-      await enqueuePuuid({ puuid, region, reason, skipMatchIds });
-    }
+    // Fan out enqueues — each is a Redis write, no inter-dependency.
+    await Promise.all(
+      newPuuids.map((puuid) => enqueuePuuid({ puuid, region, reason, skipMatchIds })),
+    );
   }
 
   log.info({

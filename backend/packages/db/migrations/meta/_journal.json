@@ -64,6 +64,13 @@
       "when": 1779200000000,
       "tag": "0008_data_deletion",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1779300000000,
+      "tag": "0009_perf_indexes",
+      "breakpoints": true
     }
   ]
 }

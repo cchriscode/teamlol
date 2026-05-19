@@ -511,12 +511,43 @@ export default async function summonerRoutes(app: FastifyInstance) {
       const acctMap = new Map(acctRows.map((r) => [r.puuid, r]));
       const sumMap = new Map(sumRows.map((r) => [r.puuid, r]));
 
+      // Backfill Riot ID from match_participants.raw_participant for puuids
+      // whose accounts row is a stub (W2 created `{game_name:'', tag_line:''}`
+      // before W1 hydrated it). Riot match data carries the names per slot.
+      const missingPuuids = puuids.filter((p) => {
+        const a = acctMap.get(p);
+        return !a || !a.gameName || a.gameName === '';
+      });
+      const nameBackfill = new Map<string, { gameName: string; tagLine: string }>();
+      if (missingPuuids.length > 0) {
+        const backfillRows = await db.execute(sql`
+          SELECT DISTINCT ON (puuid) puuid,
+            raw_participant->>'riotIdGameName' AS "gameName",
+            raw_participant->>'riotIdTagline'  AS "tagLine"
+          FROM match_participants
+          WHERE puuid IN (${sql.join(missingPuuids.map((p) => sql`${p}`), sql`, `)})
+            AND COALESCE(raw_participant->>'riotIdGameName', '') <> ''
+          ORDER BY puuid, ingested_at DESC
+        `);
+        for (const r of backfillRows as unknown as Array<{ puuid: string; gameName: string; tagLine: string }>) {
+          nameBackfill.set(r.puuid, { gameName: r.gameName, tagLine: r.tagLine ?? '' });
+        }
+      }
+      const resolveName = (puuid: string): { gameName: string | null; tagLine: string | null } => {
+        const a = acctMap.get(puuid);
+        if (a && a.gameName && a.gameName !== '') return { gameName: a.gameName, tagLine: a.tagLine || null };
+        const b = nameBackfill.get(puuid);
+        if (b) return { gameName: b.gameName, tagLine: b.tagLine || null };
+        return { gameName: null, tagLine: null };
+      };
+
       // Pull latest ranked-solo tier from raw_participant (always present in
       // recent matches), with fallback to league_entries.
       const leRows = puuids.length > 0 ? await db.execute(sql`
         SELECT DISTINCT ON (puuid) puuid, tier, rank
         FROM league_entries
-        WHERE puuid = ANY(${puuids}::text[]) AND queue_type = 'RANKED_SOLO_5x5'
+        WHERE puuid IN (${sql.join(puuids.map((p) => sql`${p}`), sql`, `)})
+          AND queue_type = 'RANKED_SOLO_5x5'
         ORDER BY puuid, refreshed_at DESC
       `) : [];
       const tierMap = new Map<string, { tier: string; rank: string }>();
@@ -534,16 +565,19 @@ export default async function summonerRoutes(app: FastifyInstance) {
       };
       const merged = new Map<string, Entry>();
       for (const r of list) {
-        const cur = merged.get(r.puuid) ?? {
-          puuid: r.puuid,
-          gameName: acctMap.get(r.puuid)?.gameName ?? null,
-          tagLine: acctMap.get(r.puuid)?.tagLine ?? null,
-          profileIconId: sumMap.get(r.puuid)?.profileIconId ?? null,
-          tier: tierMap.get(r.puuid)?.tier ?? null,
-          rank: tierMap.get(r.puuid)?.rank ?? null,
-          sameTeam: { games: 0, wins: 0 },
-          oppTeam:  { games: 0, wins: 0 },
-        };
+        const cur = merged.get(r.puuid) ?? (() => {
+          const { gameName, tagLine } = resolveName(r.puuid);
+          return {
+            puuid: r.puuid,
+            gameName,
+            tagLine,
+            profileIconId: sumMap.get(r.puuid)?.profileIconId ?? null,
+            tier: tierMap.get(r.puuid)?.tier ?? null,
+            rank: tierMap.get(r.puuid)?.rank ?? null,
+            sameTeam: { games: 0, wins: 0 },
+            oppTeam:  { games: 0, wins: 0 },
+          };
+        })();
         const bucket = r.sameTeam ? cur.sameTeam : cur.oppTeam;
         bucket.games += r.games;
         // For same-team: shared_outcome == both win. For opp-team: shared_outcome == I won (they lost).

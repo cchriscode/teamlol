@@ -29,39 +29,71 @@ const TIER_SHORT: Record<string, string> = {
   EMERALD: 'E', DIAMOND: 'D', MASTER: 'M', GRANDMASTER: 'GM', CHALLENGER: 'CH',
 };
 
-// Tier bands cover ~8 points each; within a divisioned tier we split the
-// band into four 2pt buckets that correspond to IV / III / II / I.
-const TIER_BANDS: Array<{ min: number; tier: string; divisioned: boolean }> = [
-  { min: 85, tier: 'CHALLENGER',   divisioned: false },
-  { min: 78, tier: 'GRANDMASTER',  divisioned: false },
-  { min: 70, tier: 'MASTER',       divisioned: false },
-  { min: 62, tier: 'DIAMOND',      divisioned: true },
-  { min: 54, tier: 'EMERALD',      divisioned: true },
-  { min: 46, tier: 'PLATINUM',     divisioned: true },
-  { min: 38, tier: 'GOLD',         divisioned: true },
-  { min: 30, tier: 'SILVER',       divisioned: true },
-  { min: 22, tier: 'BRONZE',       divisioned: true },
-  { min: 0,  tier: 'IRON',         divisioned: true },
-];
+// AI Score is an absolute LUT — a 10/0/5 stomp earns the same number in
+// Iron as in Challenger. But the AVERAGE Iron player puts up much higher
+// numbers than the average Challenger because opponents are easier. So
+// "absolute score → absolute tier" over-predicts at low tiers.
+//
+// Relative prediction: baseline expected score per tier (≈ what the median
+// player at that tier averages). Player's actual avg − baseline = delta.
+// Positive delta → climbing; negative → demoting.
+//
+// Baselines are calibrated heuristics — replace with empirical SELECT
+// AVG(ai_score_cached) GROUP BY tier once we have enough samples.
+const TIER_BASELINE: Record<string, number> = {
+  IRON: 62, BRONZE: 58, SILVER: 54, GOLD: 51, PLATINUM: 49,
+  EMERALD: 48, DIAMOND: 47, MASTER: 45, GRANDMASTER: 43, CHALLENGER: 41,
+};
 
-function divisionFromBucket(score: number, bandMin: number, bandMax: number): 'IV' | 'III' | 'II' | 'I' {
-  const t = (score - bandMin) / Math.max(0.0001, bandMax - bandMin);
-  if (t >= 0.75) return 'I';
-  if (t >= 0.50) return 'II';
-  if (t >= 0.25) return 'III';
-  return 'IV';
+// Ordered low → high for shift arithmetic.
+const TIER_ORDER = [
+  'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM',
+  'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER',
+] as const;
+const DIVISIONED_TIERS = new Set(['IRON','BRONZE','SILVER','GOLD','PLATINUM','EMERALD','DIAMOND']);
+const RANK_ORDER = ['IV', 'III', 'II', 'I'] as const;     // low → high
+type Rank = typeof RANK_ORDER[number];
+
+// 4-division ladder index. Master/GM/Challenger each occupy one position
+// (no divisions) — we treat them as a single divisional step each so the
+// shift math stays linear.
+function ladderIndex(tier: string, rank?: string | null): number {
+  const tIdx = TIER_ORDER.indexOf(tier as typeof TIER_ORDER[number]);
+  if (tIdx < 0) return 0;
+  if (!DIVISIONED_TIERS.has(tier)) {
+    // Position past Diamond I = master+ tiers, one slot each.
+    return TIER_ORDER.indexOf('DIAMOND') * 4 + 4 + (tIdx - TIER_ORDER.indexOf('MASTER'));
+  }
+  const rIdx = rank ? RANK_ORDER.indexOf(rank as Rank) : 0;
+  return tIdx * 4 + Math.max(0, rIdx);
 }
 
-function tierFromScore(avg: number): { tier: string; rank?: 'I' | 'II' | 'III' | 'IV' } {
-  for (let i = 0; i < TIER_BANDS.length; i++) {
-    const b = TIER_BANDS[i];
-    if (avg >= b.min) {
-      if (!b.divisioned) return { tier: b.tier };
-      const next = i === 0 ? 100 : TIER_BANDS[i - 1].min;       // upper bound = next-tier floor
-      return { tier: b.tier, rank: divisionFromBucket(avg, b.min, next) };
-    }
+function fromLadderIndex(idx: number): { tier: string; rank?: Rank } {
+  const diamondMax = TIER_ORDER.indexOf('DIAMOND') * 4 + 3;          // Diamond I
+  if (idx <= diamondMax) {
+    const tIdx = Math.max(0, Math.min(TIER_ORDER.indexOf('DIAMOND'), Math.floor(idx / 4)));
+    const rIdx = Math.max(0, Math.min(3, idx - tIdx * 4));
+    return { tier: TIER_ORDER[tIdx], rank: RANK_ORDER[rIdx] };
   }
-  return { tier: 'IRON', rank: 'IV' };
+  const masterIdx = idx - diamondMax - 1;                            // 0=Master, 1=GM, 2=Challenger
+  const tierName = ['MASTER', 'GRANDMASTER', 'CHALLENGER'][Math.min(2, masterIdx)];
+  return { tier: tierName };
+}
+
+// Each ±3 AI-score points away from baseline = ±1 division shift.
+// Clamped to ±4 divisions (one full tier) so the prediction stays
+// believable — e.g. E4 can rise to D4 at most, fall to P4 at worst.
+const POINTS_PER_DIVISION = 3;
+const MAX_SHIFT = 4;
+
+function predictFromCurrent(currentTier: string, currentRank: string | null | undefined, avgScore: number): { tier: string; rank?: Rank; shift: number } {
+  const baseline = TIER_BASELINE[currentTier] ?? 50;
+  const rawShift = (avgScore - baseline) / POINTS_PER_DIVISION;
+  const shift = Math.max(-MAX_SHIFT, Math.min(MAX_SHIFT, Math.round(rawShift)));
+  const curIdx = ladderIndex(currentTier, currentRank);
+  const maxIdx = ladderIndex('CHALLENGER');
+  const newIdx = Math.max(0, Math.min(maxIdx, curIdx + shift));
+  return { ...fromLadderIndex(newIdx), shift };
 }
 
 function tierLabel(tier: string, rank?: string): string {
@@ -76,7 +108,10 @@ export function AIPredictionBadges({ matches, selfPuuid, currentTier, currentRan
   }
 
   const avgScore = scored.reduce((s, m) => s + (m.self.aiScore ?? 0), 0) / scored.length;
-  const predicted = tierFromScore(avgScore);
+  // Unranked players have no baseline — hide the prediction (we can't tell
+  // them anything meaningful without knowing their starting tier).
+  if (!currentTier) return null;
+  const predicted = predictFromCurrent(currentTier, currentRank, avgScore);
 
   // Team luck: average AI score of THIS player's 4 teammates per match,
   // weighted by win/loss. If you carry losses (your score high, team low) → 팀운 나쁨.
@@ -121,6 +156,7 @@ export function AIPredictionBadges({ matches, selfPuuid, currentTier, currentRan
         </div>
         <div className="text-tertiary" style={{ fontSize: 10 }}>
           최근 {scored.length}게임 평균 AI {avgScore.toFixed(1)}점
+          {predicted.shift !== 0 && ` (${predicted.shift > 0 ? '+' : ''}${predicted.shift}디비전)`}
         </div>
       </div>
       <div className="ai-prediction-card">

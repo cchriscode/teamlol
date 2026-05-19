@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { apiGet, ApiError } from '@/lib/api';
@@ -16,14 +17,20 @@ interface PatchDetail {
 
 interface PageProps { params: Promise<{ slug: string }>; }
 
+// React.cache() dedupes the upstream call so generateMetadata and the page
+// body share one fetch per render. Next's fetch cache also dedupes, but this
+// is explicit at the function boundary.
+const getPatch = cache(async (slug: string) =>
+  apiGet<PatchDetail>(`/api/patch-notes/${slug}`, { next: { revalidate: 86400 } }).catch((e) => {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 400)) return null;
+    throw e;
+  }));
+
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
-  try {
-    const d = await apiGet<PatchDetail>(`/api/patch-notes/${slug}`, { next: { revalidate: 86400 } });
-    return { title: `${d.title} — TeamLOL`, description: d.description };
-  } catch {
-    return { title: '패치 노트 — TeamLOL' };
-  }
+  const d = await getPatch(slug);
+  if (!d) return { title: '패치 노트 — TeamLOL' };
+  return { title: `${d.title} — TeamLOL`, description: d.description };
 }
 
 function formatDate(iso: string) {
@@ -35,12 +42,7 @@ function formatDate(iso: string) {
 
 export default async function PatchDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const data = await apiGet<PatchDetail>(`/api/patch-notes/${slug}`, {
-    next: { revalidate: 86400 },
-  }).catch((e) => {
-    if (e instanceof ApiError && (e.status === 404 || e.status === 400)) return null;
-    throw e;
-  });
+  const data = await getPatch(slug);
   if (!data) notFound();
 
   return (

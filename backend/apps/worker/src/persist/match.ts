@@ -204,34 +204,37 @@ export async function upsertLeagueEntries(
   }>,
 ) {
   if (dtos.length === 0) return;
-  for (const dto of dtos) {
-    await db.insert(schema.leagueEntries).values({
-      puuid,
-      queueType: dto.queueType,
-      tier: dto.tier,
-      rank: dto.rank ?? '',
-      leaguePoints: dto.leaguePoints,
-      wins: dto.wins,
-      losses: dto.losses,
-      veteran: dto.veteran,
-      inactive: dto.inactive,
-      freshBlood: dto.freshBlood,
-      hotStreak: dto.hotStreak,
-      refreshedAt: new Date(),
-    }).onConflictDoUpdate({
+  const now = new Date();
+  const rows = dtos.map((dto) => ({
+    puuid,
+    queueType: dto.queueType,
+    tier: dto.tier,
+    rank: dto.rank ?? '',
+    leaguePoints: dto.leaguePoints,
+    wins: dto.wins,
+    losses: dto.losses,
+    veteran: dto.veteran,
+    inactive: dto.inactive,
+    freshBlood: dto.freshBlood,
+    hotStreak: dto.hotStreak,
+    refreshedAt: now,
+  }));
+  // One INSERT ... ON CONFLICT for the whole set instead of N round-trips.
+  // Each puuid has ≤ a handful of queueTypes so a single chunk always fits.
+  await db.insert(schema.leagueEntries).values(rows)
+    .onConflictDoUpdate({
       target: [schema.leagueEntries.puuid, schema.leagueEntries.queueType],
       set: {
-        tier: dto.tier,
-        rank: dto.rank ?? '',
-        leaguePoints: dto.leaguePoints,
-        wins: dto.wins,
-        losses: dto.losses,
-        veteran: dto.veteran,
-        inactive: dto.inactive,
-        freshBlood: dto.freshBlood,
-        hotStreak: dto.hotStreak,
-        refreshedAt: new Date(),
+        tier: sql`excluded.tier`,
+        rank: sql`excluded.rank`,
+        leaguePoints: sql`excluded.league_points`,
+        wins: sql`excluded.wins`,
+        losses: sql`excluded.losses`,
+        veteran: sql`excluded.veteran`,
+        inactive: sql`excluded.inactive`,
+        freshBlood: sql`excluded.fresh_blood`,
+        hotStreak: sql`excluded.hot_streak`,
+        refreshedAt: now,
       },
     });
-  }
 }

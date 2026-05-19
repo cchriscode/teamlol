@@ -3,6 +3,7 @@ import { NAV_ITEMS, type NavKey } from './nav-config';
 import { HeaderSearch } from './header-search';
 import { RegionSelect } from './region-select';
 import { NavBurger } from './nav-burger';
+import { ThemeToggle } from './theme-toggle';
 
 interface HeaderProps {
   activeKey?: NavKey;
@@ -36,6 +37,7 @@ export function Header({ activeKey, showHeaderSearch = false, searchPlaceholder 
         {showHeaderSearch && <HeaderSearch placeholder={searchPlaceholder} />}
         <div className="header-tools">
           <RegionSelect />
+          <ThemeToggle />
           <NavBurger activeKey={activeKey} />
         </div>
       </div>

@@ -4,6 +4,7 @@ import { ChampionIcon } from '@/components/atoms/champion-icon';
 import { getChampionMeta } from '@/lib/champion-meta';
 import { buildPickData } from '@/app/pick/build-pick-data';
 import { createTierEngine } from '@/lib/tier-engine';
+import { laneKr } from '@/lib/display';
 import type { Lane, Bracket } from '@/lib/types';
 
 export const revalidate = 600;
@@ -24,10 +25,6 @@ const BRACKETS: Array<{ key: Bracket; label: string }> = [
   { key: 'gm+',        label: '그랜드마스터+' },
   { key: 'challenger', label: '챌린저'       },
 ];
-
-function laneKr(l: string) {
-  return ({ top: '탑', jungle: '정글', mid: '미드', adc: '원딜', support: '서폿' } as Record<string, string>)[l] ?? l;
-}
 
 interface PageProps {
   searchParams: Promise<{ lane?: string; bracket?: string }>;

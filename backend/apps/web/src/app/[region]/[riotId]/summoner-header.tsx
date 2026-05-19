@@ -2,36 +2,22 @@ import Link from 'next/link';
 import { ddragon } from '@/lib/ddragon';
 import type { SummonerSearchResponse } from '@/lib/api-types-summoner';
 import { getDdragonVersion } from '@/lib/ddragon-version';
+import { tierKr, tierClass, timeAgo } from '@/lib/display';
 import { RefreshButton } from './refresh-button';
 
 type Tab = 'overview' | 'champions' | 'live' | 'seasons';
-
-function tierKr(tier: string) {
-  const map: Record<string, string> = {
-    IRON: 'Iron', BRONZE: 'Bronze', SILVER: 'Silver', GOLD: 'Gold',
-    PLATINUM: 'Platinum', EMERALD: 'Emerald', DIAMOND: 'Diamond',
-    MASTER: 'Master', GRANDMASTER: 'Grandmaster', CHALLENGER: 'Challenger',
-  };
-  return map[tier] ?? tier;
-}
-function tierClass(tier: string) { return 'tier-' + tier.toLowerCase(); }
-function timeAgo(ms: number): string {
-  const sec = Math.floor((Date.now() - ms) / 1000);
-  if (sec < 60) return `${sec}초 전`;
-  const m = Math.floor(sec / 60); if (m < 60) return `${m}분 전`;
-  const h = Math.floor(m / 60); if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
-}
 
 interface Props {
   summoner: SummonerSearchResponse;
   region: string;
   riotId: string;
   tab: Tab;
+  /** Pass the ddragon version if the parent already resolved it — skips a redundant lookup. */
+  version?: string;
 }
 
-export async function SummonerHeader({ summoner, region, riotId, tab }: Props) {
-  const version = await getDdragonVersion();
+export async function SummonerHeader({ summoner, region, riotId, tab, version: versionProp }: Props) {
+  const version = versionProp ?? await getDdragonVersion();
   const profileIconUrl = summoner.summoner ? ddragon.profileIcon(summoner.summoner.profileIconId, version) : null;
   const solo = summoner.leagueEntries.find((e) => e.queueType === 'RANKED_SOLO_5x5');
   const flex = summoner.leagueEntries.find((e) => e.queueType === 'RANKED_FLEX_SR');

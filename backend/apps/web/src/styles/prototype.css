@@ -95,6 +95,41 @@
 }
 
 /* ============================================
+   LIGHT THEME — warm cream/beige tokens
+   Activated by <html data-theme="light"> (set by the no-flash init script
+   in layout.tsx based on the `theme` cookie / system preference).
+   Surfaces/text/borders flip; semantic accents (win/loss/tier) stay the
+   same for visual continuity, with soft fills slightly increased so they
+   read on a light background.
+   ============================================ */
+html[data-theme="light"] {
+  --bg-base: #F5F2EC;
+  --bg-surface: #FBFAF6;
+  --bg-elevated: #F1ECE2;
+  --bg-input: #FFFFFF;
+  --bg-overlay: rgba(245, 242, 236, 0.78);
+
+  --border-subtle: #E8E2D5;
+  --border-default: #D8CFBE;
+  --border-strong: #BAAE96;
+
+  --text-primary: #1E1E1E;
+  --text-secondary: #6B6B6B;
+  --text-tertiary: #9A9A9A;
+  --text-quaternary: #BFBFBF;
+
+  --color-win-soft: rgba(74, 144, 226, 0.14);
+  --color-loss-soft: rgba(226, 92, 92, 0.14);
+
+  --chart-grid: #E0DACA;
+}
+
+html, body {
+  /* Soft cross-fade between modes — avoids the harsh flash when toggling. */
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+/* ============================================
    RESET
    ============================================ */
 *, *::before, *::after {
@@ -256,6 +291,26 @@ textarea { resize: vertical; min-height: 80px; font-family: inherit; }
   padding: 0;
 }
 .nav-burger svg { width: 16px; height: 16px; }
+
+.theme-toggle {
+  /* Override base `button` padding (6px 14px) which would crush a 32×32 icon button. */
+  padding: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
+}
+.theme-toggle:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
 
 /* ============================================
    PAGE LAYOUT

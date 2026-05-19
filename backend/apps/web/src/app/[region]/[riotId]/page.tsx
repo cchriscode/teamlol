@@ -13,6 +13,8 @@ import { CoPlayersCard } from './co-players';
 import { RankHistoryCard } from './rank-history';
 import { AIPredictionBadges } from './ai-prediction';
 import { SeasonChampList } from './season-champ-list';
+import type { RankPoint } from './rank-history';
+import { laneKr } from '@/lib/display';
 
 interface PageProps {
   params: Promise<{ region: string; riotId: string }>;
@@ -24,31 +26,6 @@ export async function generateMetadata({ params }: PageProps) {
   return {
     title: id ? `${formatRiotId(id)} — TeamLOL` : 'TeamLOL',
   };
-}
-
-function tierKr(tier: string) {
-  const map: Record<string, string> = {
-    IRON: 'Iron', BRONZE: 'Bronze', SILVER: 'Silver', GOLD: 'Gold',
-    PLATINUM: 'Platinum', EMERALD: 'Emerald', DIAMOND: 'Diamond',
-    MASTER: 'Master', GRANDMASTER: 'Grandmaster', CHALLENGER: 'Challenger',
-  };
-  return map[tier] ?? tier;
-}
-function tierClass(tier: string) {
-  return 'tier-' + tier.toLowerCase();
-}
-function laneKr(l: string) {
-  return ({ top: '탑', jungle: '정글', mid: '미드', adc: '원딜', support: '서폿' } as Record<string, string>)[l] ?? l;
-}
-function timeAgo(epochMs: number): string {
-  const sec = Math.floor((Date.now() - epochMs) / 1000);
-  if (sec < 60) return `${sec}초 전`;
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}분 전`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}시간 전`;
-  const d = Math.floor(hr / 24);
-  return `${d}일 전`;
 }
 
 export default async function SummonerPage({ params }: PageProps) {
@@ -63,17 +40,20 @@ export default async function SummonerPage({ params }: PageProps) {
   });
   if (!summoner) notFound();
 
-  const matches = await apiGet<MatchListResponse>(`/api/summoner/${summoner.account.puuid}/matches?count=20`).catch(() => null);
-  const coPlayers = await apiGet<{ sampleMatches: number; sameTeam: Parameters<typeof CoPlayersCard>[0]['sameTeam']; oppTeam: Parameters<typeof CoPlayersCard>[0]['oppTeam'] }>(
-    `/api/summoner/${summoner.account.puuid}/co-players?count=20`,
-  ).catch(() => null);
-  // Season-wide champion stats (all matches we've ingested for this puuid),
-  // aggregated by championId regardless of lane.
-  const seasonChamps = await apiGet<{ rows: Array<{ championId: number; championKey: string; lane: string; games: number; wins: number; avgKda: number; winrate: number }> }>(
-    `/api/summoner/${summoner.account.puuid}/champion-stats?minGames=1`,
-  ).catch(() => null);
-  const meta = await getChampionMeta();
-  const version = await getDdragonVersion();
+  // Fan out all summoner-page reads in parallel — they're independent given
+  // the puuid above. Previously these ran sequentially (~6× round-trip cost).
+  const [matches, coPlayers, seasonChamps, rankHistory, meta, version] = await Promise.all([
+    apiGet<MatchListResponse>(`/api/summoner/${summoner.account.puuid}/matches?count=20`).catch(() => null),
+    apiGet<{ sampleMatches: number; sameTeam: Parameters<typeof CoPlayersCard>[0]['sameTeam']; oppTeam: Parameters<typeof CoPlayersCard>[0]['oppTeam'] }>(
+      `/api/summoner/${summoner.account.puuid}/co-players?count=20`,
+    ).catch(() => null),
+    apiGet<{ rows: Array<{ championId: number; championKey: string; lane: string; games: number; wins: number; avgKda: number; winrate: number }> }>(
+      `/api/summoner/${summoner.account.puuid}/champion-stats?minGames=1`,
+    ).catch(() => null),
+    apiGet<{ history: RankPoint[] }>(`/api/summoner/${summoner.account.puuid}/rank-history?days=30`).catch(() => null),
+    getChampionMeta(),
+    getDdragonVersion(),
+  ]);
   const profileIconUrl = summoner.summoner ? ddragon.profileIcon(summoner.summoner.profileIconId, version) : null;
 
   const solo = summoner.leagueEntries.find((e) => e.queueType === 'RANKED_SOLO_5x5');
@@ -117,11 +97,11 @@ export default async function SummonerPage({ params }: PageProps) {
 
   return (
     <main className="page">
-      <SummonerHeader summoner={summoner} region={region} riotId={riotId} tab="overview" />
+      <SummonerHeader summoner={summoner} region={region} riotId={riotId} tab="overview" version={version} />
 
       <div className="summoner-grid">
         <aside className="sidebar">
-          <RankHistoryCard puuid={summoner.account.puuid} days={30} />
+          <RankHistoryCard history={rankHistory?.history ?? []} days={30} />
 
           <div className="card stats-summary">
             <div className="section-title">최근 {recent.length}게임</div>

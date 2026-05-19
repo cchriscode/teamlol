@@ -1,7 +1,8 @@
 // Server component — pure SVG render of tier-progression dots + LP trend.
-import { apiGet } from '@/lib/api';
+// Data is fetched by the parent page (and bundled into its parallel fetch
+// batch) so this component is purely presentational.
 
-interface RankPoint {
+export interface RankPoint {
   snapshotDate: string;     // YYYY-MM-DD
   tier: string;
   rank: string;
@@ -33,13 +34,12 @@ function absLp(tier: string, rank: string, lp: number): number {
 }
 
 interface Props {
-  puuid: string;
+  history: RankPoint[];
   days?: number;
 }
 
-export async function RankHistoryCard({ puuid, days = 30 }: Props) {
-  const data = await apiGet<{ history: RankPoint[] }>(`/api/summoner/${puuid}/rank-history?days=${days}`).catch(() => null);
-  const points = data?.history ?? [];
+export function RankHistoryCard({ history, days = 30 }: Props) {
+  const points = history;
   if (points.length < 2) {
     return null;       // not enough history yet — hide instead of empty chart
   }
