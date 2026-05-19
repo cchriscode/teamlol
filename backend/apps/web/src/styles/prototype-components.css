@@ -694,7 +694,10 @@
   border-bottom-left-radius: 0;
   padding: 14px 18px;
   display: grid;
-  grid-template-columns: 90px 72px minmax(220px, 1fr) 90px 160px 28px;
+  /* champ-section + items use `auto` so they size to natural content —
+     previously 72px / 160px squashed the champion icon, rune+spell stack,
+     and the role-bound 8th item slot when they overflowed. */
+  grid-template-columns: 90px auto minmax(180px, 1fr) 90px auto 28px;
   gap: var(--space-4);
   align-items: center;
   transition: border-color 120ms, background 120ms;
