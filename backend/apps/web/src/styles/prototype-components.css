@@ -3255,6 +3255,43 @@
   color: var(--color-win);
 }
 
+/* ---- Season champion list (sidebar) -------------------------------- */
+.season-champ-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.season-champ-row:last-of-type { border-bottom: none; }
+.season-champ-info { display: flex; flex-direction: column; min-width: 0; }
+.season-champ-name {
+  font-size: 12px; color: var(--text-primary); font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.season-champ-meta { font-size: 10px; }
+.season-champ-record { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+.season-champ-wr {
+  font-size: 12px; font-weight: 600; color: var(--text-primary);
+  font-feature-settings: 'tnum' on;
+}
+.season-champ-wl { font-size: 10px; font-feature-settings: 'tnum' on; }
+.season-champ-more {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  cursor: pointer;
+  text-decoration: none;
+}
+.season-champ-more:hover { color: var(--text-primary); background: var(--bg-elevated); }
+
 /* ---- Co-player sidebar rows ---------------------------------------- */
 .co-player-row {
   display: flex;

@@ -12,6 +12,7 @@ import { MatchListClient } from './match-list-client';
 import { CoPlayersCard } from './co-players';
 import { RankHistoryCard } from './rank-history';
 import { AIPredictionBadges } from './ai-prediction';
+import { SeasonChampList } from './season-champ-list';
 
 interface PageProps {
   params: Promise<{ region: string; riotId: string }>;
@@ -66,6 +67,11 @@ export default async function SummonerPage({ params }: PageProps) {
   const coPlayers = await apiGet<{ sampleMatches: number; sameTeam: Parameters<typeof CoPlayersCard>[0]['sameTeam']; oppTeam: Parameters<typeof CoPlayersCard>[0]['oppTeam'] }>(
     `/api/summoner/${summoner.account.puuid}/co-players?count=20`,
   ).catch(() => null);
+  // Season-wide champion stats (all matches we've ingested for this puuid),
+  // aggregated by championId regardless of lane.
+  const seasonChamps = await apiGet<{ rows: Array<{ championId: number; championKey: string; lane: string; games: number; wins: number; avgKda: number; winrate: number }> }>(
+    `/api/summoner/${summoner.account.puuid}/champion-stats?minGames=1`,
+  ).catch(() => null);
   const meta = await getChampionMeta();
   const version = await getDdragonVersion();
   const profileIconUrl = summoner.summoner ? ddragon.profileIcon(summoner.summoner.profileIconId, version) : null;
@@ -93,17 +99,21 @@ export default async function SummonerPage({ params }: PageProps) {
   const laneCounts: Record<string, number> = {};
   recent.forEach((m) => { laneCounts[m.self.lane] = (laneCounts[m.self.lane] ?? 0) + 1; });
 
-  // Top champions
-  const champCounts: Record<string, { games: number; wins: number; key: string; name: string }> = {};
-  recent.forEach((m) => {
-    const k = m.self.championKey;
-    if (!champCounts[k]) {
-      champCounts[k] = { games: 0, wins: 0, key: k, name: meta.byKey.get(k)?.name ?? k };
-    }
-    champCounts[k].games += 1;
-    if (m.self.win) champCounts[k].wins += 1;
-  });
-  const topChamps = Object.values(champCounts).sort((a, b) => b.games - a.games).slice(0, 5);
+  // Season-wide champion stats (collapses lane splits into one row per
+  // championId; sorted by games desc). Falls back to recent-20 aggregation
+  // if the season endpoint returned nothing yet.
+  type SeasonChamp = { championId: number; championKey: string; games: number; wins: number; avgKda: number };
+  const byChamp = new Map<number, SeasonChamp>();
+  for (const r of (seasonChamps?.rows ?? [])) {
+    const cur = byChamp.get(r.championId) ?? { championId: r.championId, championKey: r.championKey, games: 0, wins: 0, avgKda: 0 };
+    cur.games += r.games;
+    cur.wins += r.wins;
+    cur.avgKda += r.avgKda * r.games;       // weight by games for accurate merge
+    byChamp.set(r.championId, cur);
+  }
+  const seasonTop = Array.from(byChamp.values())
+    .map((c) => ({ ...c, avgKda: c.games > 0 ? c.avgKda / c.games : 0 }))
+    .sort((a, b) => b.games - a.games);
 
   return (
     <main className="page">
@@ -174,29 +184,8 @@ export default async function SummonerPage({ params }: PageProps) {
             </div>
           </div>
 
-          <div className="card">
-            <div className="section-title">자주 픽한 챔프 <span className="meta">최근 {recent.length}게임</span></div>
-            <div>
-              {topChamps.length === 0 ? (
-                <div className="text-tertiary" style={{ padding: 8 }}>데이터 없음</div>
-              ) : (
-                topChamps.map((c) => {
-                  const wr = c.games > 0 ? (c.wins / c.games) * 100 : 0;
-                  return (
-                    <div key={c.key} className="champ-list-row">
-                      <ChampionIcon championKey={c.key} size={32} alt={c.name} />
-                      <div className="champ-list-info">
-                        <div className="champ-list-name">{c.name}</div>
-                        <div className="text-tertiary" style={{ fontSize: 11 }}>
-                          {c.games}게임 · {wr.toFixed(0)}%
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          <SeasonChampList champs={seasonTop} championNameByKey={Object.fromEntries(Array.from(meta.byKey.entries()).map(([k, v]) => [k, v.name]))} region={region} riotId={riotId} />
+
 
           {coPlayers && (
             <CoPlayersCard
@@ -214,6 +203,7 @@ export default async function SummonerPage({ params }: PageProps) {
             matches={recent}
             selfPuuid={summoner.account.puuid}
             currentTier={solo?.tier}
+            currentRank={solo?.rank}
           />
           <MatchListClient
             matches={recent}

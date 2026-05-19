@@ -17,34 +17,66 @@ interface Props {
   matches: MatchListItem[];
   selfPuuid: string;
   currentTier?: string | null;
+  currentRank?: string | null;
 }
 
 const TIER_NAME: Record<string, string> = {
   IRON: '아이언', BRONZE: '브론즈', SILVER: '실버', GOLD: '골드', PLATINUM: '플래티넘',
   EMERALD: '에메랄드', DIAMOND: '다이아', MASTER: '마스터', GRANDMASTER: '그랜드마스터', CHALLENGER: '챌린저',
 };
+const TIER_SHORT: Record<string, string> = {
+  IRON: 'I', BRONZE: 'B', SILVER: 'S', GOLD: 'G', PLATINUM: 'P',
+  EMERALD: 'E', DIAMOND: 'D', MASTER: 'M', GRANDMASTER: 'GM', CHALLENGER: 'CH',
+};
 
-function tierFromScore(avg: number): string {
-  if (avg >= 85) return 'CHALLENGER';
-  if (avg >= 78) return 'GRANDMASTER';
-  if (avg >= 70) return 'MASTER';
-  if (avg >= 60) return 'DIAMOND';
-  if (avg >= 50) return 'EMERALD';
-  if (avg >= 42) return 'PLATINUM';
-  if (avg >= 34) return 'GOLD';
-  if (avg >= 26) return 'SILVER';
-  if (avg >= 18) return 'BRONZE';
-  return 'IRON';
+// Tier bands cover ~8 points each; within a divisioned tier we split the
+// band into four 2pt buckets that correspond to IV / III / II / I.
+const TIER_BANDS: Array<{ min: number; tier: string; divisioned: boolean }> = [
+  { min: 85, tier: 'CHALLENGER',   divisioned: false },
+  { min: 78, tier: 'GRANDMASTER',  divisioned: false },
+  { min: 70, tier: 'MASTER',       divisioned: false },
+  { min: 62, tier: 'DIAMOND',      divisioned: true },
+  { min: 54, tier: 'EMERALD',      divisioned: true },
+  { min: 46, tier: 'PLATINUM',     divisioned: true },
+  { min: 38, tier: 'GOLD',         divisioned: true },
+  { min: 30, tier: 'SILVER',       divisioned: true },
+  { min: 22, tier: 'BRONZE',       divisioned: true },
+  { min: 0,  tier: 'IRON',         divisioned: true },
+];
+
+function divisionFromBucket(score: number, bandMin: number, bandMax: number): 'IV' | 'III' | 'II' | 'I' {
+  const t = (score - bandMin) / Math.max(0.0001, bandMax - bandMin);
+  if (t >= 0.75) return 'I';
+  if (t >= 0.50) return 'II';
+  if (t >= 0.25) return 'III';
+  return 'IV';
 }
 
-export function AIPredictionBadges({ matches, selfPuuid, currentTier }: Props) {
+function tierFromScore(avg: number): { tier: string; rank?: 'I' | 'II' | 'III' | 'IV' } {
+  for (let i = 0; i < TIER_BANDS.length; i++) {
+    const b = TIER_BANDS[i];
+    if (avg >= b.min) {
+      if (!b.divisioned) return { tier: b.tier };
+      const next = i === 0 ? 100 : TIER_BANDS[i - 1].min;       // upper bound = next-tier floor
+      return { tier: b.tier, rank: divisionFromBucket(avg, b.min, next) };
+    }
+  }
+  return { tier: 'IRON', rank: 'IV' };
+}
+
+function tierLabel(tier: string, rank?: string): string {
+  if (rank) return `${TIER_SHORT[tier] ?? tier}${rank === 'I' ? '1' : rank === 'II' ? '2' : rank === 'III' ? '3' : '4'}`;
+  return TIER_NAME[tier] ?? tier;
+}
+
+export function AIPredictionBadges({ matches, selfPuuid, currentTier, currentRank }: Props) {
   const scored = matches.filter((m) => m.self.aiScore != null);
   if (scored.length < 5) {
     return null;       // need at least 5 games before any prediction is meaningful
   }
 
   const avgScore = scored.reduce((s, m) => s + (m.self.aiScore ?? 0), 0) / scored.length;
-  const predictedTier = tierFromScore(avgScore);
+  const predicted = tierFromScore(avgScore);
 
   // Team luck: average AI score of THIS player's 4 teammates per match,
   // weighted by win/loss. If you carry losses (your score high, team low) → 팀운 나쁨.
@@ -78,10 +110,14 @@ export function AIPredictionBadges({ matches, selfPuuid, currentTier }: Props) {
         <div className="ai-prediction-label">AI 티어 예측</div>
         <div className="ai-prediction-tiers">
           {currentTier && (
-            <span className={`tier-badge tier-${currentTier.toLowerCase()}`}>{TIER_NAME[currentTier] ?? currentTier}</span>
+            <span className={`tier-badge tier-${currentTier.toLowerCase()}`}>
+              {tierLabel(currentTier, currentRank ?? undefined)}
+            </span>
           )}
           <span className="ai-prediction-arrow">→</span>
-          <span className={`tier-badge tier-${predictedTier.toLowerCase()}`}>{TIER_NAME[predictedTier]}</span>
+          <span className={`tier-badge tier-${predicted.tier.toLowerCase()}`}>
+            {tierLabel(predicted.tier, predicted.rank)}
+          </span>
         </div>
         <div className="text-tertiary" style={{ fontSize: 10 }}>
           최근 {scored.length}게임 평균 AI {avgScore.toFixed(1)}점
