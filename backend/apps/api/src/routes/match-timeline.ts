@@ -34,6 +34,8 @@ interface TimelineDto {
         itemId?: number;
         afterId?: number;
         beforeId?: number;
+        skillSlot?: number;
+        levelUpType?: string;
       }>;
     }>;
   };
@@ -60,6 +62,7 @@ interface PlayerSeries {
   totalXp: number[];
   level: number[];
   itemEvents: Array<{ ts: number; itemId: number; type: 'BUY' | 'SELL' | 'UNDO' }>;
+  skillEvents: Array<{ ts: number; skillSlot: 1 | 2 | 3 | 4 }>;
 }
 
 // Trinkets, biscuits, control wards, potions — too noisy for build timeline.
@@ -116,7 +119,7 @@ function compact(frames: TimelineDto['info']['frames'], gameDurationSec: number)
   const compactFrames: CompactFrame[] = [];
   const events: CompactEvent[] = [];
   const perPlayer: PlayerSeries[] = Array.from({ length: 10 }, (_, i) => ({
-    slot: i, totalGold: [], totalXp: [], level: [], itemEvents: [],
+    slot: i, totalGold: [], totalXp: [], level: [], itemEvents: [], skillEvents: [],
   }));
 
   // Running team kill counters built from event types.
@@ -191,6 +194,14 @@ function compact(frames: TimelineDto['info']['frames'], gameDurationSec: number)
           const itemId = ev.beforeId ?? ev.afterId ?? 0;
           if (pid >= 1 && pid <= 10 && itemId > 0) {
             perPlayer[participantToSlot(pid)]!.itemEvents.push({ ts: evTs, itemId, type: 'UNDO' });
+          }
+          break;
+        }
+        case 'SKILL_LEVEL_UP': {
+          const pid = ev.participantId ?? 0;
+          const ss = (ev as { skillSlot?: number }).skillSlot ?? 0;
+          if (pid >= 1 && pid <= 10 && ss >= 1 && ss <= 4) {
+            perPlayer[participantToSlot(pid)]!.skillEvents.push({ ts: evTs, skillSlot: ss as 1 | 2 | 3 | 4 });
           }
           break;
         }

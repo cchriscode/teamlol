@@ -224,15 +224,17 @@ export default async function summonerRoutes(app: FastifyInstance) {
         byMatch.set(m.matchId, arr);
       }
 
-      // Static runes map (perk id → icon path) for keystone resolution.
-      // Cheap query; cached implicitly by Postgres after first call per process.
+      // Static runes map (perk id → icon path + tree key) for keystone +
+      // full rune-page resolution. Cheap query; cached implicitly.
       const runeRows = await db.execute(sql`
-        SELECT DISTINCT ON (id) id, icon_path FROM static_runes ORDER BY id, patch DESC
+        SELECT DISTINCT ON (id) id, rune_key, tree_key, icon_path
+        FROM static_runes ORDER BY id, patch DESC
       `);
-      const runeIconById = new Map<number, string>();
-      for (const r of runeRows as unknown as Array<{ id: number; icon_path: string }>) {
-        runeIconById.set(r.id, r.icon_path);
+      const runeMetaById = new Map<number, { iconPath: string; treeKey: string; runeKey: string }>();
+      for (const r of runeRows as unknown as Array<{ id: number; rune_key: string; tree_key: string; icon_path: string }>) {
+        runeMetaById.set(r.id, { iconPath: r.icon_path, treeKey: r.tree_key, runeKey: r.rune_key });
       }
+      const runeIconById = new Map(Array.from(runeMetaById.entries()).map(([k, v]) => [k, v.iconPath]));
 
       // Resolve gameName/tagLine for every participant puuid (one query).
       const allPuuids = Array.from(new Set(allMembers.map((m) => m.puuid)));
@@ -317,6 +319,22 @@ export default async function summonerRoutes(app: FastifyInstance) {
               visionScore: me.visionScore,
               dmgToChampPerMin: Math.round(me.dmgToChampPerMin),
               items: me.items, spells: me.spells, runes: me.runes,
+              runesFull: (() => {
+                const rn = me.runes as {
+                  styles?: Array<{ style: number; selections: Array<{ perk: number }> }>;
+                  statPerks?: { offense?: number; flex?: number; defense?: number };
+                } | null;
+                if (!rn?.styles) return null;
+                return {
+                  primaryStyle: rn.styles[0]?.style ?? null,
+                  subStyle:     rn.styles[1]?.style ?? null,
+                  perks: [
+                    ...(rn.styles[0]?.selections ?? []),
+                    ...(rn.styles[1]?.selections ?? []),
+                  ].map((s) => ({ id: s.perk, ...(runeMetaById.get(s.perk) ?? { iconPath: null, treeKey: null, runeKey: null }) })),
+                  statPerks: rn.statPerks ?? null,
+                };
+              })(),
               keystoneId: (me.runes as { styles?: Array<{ selections: Array<{ perk: number }> }> } | null)?.styles?.[0]?.selections?.[0]?.perk ?? null,
               keystoneIcon: (() => {
                 const k = (me.runes as { styles?: Array<{ selections: Array<{ perk: number }> }> } | null)?.styles?.[0]?.selections?.[0]?.perk;

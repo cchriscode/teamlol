@@ -61,6 +61,12 @@ export interface MatchListItem {
     items: number[];
     spells: number[];
     runes?: unknown;
+    runesFull?: {
+      primaryStyle: number | null;
+      subStyle: number | null;
+      perks: Array<{ id: number; iconPath: string | null; treeKey: string | null; runeKey: string | null }>;
+      statPerks: { offense?: number; flex?: number; defense?: number } | null;
+    } | null;
     keystoneId?: number | null;
     keystoneIcon?: string | null;
     subStyleId?: number | null;

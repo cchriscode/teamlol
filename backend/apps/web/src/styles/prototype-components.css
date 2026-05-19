@@ -3532,28 +3532,116 @@
   background: var(--bg-elevated);
 }
 
-/* ---- Build tab ----------------------------------------------------- */
-.match-build-stack {
+/* ---- Build tab (self only): items + skills + runes ----------------- */
+.build-self {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.build-self-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.build-self-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+
+.build-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+.build-section-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.build-item-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+.build-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.build-item .item-icon {
+  border-radius: 3px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+}
+.build-item-ts {
+  font-size: 9px;
+  color: var(--text-tertiary);
+  font-feature-settings: 'tnum' on;
+}
+
+/* Skill build matrix */
+.skill-build-grid {
+  display: grid;
+  grid-template-columns: 18px repeat(18, 1fr);
+  gap: 2px;
+  font-size: 9px;
+  font-feature-settings: 'tnum' on;
+}
+.skill-build-rowlabel {
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.skill-build-rowlabel.skill-1 { color: var(--color-win); }
+.skill-build-rowlabel.skill-2 { color: var(--color-positive); }
+.skill-build-rowlabel.skill-3 { color: var(--color-warning); }
+.skill-build-rowlabel.skill-4 { color: var(--color-loss); }
+.skill-build-cell {
+  height: 18px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  color: transparent;
+}
+.skill-build-cell.chosen { color: var(--text-primary); font-weight: 600; }
+.skill-build-cell.skill-1.chosen { background: rgba(74, 144, 226, 0.30); border-color: var(--color-win); }
+.skill-build-cell.skill-2.chosen { background: rgba(93, 201, 148, 0.30); border-color: var(--color-positive); }
+.skill-build-cell.skill-3.chosen { background: rgba(232, 179, 57, 0.30); border-color: var(--color-warning); }
+.skill-build-cell.skill-4.chosen { background: rgba(226, 92, 92, 0.30); border-color: var(--color-loss); }
+
+/* Rune page */
+.rune-page {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
-  padding: var(--space-3);
 }
-@media (max-width: 760px) { .match-build-stack { grid-template-columns: 1fr; } }
-.match-build-row {
-  display: grid;
-  grid-template-columns: 24px 1.2fr 5fr;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  font-size: 11px;
-  border-bottom: 1px dashed var(--border-subtle);
+.rune-page-col {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 10px;
 }
-.match-build-row.is-self { background: var(--bg-input); }
-.match-build-name { font-size: 11px; color: var(--text-primary); }
-.match-build-sequence { display: flex; flex-wrap: wrap; gap: 6px; }
-.match-build-step { display: flex; flex-direction: column; align-items: center; }
-.build-step-ts { font-size: 9px; color: var(--text-tertiary); font-feature-settings: 'tnum' on; }
+.rune-page-col-head {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.rune-page-col-label { font-size: 11px; color: var(--text-secondary); }
+.rune-page-perks { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.rune-page-perk { display: flex; align-items: center; justify-content: center; }
+.rune-page-perk img { border-radius: 50%; background: var(--bg-base); }
+.rune-page-perk.keystone img { background: var(--bg-base); border: 1px solid var(--border-default); }
+.rune-page-stats {
+  display: flex; gap: 6px; margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-subtle);
+}
+.rune-page-stat {
+  padding: 3px 6px;
+  background: var(--bg-elevated);
+  border-radius: 2px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
 
 /* dmg column in scoreboard row */
 .match-detail-dmg {

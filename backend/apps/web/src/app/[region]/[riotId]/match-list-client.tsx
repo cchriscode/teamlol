@@ -242,7 +242,7 @@ function ExpandPanel({ match: m, blueParts, redParts, selfPuuid, version, champi
       )}
 
       {tab === 'build' && (
-        <BuildTab matchId={m.matchId} duration={m.gameDuration} version={version}
+        <BuildTab matchId={m.matchId} match={m} duration={m.gameDuration} version={version}
                   participants={m.participants ?? []} selfPuuid={selfPuuid}
                   championNameByKey={championNameByKey} anonymous={anonymous} />
       )}
@@ -375,16 +375,17 @@ function RuneSpellStack({ spells, keystoneIcon, subStyleId, version, compact }: 
   );
 }
 
-// --- Build tab — per-player item purchase sequence over time.
+// --- Build tab — self only: item purchases + skill order + rune page.
 interface BuildParticipant {
-  slot: number; participantId?: number; puuid?: string;
+  slot: number;
   itemEvents?: Array<{ ts: number; itemId: number; type: 'BUY' | 'SELL' | 'UNDO' }>;
+  skillEvents?: Array<{ ts: number; skillSlot: 1 | 2 | 3 | 4 }>;
 }
-interface BuildTimelineResp {
-  perPlayer: BuildParticipant[];
-}
-function BuildTab({ matchId, version, participants, selfPuuid, championNameByKey, anonymous }: {
+interface BuildTimelineResp { perPlayer: BuildParticipant[] }
+
+function BuildTab({ matchId, match, selfPuuid, version, championNameByKey }: {
   matchId: string; duration: number; version: string;
+  match: MatchListItem;
   participants: Participant[]; selfPuuid: string;
   championNameByKey: Record<string, string>;
   anonymous: boolean;
@@ -404,49 +405,163 @@ function BuildTab({ matchId, version, participants, selfPuuid, championNameByKey
   if (error) return <div className="text-tertiary" style={{ padding: 32, textAlign: 'center' }}>빌드 데이터 없음</div>;
   if (!data) return <div className="text-tertiary" style={{ padding: 32, textAlign: 'center' }}>로딩 중...</div>;
 
-  // perPlayer is indexed by participantId (1..10); align to participants by slot+1.
-  // Participants array sorted slot 0..9 maps to participantId 1..10.
+  // Find self slot — participants are sorted blue→red by slot, so isSelf flag is reliable.
+  const selfParticipant = (match.participants ?? []).find((p) => p.puuid === selfPuuid);
+  const selfSlot = (selfParticipant as Participant & { slot?: number } | undefined)?.slot;
   const buildBySlot = new Map<number, BuildParticipant>();
   for (const b of data.perPlayer ?? []) buildBySlot.set(b.slot, b);
-
-  const blue = participants.filter((p) => p.team === 'blue');
-  const red  = participants.filter((p) => p.team === 'red');
+  const bp = selfSlot != null ? buildBySlot.get(selfSlot) : undefined;
+  const items   = (bp?.itemEvents ?? []).filter((e) => e.type === 'BUY');
+  const skills  = bp?.skillEvents ?? [];
+  const champName = championNameByKey[match.self.championKey] ?? match.self.championKey;
 
   return (
-    <div className="match-build-stack" onClick={(e) => e.stopPropagation()}>
-      {[blue, red].map((team, ti) => (
-        <div key={ti} className={`match-detail-team team-${ti === 0 ? 'blue' : 'red'}`}>
-          <div className="match-detail-team-header">{ti === 0 ? '블루팀' : '레드팀'}</div>
-          {team.map((p, i) => {
-            // Participants in summoner API are sorted by team then slot, so blue gets slots 0-4 or 5-9.
-            // Match by slot from the per-team subset: participantId in timeline = slot+1.
-            const slot = (p as Participant & { slot?: number }).slot;
-            const bp = slot != null ? buildBySlot.get(slot) : undefined;
-            const events = (bp?.itemEvents ?? []).filter((e) => e.type === 'BUY');
-            return (
-              <div key={p.puuid} className={`match-build-row${p.puuid === selfPuuid ? ' is-self' : ''}`}>
-                <ChampionIcon championKey={p.championKey} size={24} version={version} alt={championNameByKey[p.championKey] ?? p.championKey} />
-                <div className="match-build-name">
-                  {displayName(p, selfPuuid, anonymous)}
-                </div>
-                <div className="match-build-sequence">
-                  {events.length === 0 ? (
-                    <span className="text-tertiary" style={{ fontSize: 10 }}>—</span>
-                  ) : (
-                    events.map((e, k) => (
-                      <div key={k} className="match-build-step">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img className="item-icon" src={ddragon.itemIcon(e.itemId, version)} width={22} height={22} alt="" />
-                        <span className="build-step-ts">{Math.floor(e.ts / 60)}분</span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            );
-          })}
+    <div className="build-self" onClick={(e) => e.stopPropagation()}>
+      <div className="build-self-head">
+        <ChampionIcon championKey={match.self.championKey} size={40} version={version} alt={champName} />
+        <div>
+          <div className="build-self-name">{champName}</div>
+          <div className="text-tertiary" style={{ fontSize: 11 }}>{laneKr(match.self.lane)}</div>
         </div>
-      ))}
+      </div>
+
+      <div className="build-section">
+        <div className="build-section-label">아이템 빌드</div>
+        {items.length === 0 ? (
+          <div className="text-tertiary" style={{ fontSize: 11 }}>아이템 기록 없음</div>
+        ) : (
+          <div className="build-item-row">
+            {items.map((e, k) => (
+              <div key={k} className="build-item">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="item-icon" src={ddragon.itemIcon(e.itemId, version)} width={32} height={32} alt="" />
+                <div className="build-item-ts">{Math.floor(e.ts / 60)}분</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="build-section">
+        <div className="build-section-label">스킬 빌드</div>
+        {skills.length === 0 ? (
+          <div className="text-tertiary" style={{ fontSize: 11 }}>스킬 기록 없음</div>
+        ) : (
+          <SkillBuildGrid skills={skills} />
+        )}
+      </div>
+
+      <div className="build-section">
+        <div className="build-section-label">룬</div>
+        {!match.self.runesFull ? (
+          <div className="text-tertiary" style={{ fontSize: 11 }}>룬 기록 없음</div>
+        ) : (
+          <RunePage runesFull={match.self.runesFull} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// 18-cell grid: rows = Q/W/E/R, cols = champion level 1..18. Filled cell at
+// (skill, level) marks the level-up choice.
+function SkillBuildGrid({ skills }: { skills: Array<{ ts: number; skillSlot: 1 | 2 | 3 | 4 }> }) {
+  // Build level taken at each level (1..18)
+  const sequence = skills.slice(0, 18);
+  const labelOf: Record<number, string> = { 1: 'Q', 2: 'W', 3: 'E', 4: 'R' };
+  return (
+    <div className="skill-build">
+      <div className="skill-build-grid">
+        {/* row headers */}
+        {[1, 2, 3, 4].map((s) => (
+          <div key={`label-${s}`} className={`skill-build-rowlabel skill-${s}`} style={{ gridRow: s, gridColumn: 1 }}>
+            {labelOf[s]}
+          </div>
+        ))}
+        {/* level cells */}
+        {Array.from({ length: 18 }, (_, i) => i + 1).map((lv) => {
+          const chosen = sequence[lv - 1]?.skillSlot;
+          return [1, 2, 3, 4].map((s) => (
+            <div
+              key={`cell-${lv}-${s}`}
+              className={`skill-build-cell skill-${s}${chosen === s ? ' chosen' : ''}`}
+              style={{ gridRow: s, gridColumn: lv + 1 }}
+            >
+              {chosen === s ? lv : ''}
+            </div>
+          ));
+        })}
+      </div>
+    </div>
+  );
+}
+
+interface RunesFull {
+  primaryStyle: number | null;
+  subStyle: number | null;
+  perks: Array<{ id: number; iconPath: string | null; treeKey: string | null }>;
+  statPerks: { offense?: number; flex?: number; defense?: number } | null;
+}
+const STAT_PERK_LABEL: Record<number, string> = {
+  5001: 'HP', 5002: 'AR', 5003: 'MR',
+  5005: '공속', 5007: '쿨감', 5008: '적응',
+  5010: '이속', 5011: 'HP', 5013: '강인함',
+};
+function RunePage({ runesFull }: { runesFull: RunesFull }) {
+  const primary = runesFull.perks.slice(0, 4);
+  const sub     = runesFull.perks.slice(4, 6);
+  return (
+    <div className="rune-page">
+      <div className="rune-page-col">
+        <div className="rune-page-col-head">
+          {runesFull.primaryStyle != null && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={ddragon.runeStyleIcon(runesFull.primaryStyle)} width={20} height={20} alt="" />
+          )}
+          <span className="rune-page-col-label">주 룬</span>
+        </div>
+        <div className="rune-page-perks">
+          {primary.map((p, i) => (
+            <div key={i} className={`rune-page-perk${i === 0 ? ' keystone' : ''}`}>
+              {p.iconPath ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={ddragon.runeIcon(p.iconPath)} width={i === 0 ? 36 : 26} height={i === 0 ? 36 : 26} alt="" />
+              ) : <span className="text-tertiary">?</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="rune-page-col">
+        <div className="rune-page-col-head">
+          {runesFull.subStyle != null && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={ddragon.runeStyleIcon(runesFull.subStyle)} width={20} height={20} alt="" />
+          )}
+          <span className="rune-page-col-label">보조 룬</span>
+        </div>
+        <div className="rune-page-perks">
+          {sub.map((p, i) => (
+            <div key={i} className="rune-page-perk">
+              {p.iconPath ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={ddragon.runeIcon(p.iconPath)} width={26} height={26} alt="" />
+              ) : <span className="text-tertiary">?</span>}
+            </div>
+          ))}
+        </div>
+        {runesFull.statPerks && (
+          <div className="rune-page-stats">
+            {(['offense', 'flex', 'defense'] as const).map((k) => {
+              const id = runesFull.statPerks?.[k];
+              return (
+                <div key={k} className="rune-page-stat">
+                  {id ? (STAT_PERK_LABEL[id] ?? id) : '—'}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
