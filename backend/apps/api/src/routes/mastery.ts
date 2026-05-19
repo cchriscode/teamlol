@@ -7,7 +7,10 @@ import { db, schema } from '@lol-tracker/db';
 import { eq, desc, and, inArray } from 'drizzle-orm';
 import { cache } from '../cache.js';
 
-const TTL_SEC = 5 * 60;
+// Mastery points only change when a player completes a ranked/normal game
+// on that champion. 6h is plenty fresh and aligns with the summoner-profile
+// TTL — 5min was burning CHAMPION-MASTERY-V4 calls for no visible benefit.
+const TTL_SEC = 6 * 60 * 60;
 
 export default async function masteryRoutes(app: FastifyInstance) {
   app.get<{ Params: { puuid: string }; Querystring: { limit?: string; patch?: string } }>(

@@ -9,7 +9,10 @@ import { inArray } from 'drizzle-orm';
 import { riot } from '../riot-client.js';
 import { redis } from '../redis.js';
 
-const TTL_SEC = 10 * 60;
+// Challenger/GM/Master ladder snapshots barely shift within an hour outside
+// the morning ladder reseed window. 30 min cache stays well inside Riot's
+// 24h policy ceiling while cutting redundant LEAGUE-V4 fetches.
+const TTL_SEC = 30 * 60;
 
 interface Query { queue?: string; tier?: string; }
 

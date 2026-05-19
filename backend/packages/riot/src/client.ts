@@ -111,7 +111,17 @@ export class RiotClient {
 
       if (res.status === 429) {
         const retryAfter = Number(res.headers.get('Retry-After')) || 1;
+        const limitType = res.headers.get('X-Rate-Limit-Type') ?? 'unknown';
+        const appCount = res.headers.get('X-App-Rate-Limit-Count') ?? '';
+        const methodCount = res.headers.get('X-Method-Rate-Limit-Count') ?? '';
         this.rl.noteRateLimited(retryAfter);
+        // Surface 429 context (limit bucket, current usage, wait) so production
+        // review can see the bucket we tripped wasn't from runaway code.
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[riot 429] ${methodKey} retryAfter=${retryAfter}s type=${limitType} ` +
+          `app=${appCount} method=${methodCount}`,
+        );
         throw new RiotApiError(429, await res.text(), url, methodKey);
       }
 

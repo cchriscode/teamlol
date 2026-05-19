@@ -14,7 +14,11 @@ import { Queue } from 'bullmq';
 import { createHash } from 'node:crypto';
 
 const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
-const SUMMONER_CACHE_TTL_MS = 5 * 60 * 1000;
+// Riot policy permits up to 24h cache for summoner profile + ranked entries.
+// 6h is comfortably below that and aligns with how often a user's level/icon/
+// rank actually changes (rank updates only on ranked game end). 5min was
+// wasteful and made the dev key burn through its quota on idle refreshes.
+const SUMMONER_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
 // PUUID queue (write-only from API; same name as worker uses).
 const puuidQueue = new Queue('puuid', { connection: redis });
