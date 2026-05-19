@@ -1125,7 +1125,11 @@ export function createPickEngine(D: PickData) {
         weights.D * Dd / 100 +
         (E - 50) * 1.2;     // EV component, centered
 
-      const score = Math.max(0, Math.min(100, raw + 50));
+      // Soft tanh squash so strong counter scenarios (raw ≈ 200+) still
+      // differentiate between candidates instead of all clamping at 100.
+      // raw=50 → 73, raw=100 → 88, raw=200 → 98 — top ~10 candidates spread
+      // 80~99 rather than every survivor showing the same "100".
+      const score = Math.round(Math.max(1, Math.min(100, 50 + 50 * Math.tanh(raw / 100))));
 
       const counterDetect = detectCounterTarget(c, myLane, state.enemyTeam);
       // Find the predicted enemy laner facing us (same lane, opposing team)
