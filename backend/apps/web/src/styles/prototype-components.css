@@ -694,10 +694,17 @@
   border-bottom-left-radius: 0;
   padding: 14px 18px;
   display: grid;
-  /* champ-section + items use `auto` so they size to natural content —
-     previously 72px / 160px squashed the champion icon, rune+spell stack,
-     and the role-bound 8th item slot when they overflowed. */
-  grid-template-columns: 90px auto minmax(180px, 1fr) 90px auto 28px;
+  /* Every column except the last (teams) is fixed-width so AI Score,
+     items, and champion icons all sit at the SAME x-position across rows
+     regardless of how many items a player bought or how long teammate
+     nicknames are. Teams col is 1fr and clips long names via ellipsis. */
+  grid-template-columns:
+    90px              /* result + meta */
+    104px             /* champ-section (56 icon + 6 gap + ~40 rune/spell) */
+    280px             /* stats (kda + items grid 228px fit) */
+    80px              /* AI Score box */
+    minmax(220px, 1fr)/* teams sidebar, ellipsis on long names */
+    28px;             /* expand chevron */
   gap: var(--space-4);
   align-items: center;
   transition: border-color 120ms, background 120ms;
