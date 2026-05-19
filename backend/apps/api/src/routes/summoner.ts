@@ -63,6 +63,18 @@ export default async function summonerRoutes(app: FastifyInstance) {
       // 2) Cache miss → call Riot directly to resolve PUUID.
       try {
         const dto = await riot.account.byRiotId(REGION_TO_REGIONAL[region], id.gameName, id.tagLine);
+        // GDPR block check — refuse to re-ingest a user who already
+        // exercised their deletion right.
+        const blocked = await db.query.blockedPuuids.findFirst({
+          where: eq(schema.blockedPuuids.puuid, dto.puuid),
+        });
+        if (blocked) {
+          await logSearch(req, formatRiotId(id), region, null);
+          return reply.status(410).send({
+            error: 'data removed at user request (GDPR)',
+            message: '해당 사용자의 데이터는 본인 요청으로 삭제되었습니다.',
+          });
+        }
         await db.insert(schema.accounts).values({
           puuid: dto.puuid, gameName: dto.gameName, tagLine: dto.tagLine, region,
         }).onConflictDoNothing();

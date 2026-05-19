@@ -20,5 +20,6 @@ export * from './copick-probs';
 export * from './champion-masteries';
 export * from './tier-snapshots';
 export * from './player-rank-history';
+export * from './data-deletion';
 export * from './search-logs';
 export * from './static-data';

@@ -103,7 +103,14 @@ export async function filterUnknownPuuids(puuids: string[]): Promise<string[]> {
     .from(schema.accounts)
     .where(inArray(schema.accounts.puuid, puuids));
   const knownSet = new Set(known.map((r) => r.puuid));
-  return puuids.filter((p) => !knownSet.has(p));
+  // Also drop any puuids that were deleted via GDPR request — re-ingesting
+  // them would defeat the user's deletion right.
+  const blocked = await db
+    .select({ puuid: schema.blockedPuuids.puuid })
+    .from(schema.blockedPuuids)
+    .where(inArray(schema.blockedPuuids.puuid, puuids));
+  const blockedSet = new Set(blocked.map((r) => r.puuid));
+  return puuids.filter((p) => !knownSet.has(p) && !blockedSet.has(p));
 }
 
 /** Insert minimal account stub (placeholder gameName/tagLine, filled later by W1). */

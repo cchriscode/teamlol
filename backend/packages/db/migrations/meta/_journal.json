@@ -57,6 +57,13 @@
       "when": 1779120000000,
       "tag": "0007_player_rank_history",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1779200000000,
+      "tag": "0008_data_deletion",
+      "breakpoints": true
     }
   ]
 }

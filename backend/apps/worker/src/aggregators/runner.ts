@@ -14,6 +14,7 @@ import { aggregateDamageProfile } from './damage-profile.js';
 import { snapshotTier } from './tier-snapshot.js';
 import { aggregateChampionPower } from './champion-power.js';
 import { snapshotRankHistory } from './rank-history.js';
+import { processDeletions } from './process-deletions.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -39,6 +40,9 @@ export function startAggregators() {
     { name: 'tierSnap', intervalMs: DAY_MS,  run: () => snapshotTier() },
     { name: 'chPower',  intervalMs: HOUR_MS, run: () => aggregateChampionPower() },
     { name: 'rankHist', intervalMs: DAY_MS,  run: () => snapshotRankHistory() },
+    // GDPR deletion queue — runs every 30 minutes so requests are honored
+    // within an hour even on a quiet day.
+    { name: 'deletions', intervalMs: 30 * 60 * 1000, run: () => processDeletions() },
   ];
 
   for (const agg of all) {
