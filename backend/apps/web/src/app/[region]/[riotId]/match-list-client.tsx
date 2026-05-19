@@ -250,7 +250,7 @@ function ExpandPanel({ match: m, blueParts, redParts, selfPuuid, version, champi
   );
 }
 
-// --- Basic tab — full per-team scoreboard with runes/spells/dmg/rank.
+// --- Basic tab — vertical stacked scoreboard (winning team on top).
 function BasicTab({ blueParts, redParts, selfPuuid, version, championNameByKey, anonymous }: {
   blueParts: Participant[]; redParts: Participant[]; selfPuuid: string;
   version: string; championNameByKey: Record<string, string>;
@@ -261,50 +261,84 @@ function BasicTab({ blueParts, redParts, selfPuuid, version, championNameByKey, 
     const sorted = [...team].sort((a, b) => (b.aiScore ?? -1) - (a.aiScore ?? -1));
     return sorted.findIndex((p) => p.puuid === puuid) + 1;
   };
+  // Highest dmg in the match — denominator for the dmg bar.
+  const allDmg = [...blueParts, ...redParts].map((p) => p.dmgToChampPerMin ?? 0);
+  const maxDmg = Math.max(1, ...allDmg);
+
+  // Sort teams so winner appears first (matches the prototype layout).
+  const teamA: { side: 'blue' | 'red'; players: Participant[]; win: boolean } = { side: 'blue', players: blueParts, win: !!blueParts[0]?.win };
+  const teamB: { side: 'blue' | 'red'; players: Participant[]; win: boolean } = { side: 'red',  players: redParts,  win: !!redParts[0]?.win };
+  const teams = [teamA, teamB].sort((a, b) => (b.win ? 1 : 0) - (a.win ? 1 : 0));
+
   return (
-    <div className="match-expand-panel" onClick={(e) => e.stopPropagation()}>
-      {[blueParts, redParts].map((team, idx) => (
-        <div key={idx} className={`match-detail-team team-${idx === 0 ? 'blue' : 'red'}`}>
-          <div className="match-detail-team-header">
-            {idx === 0 ? '블루팀' : '레드팀'} {team[0]?.win ? '승리' : '패배'}
+    <div className="scoreboard-stack" onClick={(e) => e.stopPropagation()}>
+      {teams.map(({ side, players, win }) => (
+        <div key={side} className={`scoreboard-team team-${side}${win ? ' win' : ' loss'}`}>
+          <div className="scoreboard-team-head">
+            <span className="scoreboard-result">{win ? '승리' : '패배'}</span>
+            <span className="scoreboard-side">{side === 'blue' ? '블루팀' : '레드팀'}</span>
+            <div className="scoreboard-head-cols">
+              <span>AI 점수</span>
+              <span>KDA</span>
+              <span>피해량</span>
+              <span>CS</span>
+              <span>아이템</span>
+            </div>
           </div>
-          {team.map((p) => {
+          {players.map((p) => {
             const pkda = (p.deaths ?? 0) === 0
               ? ((p.kills ?? 0) + (p.assists ?? 0))
               : ((p.kills ?? 0) + (p.assists ?? 0)) / (p.deaths ?? 1);
-            const rk = rankIn(team, p.puuid);
+            const rk = rankIn(players, p.puuid);
+            const dmg = p.dmgToChampPerMin ?? 0;
+            const dmgPct = (dmg / maxDmg) * 100;
+            const aiScore = p.aiScore;
+            const aiCls = aiScore == null ? '' : aiScore >= 65 ? 'ai-high' : aiScore < 40 ? 'ai-low' : 'ai-mid';
             return (
-              <div key={p.puuid} className={`match-detail-row${p.puuid === selfPuuid ? ' is-self' : ''}`}>
-                <RuneSpellStack spells={p.spells} keystoneIcon={p.keystoneIcon ?? null}
-                                subStyleId={p.subStyleId ?? null} version={version} compact />
-                <ChampionIcon championKey={p.championKey} size={28} version={version} alt={championNameByKey[p.championKey] ?? p.championKey} />
-                <div className="match-detail-name">
-                  <div className="name-line">
-                    {displayName(p, selfPuuid, anonymous)}
-                    {p.tagLine && !anonymous && <span className="text-tertiary"> #{p.tagLine}</span>}
+              <div key={p.puuid} className={`scoreboard-row${p.puuid === selfPuuid ? ' is-self' : ''}`}>
+                <div className="sb-identity">
+                  <RuneSpellStack spells={p.spells} keystoneIcon={p.keystoneIcon ?? null}
+                                  subStyleId={p.subStyleId ?? null} version={version} compact />
+                  <ChampionIcon championKey={p.championKey} size={32} version={version} alt={championNameByKey[p.championKey] ?? p.championKey} />
+                  <div className="sb-name">
+                    <div className="sb-name-line">
+                      {displayName(p, selfPuuid, anonymous)}
+                      {p.tagLine && !anonymous && <span className="text-tertiary"> #{p.tagLine}</span>}
+                    </div>
+                    <div className="sb-lane text-tertiary">{laneKr(p.lane ?? '')}</div>
                   </div>
-                  <div className="text-tertiary" style={{ fontSize: 10 }}>{laneKr(p.lane ?? '')}</div>
                 </div>
-                <div className="match-detail-kda">
-                  {p.kills}/{p.deaths}/{p.assists}
-                  <span className="text-tertiary" style={{ marginLeft: 4 }}>({pkda.toFixed(2)})</span>
+                <div className={`sb-ai ${aiCls}`}>
+                  <div className="sb-ai-num">{aiScore != null ? Math.round(aiScore) : '—'}</div>
+                  {rk > 0 && <div className="sb-ai-rank">{rk}등</div>}
                 </div>
-                <div className="match-detail-dmg">
-                  {p.dmgToChampPerMin != null ? `${Math.round(p.dmgToChampPerMin)}/분` : '—'}
+                <div className="sb-kda">
+                  <div className="sb-kda-row">
+                    <span className="kda-kills">{p.kills}</span>
+                    <span className="text-tertiary"> / </span>
+                    <span className="kda-deaths">{p.deaths}</span>
+                    <span className="text-tertiary"> / </span>
+                    <span className="kda-assists">{p.assists}</span>
+                  </div>
+                  <div className="sb-kda-ratio text-tertiary">{pkda.toFixed(2)} KDA</div>
                 </div>
-                <div className="match-detail-cs">
-                  CS {p.cs ?? 0}
-                  <span className="text-tertiary" style={{ marginLeft: 4 }}>({(p.csPerMin ?? 0).toFixed(1)}/분)</span>
+                <div className="sb-dmg">
+                  <div className="sb-dmg-num">{Math.round(dmg).toLocaleString('ko-KR')}</div>
+                  <div className="sb-dmg-bar">
+                    <div className={`sb-dmg-bar-fill ${side}`} style={{ width: `${dmgPct}%` }} />
+                  </div>
                 </div>
-                <div className="match-detail-items">
+                <div className="sb-cs">
+                  <div className="sb-cs-num">{p.cs ?? 0}</div>
+                  <div className="sb-cs-pm text-tertiary">{(p.csPerMin ?? 0).toFixed(1)}/분</div>
+                </div>
+                <div className="sb-items">
                   {(p.items ?? []).map((id, i) => id > 0 ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img key={i} className="item-icon" src={ddragon.itemIcon(id, version)} width={20} height={20} alt="" />
-                  ) : null)}
-                </div>
-                <div className="match-detail-score">
-                  <div>{p.aiScore != null ? p.aiScore.toFixed(0) : '—'}</div>
-                  {rk > 0 && <div className="text-tertiary" style={{ fontSize: 9 }}>{rk}등</div>}
+                    <img key={i} className="item-icon" src={ddragon.itemIcon(id, version)} width={22} height={22} alt="" />
+                  ) : (
+                    <span key={i} className="item-icon empty" />
+                  ))}
                 </div>
               </div>
             );

@@ -3342,6 +3342,182 @@
 }
 .match-champ-search:focus { outline: none; border-color: var(--color-win); }
 
+/* ---- Scoreboard (basic tab) — designer-quality polish -------------- */
+.scoreboard-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-base);
+}
+.scoreboard-team {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-left-width: 3px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.scoreboard-team.team-blue { border-left-color: var(--color-win); }
+.scoreboard-team.team-red  { border-left-color: var(--color-loss); }
+.scoreboard-team.loss { opacity: 0.86; }
+
+.scoreboard-team-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  padding: 8px 14px 8px 12px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+  gap: 12px;
+}
+.scoreboard-team.team-blue .scoreboard-team-head { background: rgba(74, 144, 226, 0.08); }
+.scoreboard-team.team-red  .scoreboard-team-head { background: rgba(226, 92, 92, 0.08); }
+.scoreboard-result {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-right: 8px;
+}
+.scoreboard-team.team-blue .scoreboard-result { color: var(--color-win); }
+.scoreboard-team.team-red  .scoreboard-result { color: var(--color-loss); }
+.scoreboard-side {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.scoreboard-head-cols {
+  display: grid;
+  grid-template-columns: 60px 90px 140px 70px 168px;
+  gap: 10px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  text-align: right;
+}
+.scoreboard-head-cols > :last-child { text-align: left; padding-left: 4px; }
+
+.scoreboard-row {
+  display: grid;
+  grid-template-columns: 1fr 60px 90px 140px 70px 168px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+.scoreboard-row:first-of-type { border-top: none; }
+.scoreboard-row.is-self {
+  background: var(--bg-elevated);
+  position: relative;
+}
+.scoreboard-row.is-self::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--text-primary);
+}
+
+.sb-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.sb-name { min-width: 0; line-height: 1.3; }
+.sb-name-line {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+.sb-lane { font-size: 10px; }
+
+.sb-ai {
+  text-align: center;
+  font-feature-settings: 'tnum' on;
+}
+.sb-ai-num {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.sb-ai.ai-high .sb-ai-num { color: var(--color-positive); }
+.sb-ai.ai-low  .sb-ai-num { color: var(--color-loss); }
+.sb-ai-rank {
+  font-size: 9px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.sb-kda {
+  text-align: right;
+  font-feature-settings: 'tnum' on;
+}
+.sb-kda-row {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.kda-deaths { color: var(--color-loss); }
+.sb-kda-ratio { font-size: 10px; margin-top: 2px; }
+
+.sb-dmg {
+  font-feature-settings: 'tnum' on;
+  text-align: right;
+}
+.sb-dmg-num {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-bottom: 3px;
+}
+.sb-dmg-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-input);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.sb-dmg-bar-fill { height: 100%; }
+.sb-dmg-bar-fill.blue { background: var(--color-win); }
+.sb-dmg-bar-fill.red  { background: var(--color-loss); }
+
+.sb-cs {
+  text-align: right;
+  font-feature-settings: 'tnum' on;
+}
+.sb-cs-num { font-size: 12px; color: var(--text-primary); font-weight: 500; }
+.sb-cs-pm { font-size: 10px; margin-top: 2px; }
+
+.sb-items {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+.sb-items .item-icon {
+  border-radius: 2px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+}
+.sb-items .item-icon.empty {
+  width: 22px;
+  height: 22px;
+  display: inline-block;
+}
+
+@media (max-width: 760px) {
+  .scoreboard-head-cols { display: none; }
+  .scoreboard-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
 /* ---- Rune+spell stack (next to champion icon) ---------------------- */
 .rune-spell-stack {
   display: grid;
@@ -3385,7 +3561,5 @@
   font-feature-settings: 'tnum' on;
   text-align: right;
 }
-/* tighten scoreboard grid: add runes col + dmg col */
-.match-detail-row {
-  grid-template-columns: 38px 28px 1.6fr 1fr 0.9fr 1fr 2.2fr 0.7fr;
-}
+/* (legacy .match-detail-row grid lives at line ~3081; replaced by
+   .scoreboard-row above. Old class no longer rendered.) */
