@@ -10,6 +10,7 @@ import { Region, REGION_TO_REGIONAL, parseRiotId, formatRiotId } from '@lol-trac
 import { redis } from '../redis.js';
 import { riot } from '../riot-client.js';
 import { env } from '../env.js';
+import { cache } from '../cache.js';
 import { Queue } from 'bullmq';
 import { createHash } from 'node:crypto';
 
@@ -215,6 +216,11 @@ export default async function summonerRoutes(app: FastifyInstance) {
       const count = Math.min(50, Math.max(1, Number(req.query.count ?? 20)));
       const puuid = req.params.puuid;
 
+      // 30s per-puuid cache. Matches don't change until W2 ingests a new
+      // game (worker triggers ~minutes after game end), so a short cache
+      // collapses the expensive 8-join per page render down to a single
+      // SQL round-trip during back-and-forth navigation.
+      return cache(`matches:${puuid}:${count}`, 30, async () => {
       const rows = await db
         .select({
           mp: schema.matchParticipants,
@@ -375,6 +381,7 @@ export default async function summonerRoutes(app: FastifyInstance) {
           };
         }),
       };
+      });
     },
   );
 
@@ -485,6 +492,11 @@ export default async function summonerRoutes(app: FastifyInstance) {
       const puuid = req.params.puuid;
       const count = Math.min(50, Math.max(1, Number(req.query.count ?? 20)));
 
+      // 5min per-puuid cache. Co-player aggregation runs a multi-join
+      // + a backfill subquery against raw_participant JSONB — easily
+      // 1s when uncached. The set of teammates changes only when W2
+      // ingests a new game, so 5min freshness is fine.
+      return cache(`co-players:${puuid}:${count}`, 300, async () => {
       const rows = await db.execute(sql`
         WITH my_matches AS (
           SELECT mp.match_id, mp.team AS my_team, mp.win AS my_win
@@ -608,6 +620,7 @@ export default async function summonerRoutes(app: FastifyInstance) {
         .slice(0, 10);
 
       return { puuid, sampleMatches: count, sameTeam, oppTeam };
+      });
     },
   );
 
