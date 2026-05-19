@@ -237,4 +237,20 @@ export async function upsertLeagueEntries(
         refreshedAt: now,
       },
     });
+
+  // Append-only history — every league refresh adds a row so we can
+  // reconstruct per-match LP deltas later. PK includes recordedAt so
+  // duplicates from rapid double-refresh are tolerated (best to drop
+  // them silently than to error the upstream flow).
+  const snapshotRows = dtos.map((dto) => ({
+    puuid,
+    queueType: dto.queueType,
+    tier: dto.tier,
+    rank: dto.rank ?? '',
+    leaguePoints: dto.leaguePoints,
+    wins: dto.wins,
+    losses: dto.losses,
+    recordedAt: now,
+  }));
+  await db.insert(schema.lpSnapshots).values(snapshotRows).onConflictDoNothing();
 }

@@ -138,6 +138,15 @@ export function MatchListClient({ matches, selfPuuid, version, championNameByKey
                   솔로랭크<br />
                   {timeAgo(m.gameCreation)}<br />
                   {minutes}분 {seconds}초
+                  {m.lpDelta && (
+                    <>
+                      <br />
+                      <span className={`match-lp-delta${m.lpDelta.delta > 0 ? ' up' : m.lpDelta.delta < 0 ? ' down' : ''}`}>
+                        {m.lpDelta.delta > 0 ? '+' : ''}{m.lpDelta.delta} LP
+                        {m.lpDelta.tierChanged && <span className="match-lp-promo">{m.lpDelta.delta > 0 ? '승급' : '강등'}</span>}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="match-champ-section">

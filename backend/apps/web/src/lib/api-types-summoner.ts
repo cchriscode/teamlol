@@ -45,6 +45,16 @@ export interface MatchListItem {
   gameCreation: number;
   gameDuration: number;
   bluewin: number | null;
+  /** LP change for this match, computed from lp_snapshots straddling the
+   *  game. null when we don't have enough snapshot coverage yet (older
+   *  matches before we started polling, or back-to-back games inside a
+   *  single polling window). */
+  lpDelta?: {
+    delta: number;
+    tierBefore: string; rankBefore: string; lpBefore: number;
+    tierAfter: string;  rankAfter: string;  lpAfter: number;
+    tierChanged: boolean;
+  } | null;
   /** Stats for the requested player only. */
   self: {
     championKey: string;

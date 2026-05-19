@@ -15,6 +15,7 @@ import { snapshotTier } from './tier-snapshot.js';
 import { aggregateChampionPower } from './champion-power.js';
 import { snapshotRankHistory } from './rank-history.js';
 import { processDeletions } from './process-deletions.js';
+import { pollLpSnapshots } from './lp-poll.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -43,6 +44,10 @@ export function startAggregators() {
     // GDPR deletion queue — runs every 30 minutes so requests are honored
     // within an hour even on a quiet day.
     { name: 'deletions', intervalMs: 30 * 60 * 1000, run: () => processDeletions() },
+    // LP snapshot polling — every 3 min picks 50 oldest-refreshed accounts
+    // and calls LEAGUE-V4 → upsert appends to lp_snapshots automatically.
+    // Builds the timeline required for per-match "+15 LP" display.
+    { name: 'lpPoll',    intervalMs: 3 * 60 * 1000,  run: () => pollLpSnapshots() },
   ];
 
   for (const agg of all) {

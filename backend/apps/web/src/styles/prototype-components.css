@@ -3470,6 +3470,27 @@
   border-top: 1px solid var(--border-subtle);
 }
 
+.match-lp-delta {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+.match-lp-delta.up   { color: var(--color-positive); }
+.match-lp-delta.down { color: var(--color-loss); }
+.match-lp-promo {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 5px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
 .match-load-more {
   display: block;
   width: 100%;

@@ -282,12 +282,77 @@ export default async function summonerRoutes(app: FastifyInstance) {
         }
       }
 
+      // LP delta lookup: load all lp_snapshots for this puuid in the time
+      // window covered by these matches + 1h buffer on each side. Then for
+      // each match we'll pick the snapshot pair straddling its time.
+      const oldestRow = rows[rows.length - 1];
+      const newestRow = rows[0];
+      const oldestT = oldestRow ? Number(oldestRow.m.gameCreation) : 0;
+      const newestT = newestRow ? Number(newestRow.m.gameCreation) + Number(newestRow.m.gameDuration) * 1000 : 0;
+      const snapshotRows = rows.length > 0 ? await db.execute(sql`
+        SELECT recorded_at, tier, rank, league_points
+        FROM lp_snapshots
+        WHERE puuid = ${puuid}
+          AND queue_type = 'RANKED_SOLO_5x5'
+          AND recorded_at >= to_timestamp(${(oldestT - 3600_000) / 1000})
+          AND recorded_at <= to_timestamp(${(newestT + 3600_000) / 1000})
+        ORDER BY recorded_at ASC
+      `) : [];
+      type Snap = { ts: number; tier: string; rank: string; lp: number };
+      const snaps: Snap[] = (snapshotRows as unknown as Array<{
+        recorded_at: Date; tier: string; rank: string; league_points: number;
+      }>).map((s) => ({
+        ts: new Date(s.recorded_at).getTime(),
+        tier: s.tier, rank: s.rank, lp: s.league_points,
+      }));
+
+      // Ladder index in absolute LP units (each division = 100 LP, master+
+      // tiers have no divisions). Lets us subtract across promo/demo.
+      const TIER_ORDER: Record<string, number> = {
+        IRON: 0, BRONZE: 1, SILVER: 2, GOLD: 3, PLATINUM: 4, EMERALD: 5,
+        DIAMOND: 6, MASTER: 7, GRANDMASTER: 8, CHALLENGER: 9,
+      };
+      const RANK_ORDER: Record<string, number> = { IV: 0, III: 1, II: 2, I: 3 };
+      const ladderIdx = (s: Snap): number => {
+        const t = TIER_ORDER[s.tier] ?? 0;
+        if (t >= 7) return 7 * 400 + (t - 7) * 1000 + s.lp;   // master+ : big offset, lp unbounded
+        const r = RANK_ORDER[s.rank] ?? 0;
+        return t * 400 + r * 100 + s.lp;
+      };
+      // For match at time T with duration D and next-newer match at T_next,
+      // attribute the LP change between (snapshot before T) and (latest
+      // snapshot in [T+D, T_next)). Reduces ambiguity from back-to-back games.
+      const computeDelta = (gameCreation: number, gameDuration: number, nextStartTs: number) => {
+        if (snaps.length === 0) return null;
+        const start = gameCreation;
+        const end   = gameCreation + gameDuration * 1000;
+        let before: Snap | null = null;
+        for (const s of snaps) { if (s.ts <= start) before = s; else break; }
+        let after: Snap | null = null;
+        for (const s of snaps) {
+          if (s.ts >= end && s.ts < nextStartTs) after = s;
+        }
+        if (!before || !after) return null;
+        const delta = ladderIdx(after) - ladderIdx(before);
+        const tierChanged = before.tier !== after.tier || before.rank !== after.rank;
+        return {
+          delta,
+          tierBefore: before.tier, rankBefore: before.rank, lpBefore: before.lp,
+          tierAfter: after.tier,   rankAfter: after.rank,   lpAfter: after.lp,
+          tierChanged,
+        };
+      };
+
       return {
         puuid,
         count: rows.length,
-        matches: rows.map((r) => {
+        matches: rows.map((r, idx) => {
           const me = r.mp;
           const minutes = Math.max(1, r.m.gameDuration / 60);
+          // rows are DESC by gameCreation; previous index = newer match.
+          const nextRow = idx === 0 ? null : rows[idx - 1];
+          const nextStartTs = nextRow ? Number(nextRow.m.gameCreation) : Number.POSITIVE_INFINITY;
+          const lpDelta = computeDelta(Number(r.m.gameCreation), Number(r.m.gameDuration), nextStartTs);
           const all = byMatch.get(r.m.matchId) ?? [];
           const expanded = all.map((p) => {
             const acct = nameByPuuid.get(p.puuid);
@@ -336,6 +401,7 @@ export default async function summonerRoutes(app: FastifyInstance) {
             gameCreation: r.m.gameCreation,
             gameDuration: r.m.gameDuration,
             bluewin: r.m.bluewin,
+            lpDelta,
             self: {
               championKey: me.championKey,
               championId: me.championId,
