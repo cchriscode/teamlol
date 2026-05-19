@@ -209,18 +209,19 @@ export default async function summonerRoutes(app: FastifyInstance) {
     };
   });
 
-  // ---- GET /api/summoner/:puuid/matches?count=20 ------------------------
-  app.get<{ Params: PuuidParams; Querystring: { count?: string } }>(
+  // ---- GET /api/summoner/:puuid/matches?count=20&offset=0 ----------------
+  app.get<{ Params: PuuidParams; Querystring: { count?: string; offset?: string } }>(
     '/api/summoner/:puuid/matches',
     async (req, _reply) => {
       const count = Math.min(50, Math.max(1, Number(req.query.count ?? 20)));
+      const offset = Math.max(0, Number(req.query.offset ?? 0));
       const puuid = req.params.puuid;
 
       // 30s per-puuid cache. Matches don't change until W2 ingests a new
       // game (worker triggers ~minutes after game end), so a short cache
       // collapses the expensive 8-join per page render down to a single
       // SQL round-trip during back-and-forth navigation.
-      return cache(`matches:${puuid}:${count}`, 30, async () => {
+      return cache(`matches:${puuid}:${count}:${offset}`, 30, async () => {
       const rows = await db
         .select({
           mp: schema.matchParticipants,
@@ -230,7 +231,8 @@ export default async function summonerRoutes(app: FastifyInstance) {
         .innerJoin(schema.matches, eq(schema.matches.matchId, schema.matchParticipants.matchId))
         .where(eq(schema.matchParticipants.puuid, puuid))
         .orderBy(desc(schema.matches.gameCreation))
-        .limit(count);
+        .limit(count)
+        .offset(offset);
 
       // For each match include all 10 participants with full stats so the
       // frontend's match-card expand panel doesn't need a second round trip.

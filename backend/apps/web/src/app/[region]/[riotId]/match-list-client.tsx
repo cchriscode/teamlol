@@ -28,14 +28,41 @@ interface Props {
 }
 
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
+const PAGE_SIZE = 20;
+
 export function MatchListClient({ matches, selfPuuid, version, championNameByKey, cold }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [queueFilter, setQueueFilter] = useState<'all' | 'solo'>('all');
   const [champQuery, setChampQuery] = useState('');
   const [anonymous, setAnonymous] = useState(false);
+  // Pagination — server passes in the first PAGE_SIZE matches; load more
+  // appends additional pages via /matches?offset=. `done` flips once a
+  // page comes back short (we hit the end of ingested history).
+  const [extraMatches, setExtraMatches] = useState<MatchListItem[]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [done, setDone] = useState(matches.length < PAGE_SIZE);
+  const allMatches = [...matches, ...extraMatches];
+
+  const loadMore = async () => {
+    if (loadingMore || done) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/summoner/${selfPuuid}/matches?count=${PAGE_SIZE}&offset=${allMatches.length}`);
+      if (!res.ok) throw new Error(`http ${res.status}`);
+      const data = await res.json() as { matches: MatchListItem[] };
+      const more = data.matches ?? [];
+      setExtraMatches((prev) => [...prev, ...more]);
+      if (more.length < PAGE_SIZE) setDone(true);
+    } catch {
+      // silently fail; user can retry
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // Filter pipeline: queue → champion name substring.
-  const filtered = matches.filter((m) => {
+  const filtered = allMatches.filter((m) => {
     if (queueFilter === 'solo' && m.queueId !== 420) return false;
     if (champQuery.trim()) {
       const q = champQuery.trim().toLowerCase();
@@ -182,6 +209,17 @@ export function MatchListClient({ matches, selfPuuid, version, championNameByKey
           </div>
         );
       })}
+
+      {!done && (
+        <button
+          type="button"
+          className="match-load-more"
+          onClick={loadMore}
+          disabled={loadingMore}
+        >
+          {loadingMore ? '불러오는 중...' : '더 보기'}
+        </button>
+      )}
     </>
   );
 }
@@ -234,6 +272,7 @@ function ExpandPanel({ match: m, blueParts, redParts, selfPuuid, version, champi
           selfPuuid={selfPuuid} version={version}
           championNameByKey={championNameByKey}
           anonymous={anonymous}
+          duration={m.gameDuration}
         />
       )}
 
@@ -250,19 +289,22 @@ function ExpandPanel({ match: m, blueParts, redParts, selfPuuid, version, champi
 }
 
 // --- Basic tab — vertical stacked scoreboard (winning team on top).
-function BasicTab({ blueParts, redParts, selfPuuid, version, championNameByKey, anonymous }: {
+function BasicTab({ blueParts, redParts, selfPuuid, version, championNameByKey, anonymous, duration }: {
   blueParts: Participant[]; redParts: Participant[]; selfPuuid: string;
   version: string; championNameByKey: Record<string, string>;
   anonymous: boolean;
+  duration: number;     // game duration in seconds, for total-damage calc
 }) {
   // Global rank by AI score across all 10 players (1등 = best in the match).
   const rankByPuuid = new Map<string, number>();
   [...blueParts, ...redParts]
     .sort((a, b) => (b.aiScore ?? -1) - (a.aiScore ?? -1))
     .forEach((p, i) => rankByPuuid.set(p.puuid, i + 1));
-  // Highest dmg in the match — denominator for the dmg bar.
-  const allDmg = [...blueParts, ...redParts].map((p) => p.dmgToChampPerMin ?? 0);
-  const maxDmg = Math.max(1, ...allDmg);
+  // Total damage to champions = perMin × minutes. Matches the convention
+  // every LoL stat site uses for the "피해량" column.
+  const minutes = Math.max(1, duration / 60);
+  const totalDmg = (p: Participant) => Math.round((p.dmgToChampPerMin ?? 0) * minutes);
+  const maxDmg = Math.max(1, ...[...blueParts, ...redParts].map(totalDmg));
 
   // Sort teams so winner appears first (matches the prototype layout).
   const teamA: { side: 'blue' | 'red'; players: Participant[]; win: boolean } = { side: 'blue', players: blueParts, win: !!blueParts[0]?.win };
@@ -274,22 +316,22 @@ function BasicTab({ blueParts, redParts, selfPuuid, version, championNameByKey, 
       {teams.map(({ side, players, win }) => (
         <div key={side} className={`scoreboard-team team-${side}${win ? ' win' : ' loss'}`}>
           <div className="scoreboard-team-head">
-            <span className="scoreboard-result">{win ? '승리' : '패배'}</span>
-            <span className="scoreboard-side">{side === 'blue' ? '블루팀' : '레드팀'}</span>
-            <div className="scoreboard-head-cols">
-              <span>AI 점수</span>
-              <span>KDA</span>
-              <span>피해량</span>
-              <span>CS</span>
-              <span>아이템</span>
-            </div>
+            <span className="scoreboard-head-label identity-col">
+              <span className="scoreboard-result">{win ? '승리' : '패배'}</span>
+              <span className="scoreboard-side">{side === 'blue' ? '블루팀' : '레드팀'}</span>
+            </span>
+            <span className="scoreboard-head-label">AI 점수</span>
+            <span className="scoreboard-head-label">KDA</span>
+            <span className="scoreboard-head-label">피해량</span>
+            <span className="scoreboard-head-label">CS</span>
+            <span className="scoreboard-head-label items-col">아이템</span>
           </div>
           {players.map((p) => {
             const pkda = (p.deaths ?? 0) === 0
               ? ((p.kills ?? 0) + (p.assists ?? 0))
               : ((p.kills ?? 0) + (p.assists ?? 0)) / (p.deaths ?? 1);
             const rk = rankByPuuid.get(p.puuid) ?? 0;
-            const dmg = p.dmgToChampPerMin ?? 0;
+            const dmg = totalDmg(p);            // total damage to champions
             const dmgPct = (dmg / maxDmg) * 100;
             const aiScore = p.aiScore;
             const aiCls = aiScore == null ? '' : aiScore >= 65 ? 'ai-high' : aiScore < 40 ? 'ai-low' : 'ai-mid';

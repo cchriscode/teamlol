@@ -3417,22 +3417,46 @@
 .scoreboard-team.team-red  { border-left-color: var(--color-loss); }
 .scoreboard-team.loss { opacity: 0.86; }
 
-.scoreboard-team-head {
+/* Shared 6-column template for header + every player row so labels and
+   data line up exactly. Items column uses min-content so it grows to fit
+   the inventory + trinket + optional role-bound slot (which previously
+   got clipped at 168px). */
+.scoreboard-team-head,
+.scoreboard-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr 60px 100px 140px 60px max-content;
   align-items: center;
+  gap: 10px;
   padding: 8px 14px 8px 12px;
+}
+.scoreboard-team-head {
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border-subtle);
-  gap: 12px;
 }
 .scoreboard-team.team-blue .scoreboard-team-head { background: rgba(74, 144, 226, 0.08); }
 .scoreboard-team.team-red  .scoreboard-team-head { background: rgba(226, 92, 92, 0.08); }
+.scoreboard-head-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  text-align: right;
+}
+.scoreboard-head-label.identity-col {
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.scoreboard-head-label.items-col { text-align: left; padding-left: 4px; }
 .scoreboard-result {
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  margin-right: 8px;
 }
 .scoreboard-team.team-blue .scoreboard-result { color: var(--color-win); }
 .scoreboard-team.team-red  .scoreboard-result { color: var(--color-loss); }
@@ -3441,26 +3465,31 @@
   color: var(--text-secondary);
   font-weight: 500;
 }
-.scoreboard-head-cols {
-  display: grid;
-  grid-template-columns: 60px 90px 140px 70px 168px;
-  gap: 10px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-tertiary);
-  text-align: right;
-}
-.scoreboard-head-cols > :last-child { text-align: left; padding-left: 4px; }
 
 .scoreboard-row {
-  display: grid;
-  grid-template-columns: 1fr 60px 90px 140px 70px 168px;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 14px 8px 12px;
   border-top: 1px solid var(--border-subtle);
 }
+
+.match-load-more {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-3);
+  padding: 10px 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+.match-load-more:hover:not(:disabled) {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+.match-load-more:disabled { opacity: 0.6; cursor: progress; }
 .scoreboard-row:first-of-type { border-top: none; }
 .scoreboard-row.is-self {
   background: var(--bg-elevated);
