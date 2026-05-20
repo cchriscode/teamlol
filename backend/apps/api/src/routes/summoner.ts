@@ -95,74 +95,88 @@ export default async function summonerRoutes(app: FastifyInstance) {
     await logSearch(req, formatRiotId(id), region, acct?.puuid ?? null);
     if (!acct) return reply.status(500).send({ error: 'failed to resolve account' });
 
-    // 3) Summoner profile (level + icon).
-    let summonerRow = await db.query.summoners.findFirst({ where: eq(schema.summoners.puuid, acct.puuid) });
-    const stale = !summonerRow || (Date.now() - summonerRow.refreshedAt.getTime()) > SUMMONER_CACHE_TTL_MS;
-    if (stale) {
-      try {
-        const dto = await riot.summoner.byPuuid(region, acct.puuid);
-        await db.insert(schema.summoners).values({
-          puuid: acct.puuid, region,
-          profileIconId: dto.profileIconId,
-          summonerLevel: dto.summonerLevel,
-          revisionDate: dto.revisionDate,
-        }).onConflictDoUpdate({
-          target: schema.summoners.puuid,
-          set: {
+    // 3-5) Summoner profile, league entries, match count — all need only
+    // acct.puuid now, so fan out the three Riot+DB branches in parallel
+    // instead of serializing 3 sequential ~500ms KR round-trips.
+    const acctRef = acct;     // tightens closure typing for the branches
+    const [summonerRow, leagueEntries, matchCount] = await Promise.all([
+      // --- summoner profile branch ----------------------------------------
+      (async () => {
+        let row = await db.query.summoners.findFirst({ where: eq(schema.summoners.puuid, acctRef.puuid) });
+        const stale = !row || (Date.now() - row.refreshedAt.getTime()) > SUMMONER_CACHE_TTL_MS;
+        if (!stale) return row;
+        try {
+          const dto = await riot.summoner.byPuuid(region, acctRef.puuid);
+          await db.insert(schema.summoners).values({
+            puuid: acctRef.puuid, region,
+            profileIconId: dto.profileIconId,
+            summonerLevel: dto.summonerLevel,
+            revisionDate: dto.revisionDate,
+          }).onConflictDoUpdate({
+            target: schema.summoners.puuid,
+            set: {
+              profileIconId: dto.profileIconId,
+              summonerLevel: dto.summonerLevel,
+              revisionDate: dto.revisionDate,
+              refreshedAt: new Date(),
+            },
+          });
+          return {
+            puuid: acctRef.puuid, region,
             profileIconId: dto.profileIconId,
             summonerLevel: dto.summonerLevel,
             revisionDate: dto.revisionDate,
             refreshedAt: new Date(),
-          },
-        });
-        // Construct fresh row (don't spread potentially-null summonerRow).
-        summonerRow = {
-          puuid: acct.puuid, region,
-          profileIconId: dto.profileIconId,
-          summonerLevel: dto.summonerLevel,
-          revisionDate: dto.revisionDate,
-          refreshedAt: new Date(),
-        };
-      } catch (_e) {
-        // Use stale data if Riot fetch fails.
-      }
-    }
-
-    // 4) League entries (rank).
-    let leagueEntries: Array<typeof schema.leagueEntries.$inferSelect> = [];
-    leagueEntries = await db.select().from(schema.leagueEntries).where(eq(schema.leagueEntries.puuid, acct.puuid));
-    if (leagueEntries.length === 0 || stale) {
-      try {
-        const dtos = await riot.league.entriesByPuuid(region, acct.puuid);
-        for (const dto of dtos) {
-          await db.insert(schema.leagueEntries).values({
-            puuid: acct.puuid,
-            queueType: dto.queueType,
-            tier: dto.tier, rank: dto.rank ?? '',
-            leaguePoints: dto.leaguePoints,
-            wins: dto.wins, losses: dto.losses,
-            veteran: dto.veteran, inactive: dto.inactive,
-            freshBlood: dto.freshBlood, hotStreak: dto.hotStreak,
-            refreshedAt: new Date(),
-          }).onConflictDoUpdate({
-            target: [schema.leagueEntries.puuid, schema.leagueEntries.queueType],
-            set: {
+          };
+        } catch { return row; }     // keep stale on Riot failure
+      })(),
+      // --- league entries branch ------------------------------------------
+      (async () => {
+        let rows = await db.select().from(schema.leagueEntries)
+          .where(eq(schema.leagueEntries.puuid, acctRef.puuid));
+        // Refresh if empty or any row older than the summoner TTL window
+        const stale = rows.length === 0 || rows.some((r) =>
+          (Date.now() - r.refreshedAt.getTime()) > SUMMONER_CACHE_TTL_MS);
+        if (!stale) return rows;
+        try {
+          const dtos = await riot.league.entriesByPuuid(region, acctRef.puuid);
+          if (dtos.length > 0) {
+            // Batched upsert: one round-trip instead of one INSERT per queue type
+            const now = new Date();
+            await db.insert(schema.leagueEntries).values(dtos.map((dto) => ({
+              puuid: acctRef.puuid,
+              queueType: dto.queueType,
               tier: dto.tier, rank: dto.rank ?? '',
               leaguePoints: dto.leaguePoints,
               wins: dto.wins, losses: dto.losses,
-              refreshedAt: new Date(),
-            },
-          });
-        }
-        leagueEntries = await db.select().from(schema.leagueEntries).where(eq(schema.leagueEntries.puuid, acct.puuid));
-      } catch (_e) { /* keep stale */ }
-    }
-
-    // 5) Match count we have for this puuid (so frontend knows whether to refresh).
-    const matchCountResult = await db.execute(sql`
-      SELECT COUNT(*)::int AS n FROM match_participants WHERE puuid = ${acct.puuid}
-    `);
-    const matchCount = Number((matchCountResult as unknown as Array<{ n: number }>)[0]?.n ?? 0);
+              veteran: dto.veteran, inactive: dto.inactive,
+              freshBlood: dto.freshBlood, hotStreak: dto.hotStreak,
+              refreshedAt: now,
+            }))).onConflictDoUpdate({
+              target: [schema.leagueEntries.puuid, schema.leagueEntries.queueType],
+              set: {
+                tier: sql`excluded.tier`,
+                rank: sql`excluded.rank`,
+                leaguePoints: sql`excluded.league_points`,
+                wins: sql`excluded.wins`,
+                losses: sql`excluded.losses`,
+                refreshedAt: now,
+              },
+            });
+            rows = await db.select().from(schema.leagueEntries)
+              .where(eq(schema.leagueEntries.puuid, acctRef.puuid));
+          }
+        } catch { /* keep stale */ }
+        return rows;
+      })(),
+      // --- match count branch ---------------------------------------------
+      (async () => {
+        const r = await db.execute(sql`
+          SELECT COUNT(*)::int AS n FROM match_participants WHERE puuid = ${acctRef.puuid}
+        `);
+        return Number((r as unknown as Array<{ n: number }>)[0]?.n ?? 0);
+      })(),
+    ]);
 
     // Auto-trigger deep-collect when we have very few matches for this puuid.
     // Suppressed by Redis lock so repeat visits within 90s don't double-enqueue.
