@@ -191,6 +191,7 @@ export function PickRecommendApp({ initialData, championKeys, ddragonVersion }: 
         ddragonVersion={ddragonVersion}
         setPick={setPick}
         setBan={setBan}
+        setTeamSlot={setTeamSlot}
       />
 
       {/* Pick order strip */}

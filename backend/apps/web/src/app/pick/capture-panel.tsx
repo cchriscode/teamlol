@@ -15,24 +15,31 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { startCapture, type CaptureSession } from '@/lib/screen-capture/capture';
-import { ensureHashesLoaded, matchChampion, type MatchResult } from '@/lib/screen-capture/champion-matcher';
+import { ensureHashesLoaded, ensureLaneHashesLoaded, matchChampion, matchLane, type MatchResult, type LaneKey } from '@/lib/screen-capture/champion-matcher';
+import type { SlotState } from '@/lib/pick-types';
 
-const STORAGE_KEY = 'tlol_capture_slots_v1';
+const STORAGE_KEY = 'tlol_capture_slots_v2';
 // Hamming distance threshold below which a match is considered confident.
 const CONFIDENCE_DISTANCE = 14;
+const LANE_CONFIDENCE_DISTANCE = 18;          // lane icons are tiny → slightly looser
 // Side of the cropped region around each calibration click (in source pixels).
 const SLOT_HALF_SIZE = 32;
+const LANE_HALF_SIZE = 14;                    // lane icons are much smaller
 
-type SlotKind = 'myPick' | 'enemyPick' | 'myBan' | 'enemyBan';
+type SlotKind = 'myPick' | 'enemyPick' | 'myBan' | 'enemyBan' | 'myLane';
 interface SlotRect {
   kind: SlotKind;
-  idx: number;        // 0..4 (pick) or 0..4 (ban)
+  idx: number;
   x: number; y: number; w: number; h: number;
-  label: string;      // 'B1 (블루)', 'R1 (적)', '벤 1 (블루)' ...
+  label: string;
 }
 
+// Order: our 5 picks → our 5 lanes → enemy 5 picks → 5 our bans → 5 enemy bans.
+// Lanes are clustered right after picks so the user calibrates them while
+// looking at the same side of the screen.
 const SLOT_PLAN: Array<{ kind: SlotKind; idx: number; label: string }> = [
   ...Array.from({ length: 5 }, (_, i) => ({ kind: 'myPick' as const,    idx: i, label: `우리 픽 ${i + 1}` })),
+  ...Array.from({ length: 5 }, (_, i) => ({ kind: 'myLane' as const,    idx: i, label: `우리 ${i + 1}번 라인 아이콘` })),
   ...Array.from({ length: 5 }, (_, i) => ({ kind: 'enemyPick' as const, idx: i, label: `적 픽 ${i + 1}` })),
   ...Array.from({ length: 5 }, (_, i) => ({ kind: 'myBan' as const,     idx: i, label: `우리 밴 ${i + 1}` })),
   ...Array.from({ length: 5 }, (_, i) => ({ kind: 'enemyBan' as const,  idx: i, label: `적 밴 ${i + 1}` })),
@@ -43,9 +50,10 @@ interface Props {
   ddragonVersion: string;
   setPick: (side: 'my' | 'enemy', idx: number, champion: string | undefined) => void;
   setBan:  (side: 'my' | 'enemy', idx: number, champion: string | undefined) => void;
+  setTeamSlot: (side: 'my' | 'enemy', idx: number, patch: Partial<SlotState>) => void;
 }
 
-export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan }: Props) {
+export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, setTeamSlot }: Props) {
   const [session, setSession] = useState<CaptureSession | null>(null);
   const [slots, setSlots] = useState<SlotRect[]>(() => loadSlots());
   const [calibratingIdx, setCalibratingIdx] = useState<number>(slots.length);   // points at next slot to calibrate
@@ -54,10 +62,14 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan }: 
   const [detections, setDetections] = useState<Record<string, MatchResult | null>>({});
   const previewRef = useRef<HTMLCanvasElement>(null);
 
-  // Preload pHashes the first time capture is mounted.
+  // Preload pHashes the first time capture is mounted — champion roster
+  // (170+) gets cached in IndexedDB; the 5 lane icons hashed in-memory.
   useEffect(() => {
     if (championKeys.length === 0) return;
-    ensureHashesLoaded(championKeys, ddragonVersion, (done, total) => setHashStatus({ done, total }))
+    Promise.all([
+      ensureHashesLoaded(championKeys, ddragonVersion, (done, total) => setHashStatus({ done, total })),
+      ensureLaneHashesLoaded(),
+    ])
       .then(() => setHashStatus({ done: championKeys.length, total: championKeys.length }))
       .catch((e) => setError(`챔프 사진 준비 실패: ${e?.message ?? e}`));
   }, [championKeys, ddragonVersion]);
@@ -85,6 +97,15 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan }: 
       for (const slot of slots) {
         const cropped = session.cropFrame({ x: slot.x, y: slot.y, w: slot.w, h: slot.h });
         if (!cropped) { next[slotKey(slot)] = null; continue; }
+        if (slot.kind === 'myLane') {
+          const lm = matchLane(cropped);
+          if (lm && lm.distance <= LANE_CONFIDENCE_DISTANCE) {
+            setTeamSlot('my', slot.idx, { lane: lm.lane });
+          }
+          // Reuse MatchResult shape so the detection list renders uniformly.
+          next[slotKey(slot)] = lm ? { championKey: lm.lane, distance: lm.distance } : null;
+          continue;
+        }
         const matches = matchChampion(cropped, 1);
         const top = matches[0];
         next[slotKey(slot)] = top ?? null;
@@ -98,7 +119,7 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan }: 
       setDetections(next);
     }, 2000);
     return () => clearInterval(id);
-  }, [session, slots, setPick, setBan]);
+  }, [session, slots, setPick, setBan, setTeamSlot]);
 
   const start = useCallback(async () => {
     try {
@@ -127,12 +148,15 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan }: 
     const cx = ((e.clientX - rect.left) / rect.width) * canvas.width;
     const cy = ((e.clientY - rect.top) / rect.height) * canvas.height;
     const plan = SLOT_PLAN[calibratingIdx];
+    // Lane icons are ~20px in the client; champ icons are ~50-80px. Use
+    // a smaller box for lane to avoid grabbing adjacent UI chrome.
+    const half = plan.kind === 'myLane' ? LANE_HALF_SIZE : SLOT_HALF_SIZE;
     const newSlot: SlotRect = {
       kind: plan.kind, idx: plan.idx, label: plan.label,
-      x: Math.max(0, Math.round(cx - SLOT_HALF_SIZE)),
-      y: Math.max(0, Math.round(cy - SLOT_HALF_SIZE)),
-      w: SLOT_HALF_SIZE * 2,
-      h: SLOT_HALF_SIZE * 2,
+      x: Math.max(0, Math.round(cx - half)),
+      y: Math.max(0, Math.round(cy - half)),
+      w: half * 2,
+      h: half * 2,
     };
     const updated = [...slots, newSlot];
     setSlots(updated);

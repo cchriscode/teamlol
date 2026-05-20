@@ -8,7 +8,7 @@
 // threshold counts as a confident match; empirically <12 = high confidence,
 // 12-20 = maybe, >20 = no match.
 
-import { computePHash, hashDistance, PHash } from './phash.js';
+import { computePHash, hashDistance, type PHash } from './phash.js';
 
 const CACHE_KEY = 'tlol_champ_phashes_v1';
 const IDB_NAME = 'teamlol-capture';
@@ -71,6 +71,54 @@ export function matchChampion(canvas: HTMLCanvasElement, topK = 3): MatchResult[
   results.sort((a, b) => a.distance - b.distance);
   return results.slice(0, topK);
 }
+
+// ---- Lane matching ------------------------------------------------------
+// Five reference icons (top/jungle/mid/adc/support) from Community Dragon,
+// hashed once and held in module memory. Same pHash technique as champions
+// but the candidate pool is tiny (5), so a single match is cheap.
+
+export type LaneKey = 'top' | 'jungle' | 'mid' | 'adc' | 'support';
+const LANE_REF_URLS: Record<LaneKey, string> = {
+  top:     'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/icon-position-top.png',
+  jungle:  'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/icon-position-jungle.png',
+  mid:     'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/icon-position-middle.png',
+  adc:     'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/icon-position-bottom.png',
+  support: 'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/icon-position-utility.png',
+};
+const LANE_KEYS: LaneKey[] = ['top', 'jungle', 'mid', 'adc', 'support'];
+let laneHashes: Array<{ lane: LaneKey; hash: PHash }> | null = null;
+
+export async function ensureLaneHashesLoaded(): Promise<void> {
+  if (laneHashes) return;
+  const rows: Array<{ lane: LaneKey; hash: PHash }> = [];
+  for (const lane of LANE_KEYS) {
+    try {
+      const img = await loadImage(LANE_REF_URLS[lane]);
+      rows.push({ lane, hash: computePHash(img) });
+    } catch {
+      // ignore — that lane just won't match
+    }
+  }
+  laneHashes = rows;
+}
+
+export interface LaneMatchResult {
+  lane: LaneKey;
+  distance: number;
+}
+export function matchLane(canvas: HTMLCanvasElement): LaneMatchResult | null {
+  if (!laneHashes || laneHashes.length === 0) return null;
+  const q = computePHash(canvas);
+  let best: LaneMatchResult | null = null;
+  for (const { lane, hash } of laneHashes) {
+    const d = hashDistance(q, hash);
+    if (!best || d < best.distance) best = { lane, distance: d };
+  }
+  return best;
+}
+
+// PHash type re-exported for callers that want to import alongside.
+export type { PHash };
 
 // ---- helpers ------------------------------------------------------------
 
