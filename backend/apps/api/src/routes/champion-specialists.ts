@@ -81,12 +81,14 @@ export default async function championSpecialistsRoutes(app: FastifyInstance) {
             r.tier, r.rank, r.league_points AS "lp",
             a.game_name AS "gameName", a.tag_line AS "tagLine",
             s.profile_icon_id AS "profileIconId",
-            recent.items, recent.spells, recent.runes
+            recent.spells, recent.runes,
+            core.core_items AS "coreItems"
           FROM ranked r
           LEFT JOIN accounts  a ON a.puuid = r.puuid
           LEFT JOIN summoners s ON s.puuid = r.puuid
           LEFT JOIN LATERAL (
-            SELECT mp.items, mp.spells, mp.runes
+            -- Spells + runes from the most-recent match (last-known config).
+            SELECT mp.spells, mp.runes
             FROM match_participants mp
             JOIN matches m ON m.match_id = mp.match_id
             WHERE mp.puuid = r.puuid
@@ -95,6 +97,30 @@ export default async function championSpecialistsRoutes(app: FastifyInstance) {
             ORDER BY m.game_creation DESC
             LIMIT 1
           ) recent ON true
+          LEFT JOIN LATERAL (
+            -- Top-3 most-frequently-built items across THIS player's history
+            -- on THIS champion. Approximates the "core build path" without
+            -- needing per-game timeline scans. Boots usually take slot 1
+            -- because they appear in nearly every game; mythic + 2nd item
+            -- follow. Trinket slot (index 6) excluded since it isn't part
+            -- of the build.
+            SELECT array_agg(item_id ORDER BY freq DESC) AS core_items
+            FROM (
+              SELECT (item_text)::int AS item_id, COUNT(*)::int AS freq
+              FROM match_participants mp2,
+                   LATERAL jsonb_array_elements_text(
+                     jsonb_set(mp2.items, '{6}', 'null'::jsonb)
+                   ) WITH ORDINALITY AS t(item_text, ord)
+              WHERE mp2.puuid = r.puuid
+                AND mp2.champion_id = ${championId}
+                ${lane ? sql`AND mp2.lane = ${lane}` : sql``}
+                AND item_text IS NOT NULL
+                AND (item_text)::int > 0
+              GROUP BY (item_text)::int
+              ORDER BY COUNT(*) DESC
+              LIMIT 3
+            ) sub
+          ) core ON true
           ORDER BY r.games DESC, r.wins DESC
         `);
 
@@ -112,15 +138,16 @@ export default async function championSpecialistsRoutes(app: FastifyInstance) {
           puuid: string; games: number; wins: number; avgKda: number; avgAi: number;
           tier: string; rank: string; lp: number;
           gameName: string | null; tagLine: string | null; profileIconId: number | null;
-          items: number[] | null; spells: number[] | null;
+          coreItems: number[] | null; spells: number[] | null;
           runes: { styles?: Array<{ style: number; selections: Array<{ perk: number }> }> } | null;
         };
 
         const specialists = (rows as unknown as Row[]).map((r) => {
           const keystone = r.runes?.styles?.[0]?.selections?.[0]?.perk ?? null;
           const subStyle = r.runes?.styles?.[1]?.style ?? null;
-          // First 3 inventory items (skip 0 = empty, skip trinket slot 6).
-          const firstItems = (r.items ?? []).slice(0, 6).filter((id) => id > 0).slice(0, 3);
+          // Core 3 items: most-frequently-built across this player's games
+          // on this champion (computed in SQL via the LATERAL aggregation).
+          const firstItems = (r.coreItems ?? []).slice(0, 3);
           return {
             puuid: r.puuid,
             gameName: r.gameName,
