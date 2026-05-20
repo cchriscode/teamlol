@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { Analytics } from '@vercel/analytics/next';
 import { HeaderWithActive } from '@/components/layout/header-with-active';
 import { Footer } from '@/components/layout/footer';
+import { TopProgress } from '@/components/layout/top-progress';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
@@ -30,6 +31,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
+        <TopProgress />
         <HeaderWithActive />
         {children}
         <Footer />

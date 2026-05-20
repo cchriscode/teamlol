@@ -62,14 +62,13 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
   const [detections, setDetections] = useState<Record<string, MatchResult | null>>({});
   const previewRef = useRef<HTMLCanvasElement>(null);
 
-  // Preload pHashes the first time capture is mounted — champion roster
-  // (170+) gets cached in IndexedDB; the 5 lane icons hashed in-memory.
+  // Champion icon pHashes are preloaded on mount (one-time IndexedDB cost).
+  // Lane icons are deferred to `start()` because Community Dragon doesn't
+  // serve them with CORS headers — fetching them on every page mount
+  // produces noisy console errors even when the user never opens capture.
   useEffect(() => {
     if (championKeys.length === 0) return;
-    Promise.all([
-      ensureHashesLoaded(championKeys, ddragonVersion, (done, total) => setHashStatus({ done, total })),
-      ensureLaneHashesLoaded(),
-    ])
+    ensureHashesLoaded(championKeys, ddragonVersion, (done, total) => setHashStatus({ done, total }))
       .then(() => setHashStatus({ done: championKeys.length, total: championKeys.length }))
       .catch((e) => setError(`챔프 사진 준비 실패: ${e?.message ?? e}`));
   }, [championKeys, ddragonVersion]);
@@ -124,6 +123,10 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
   const start = useCallback(async () => {
     try {
       setError(null);
+      // Lane icons fetched lazily on first capture — failures here are
+      // tolerated (the per-icon try/catch in ensureLaneHashesLoaded
+      // skips broken ones, lane detection just won't match).
+      void ensureLaneHashesLoaded();
       const s = await startCapture();
       setSession(s);
     } catch (e) {

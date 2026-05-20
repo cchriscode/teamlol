@@ -130,6 +130,42 @@ html, body {
 }
 
 /* ============================================
+   TOP PROGRESS BAR — op.gg / nprogress style
+   ============================================ */
+.top-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+.top-progress.phase-loading { opacity: 1; }
+.top-progress.phase-done    { opacity: 1; }
+.top-progress.phase-idle    { opacity: 0; }
+
+.top-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--color-win);
+  box-shadow: 0 0 6px var(--color-win), 0 0 2px var(--color-win);
+  transition: width 0s;
+}
+.top-progress.phase-loading .top-progress-bar {
+  /* Slowly ramp to ~70% over several seconds — never hits 100% until the
+     route actually mounts. Curve eases out so first jump is fast then slows. */
+  width: 70%;
+  transition: width 8s cubic-bezier(0.1, 0.7, 0.1, 1);
+}
+.top-progress.phase-done .top-progress-bar {
+  width: 100%;
+  transition: width 180ms ease;
+}
+
+/* ============================================
    RESET
    ============================================ */
 *, *::before, *::after {
