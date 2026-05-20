@@ -87,11 +87,15 @@ export class RateLimiter {
    * the queue grows unbounded, and every schedule() eventually never returns
    * (caught only by the outer job-handler timeout) — death spiral.
    */
-  async schedule<T>(methodKey: string, fn: () => Promise<T>): Promise<T> {
+  async schedule<T>(methodKey: string, fn: () => Promise<T>, priority = 5): Promise<T> {
     const methodLim = this.getMethodLimiter(methodKey);
+    // Bottleneck priority: lower = higher (default 5). User-facing API
+    // routes pass priority=1 so they jump ahead of worker BFS jobs in
+    // the rate-limit queue. Without this, a backlog of worker calls
+    // (BFS expansion, lp-poll) starves live searches → SSR hangs.
     return this.appLimiter.schedule(
-      { expiration: 30_000 },
-      () => methodLim.schedule({ expiration: 30_000 }, fn),
+      { expiration: 30_000, priority },
+      () => methodLim.schedule({ expiration: 30_000, priority }, fn),
     );
   }
 

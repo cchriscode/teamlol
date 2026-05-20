@@ -77,12 +77,12 @@ export class RiotClient {
    * job-level setTimeout — by which point the task is still queued and will
    * eventually consume a reservoir slot for nothing.
    */
-  async get<T>(url: string, methodKey: string, parentSignal?: AbortSignal): Promise<T> {
+  async get<T>(url: string, methodKey: string, parentSignal?: AbortSignal, priority?: number): Promise<T> {
     return this.rl.schedule(methodKey, async () => {
       // Bail before consuming a reservoir slot if caller already gave up.
       if (parentSignal?.aborted) throw new RiotApiError(0, 'aborted before fetch', url, methodKey);
       return this.executeOnce<T>(url, methodKey, 0, parentSignal);
-    });
+    }, priority);
   }
 
   private async executeOnce<T>(url: string, methodKey: string, _attempt: number, parentSignal?: AbortSignal): Promise<T> {
@@ -153,29 +153,31 @@ function enc(s: string) { return encodeURIComponent(s); }
 
 class AccountEndpoints {
   constructor(private c: RiotClient) {}
-  byRiotId(regional: RegionalRoute, gameName: string, tagLine: string): Promise<RiotAccountDto> {
+  // priority: lower = higher (default 5). API routes pass 1 so user-
+  // facing searches jump ahead of worker BFS backlog in the rate queue.
+  byRiotId(regional: RegionalRoute, gameName: string, tagLine: string, priority?: number): Promise<RiotAccountDto> {
     const url = `https://${regional}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${enc(gameName)}/${enc(tagLine)}`;
-    return this.c.get<RiotAccountDto>(url, 'account.byRiotId');
+    return this.c.get<RiotAccountDto>(url, 'account.byRiotId', undefined, priority);
   }
-  byPuuid(regional: RegionalRoute, puuid: Puuid): Promise<RiotAccountDto> {
+  byPuuid(regional: RegionalRoute, puuid: Puuid, priority?: number): Promise<RiotAccountDto> {
     const url = `https://${regional}.api.riotgames.com/riot/account/v1/accounts/by-puuid/${enc(puuid)}`;
-    return this.c.get<RiotAccountDto>(url, 'account.byPuuid');
+    return this.c.get<RiotAccountDto>(url, 'account.byPuuid', undefined, priority);
   }
 }
 
 class SummonerEndpoints {
   constructor(private c: RiotClient) {}
-  byPuuid(region: Region, puuid: Puuid): Promise<SummonerDto> {
+  byPuuid(region: Region, puuid: Puuid, priority?: number): Promise<SummonerDto> {
     const url = `${platformBase(region)}/lol/summoner/v4/summoners/by-puuid/${enc(puuid)}`;
-    return this.c.get<SummonerDto>(url, 'summoner.byPuuid');
+    return this.c.get<SummonerDto>(url, 'summoner.byPuuid', undefined, priority);
   }
 }
 
 class LeagueEndpoints {
   constructor(private c: RiotClient) {}
-  entriesByPuuid(region: Region, puuid: Puuid): Promise<LeagueEntryDto[]> {
+  entriesByPuuid(region: Region, puuid: Puuid, priority?: number): Promise<LeagueEntryDto[]> {
     const url = `${platformBase(region)}/lol/league/v4/entries/by-puuid/${enc(puuid)}`;
-    return this.c.get<LeagueEntryDto[]>(url, 'league.entriesByPuuid');
+    return this.c.get<LeagueEntryDto[]>(url, 'league.entriesByPuuid', undefined, priority);
   }
   challenger(region: Region, queue: QueueType): Promise<LeagueListDto> {
     const url = `${platformBase(region)}/lol/league/v4/challengerleagues/by-queue/${enc(queue)}`;

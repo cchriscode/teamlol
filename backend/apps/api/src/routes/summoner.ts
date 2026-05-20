@@ -63,7 +63,7 @@ export default async function summonerRoutes(app: FastifyInstance) {
     if (!acct) {
       // 2) Cache miss → call Riot directly to resolve PUUID.
       try {
-        const dto = await riot.account.byRiotId(REGION_TO_REGIONAL[region], id.gameName, id.tagLine);
+        const dto = await riot.account.byRiotId(REGION_TO_REGIONAL[region], id.gameName, id.tagLine, 1);
         // GDPR block check — refuse to re-ingest a user who already
         // exercised their deletion right.
         const blocked = await db.query.blockedPuuids.findFirst({
@@ -106,7 +106,7 @@ export default async function summonerRoutes(app: FastifyInstance) {
         const stale = !row || (Date.now() - row.refreshedAt.getTime()) > SUMMONER_CACHE_TTL_MS;
         if (!stale) return row;
         try {
-          const dto = await riot.summoner.byPuuid(region, acctRef.puuid);
+          const dto = await riot.summoner.byPuuid(region, acctRef.puuid, 1);
           await db.insert(schema.summoners).values({
             puuid: acctRef.puuid, region,
             profileIconId: dto.profileIconId,
@@ -139,7 +139,7 @@ export default async function summonerRoutes(app: FastifyInstance) {
           (Date.now() - r.refreshedAt.getTime()) > SUMMONER_CACHE_TTL_MS);
         if (!stale) return rows;
         try {
-          const dtos = await riot.league.entriesByPuuid(region, acctRef.puuid);
+          const dtos = await riot.league.entriesByPuuid(region, acctRef.puuid, 1);
           if (dtos.length > 0) {
             // Batched upsert: one round-trip instead of one INSERT per queue type
             const now = new Date();
