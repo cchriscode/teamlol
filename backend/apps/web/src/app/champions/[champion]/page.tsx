@@ -4,6 +4,10 @@ import { apiGet } from '@/lib/api';
 import { ChampionIcon } from '@/components/atoms/champion-icon';
 import { ddragon } from '@/lib/ddragon';
 import { getChampionMeta } from '@/lib/champion-meta';
+import { getDdragonVersion } from '@/lib/ddragon-version';
+import { spellKey } from '@/lib/summoner-spells';
+import { tierKr, tierClass } from '@/lib/display';
+import { slugFromRiotId } from '@/lib/riot-id';
 import type { Lane, Bracket } from '@/lib/types';
 
 export const revalidate = 600;
@@ -25,6 +29,23 @@ interface DetailResponse {
   worstMatchups: Matchup[];
   synergies: Synergy[];
   botDuos: BotDuo[];
+}
+
+interface Specialist {
+  puuid: string;
+  gameName: string | null;
+  tagLine: string | null;
+  profileIconId: number | null;
+  tier: string; rank: string; lp: number;
+  games: number; wins: number; winrate: number;
+  avgKda: number; avgAi: number;
+  firstItems: number[];
+  spells: number[];
+  keystoneIcon: string | null;
+  subStyleId: number | null;
+}
+interface SpecialistsResponse {
+  specialists: Specialist[];
 }
 
 const LANES: Array<{ key: Lane; label: string }> = [
@@ -74,10 +95,17 @@ export default async function ChampionDetailPage({ params, searchParams }: PageP
   const lane: Lane = (LANES.find((l) => l.key === sp.lane)?.key ?? 'mid');
   const bracket: Bracket = (BRACKETS.find((b) => b.key === sp.bracket)?.key ?? 'diamond+');
 
-  const data = await apiGet<DetailResponse>(
-    `/api/champions/${ddChamp.key}/detail?lane=${lane}&bracket=${encodeURIComponent(bracket)}`,
-    { next: { revalidate: 600 } },
-  );
+  const [data, specialists, version] = await Promise.all([
+    apiGet<DetailResponse>(
+      `/api/champions/${ddChamp.key}/detail?lane=${lane}&bracket=${encodeURIComponent(bracket)}`,
+      { next: { revalidate: 600 } },
+    ),
+    apiGet<SpecialistsResponse>(
+      `/api/champions/${ddChamp.key}/specialists?bracket=${encodeURIComponent(bracket)}&lane=${lane}&limit=20`,
+      { next: { revalidate: 600 } },
+    ).catch(() => ({ specialists: [] }) as SpecialistsResponse),
+    getDdragonVersion(),
+  ]);
 
   const myStat = data.tier.find((t) => t.lane === lane) ?? data.tier[0] ?? null;
   const splashUrl = ddragon.championSplash(ddChamp.id);
@@ -292,6 +320,79 @@ export default async function ChampionDetailPage({ params, searchParams }: PageP
           )}
         </aside>
       </div>
+
+      {specialists.specialists.length > 0 && (
+        <section className="card card-padded" style={{ marginTop: 'var(--space-4)' }}>
+          <div className="section-title">
+            <span>{ddChamp.name} 장인 랭킹</span>
+            <span className="meta">{laneKr(lane)} · {bracket} · 게임수 기준 상위 {specialists.specialists.length}명</span>
+          </div>
+          <div className="specialists-table">
+            <div className="specialists-row specialists-header">
+              <span className="specialists-col-rank">#</span>
+              <span className="specialists-col-name">소환사</span>
+              <span className="specialists-col-tier">티어</span>
+              <span className="specialists-col-stats">게임 / 승률 / KDA</span>
+              <span className="specialists-col-runes">룬 · 스펠</span>
+              <span className="specialists-col-items">최근 빌드 (3템)</span>
+            </div>
+            {specialists.specialists.map((s, i) => {
+              const linkable = s.gameName && s.tagLine;
+              const nameHref = linkable ? `/kr/${slugFromRiotId({ gameName: s.gameName!, tagLine: s.tagLine! })}` : null;
+              return (
+                <div key={s.puuid} className="specialists-row">
+                  <span className="specialists-col-rank">{i + 1}</span>
+                  <span className="specialists-col-name">
+                    {s.profileIconId != null && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img className="profile-icon-img" src={ddragon.profileIcon(s.profileIconId, version)} width={24} height={24} alt="" />
+                    )}
+                    {nameHref ? (
+                      <Link href={nameHref} className="specialists-name-link">{s.gameName}<span className="text-tertiary"> #{s.tagLine}</span></Link>
+                    ) : (
+                      <span>{s.gameName ?? s.puuid.slice(0, 6)}</span>
+                    )}
+                  </span>
+                  <span className="specialists-col-tier">
+                    <span className={`tier-badge ${tierClass(s.tier)}`}>{tierKr(s.tier)} {s.rank}</span>
+                    <span className="text-tertiary" style={{ marginLeft: 4, fontSize: 11 }}>{s.lp} LP</span>
+                  </span>
+                  <span className="specialists-col-stats">
+                    <span>{s.games}게임</span>
+                    <span className={s.winrate >= 55 ? 'text-positive fw-semibold' : s.winrate < 50 ? 'text-loss' : 'fw-semibold'}>
+                      {s.winrate.toFixed(1)}%
+                    </span>
+                    <span className="text-tertiary">{s.avgKda.toFixed(2)} KDA</span>
+                  </span>
+                  <span className="specialists-col-runes">
+                    {s.keystoneIcon && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={ddragon.runeIcon(s.keystoneIcon)} width={22} height={22} alt="" className="rune-icon" />
+                    )}
+                    {s.subStyleId != null && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={ddragon.runeStyleIcon(s.subStyleId)} width={16} height={16} alt="" className="rune-style-icon" />
+                    )}
+                    {s.spells.slice(0, 2).map((id, k) => {
+                      const sk = spellKey(id);
+                      return sk ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={k} src={ddragon.spellIcon(sk, version)} width={18} height={18} alt="" className="spell-icon" />
+                      ) : null;
+                    })}
+                  </span>
+                  <span className="specialists-col-items">
+                    {s.firstItems.map((id, k) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={k} src={ddragon.itemIcon(id, version)} width={24} height={24} alt="" className="item-icon" />
+                    ))}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

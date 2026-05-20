@@ -10,6 +10,7 @@ import { redis } from './redis.js';
 import healthRoutes from './routes/health.js';
 import championsRoutes from './routes/champions.js';
 import championDetailRoutes from './routes/champion-detail.js';
+import championSpecialistsRoutes from './routes/champion-specialists.js';
 import summonerRoutes from './routes/summoner.js';
 import pickRecommendRoutes from './routes/pick-recommend.js';
 import matchRoutes from './routes/match.js';
@@ -68,6 +69,7 @@ async function main() {
   await app.register(healthRoutes);
   await app.register(championsRoutes);
   await app.register(championDetailRoutes);
+  await app.register(championSpecialistsRoutes);
   await app.register(summonerRoutes);
   await app.register(pickRecommendRoutes);
   await app.register(matchRoutes);

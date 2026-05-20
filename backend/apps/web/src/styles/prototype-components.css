@@ -3480,6 +3480,52 @@
   border-top: 1px solid var(--border-subtle);
 }
 
+/* ---- Champion 장인 랭킹 table ------------------------------------- */
+.specialists-table {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-2);
+}
+.specialists-row {
+  display: grid;
+  grid-template-columns: 32px minmax(160px, 1.4fr) 130px 180px 140px 110px;
+  gap: var(--space-3);
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+}
+.specialists-row:last-child { border-bottom: none; }
+.specialists-row.specialists-header {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--bg-elevated);
+}
+.specialists-col-rank { text-align: center; font-feature-settings: 'tnum' on; color: var(--text-tertiary); }
+.specialists-col-name {
+  display: flex; align-items: center; gap: 6px;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.specialists-col-name .profile-icon-img { border-radius: 50%; flex: 0 0 auto; }
+.specialists-name-link { color: var(--text-primary); }
+.specialists-name-link:hover { color: var(--color-win); }
+.specialists-col-tier { display: flex; align-items: center; }
+.specialists-col-stats {
+  display: flex; flex-direction: column; gap: 1px;
+  font-feature-settings: var(--font-mono-features);
+}
+.specialists-col-runes { display: flex; align-items: center; gap: 3px; }
+.specialists-col-items { display: flex; align-items: center; gap: 2px; }
+.specialists-col-items .item-icon { border-radius: 3px; border: 1px solid var(--border-subtle); }
+
+@media (max-width: 768px) {
+  .specialists-row { grid-template-columns: 28px 1fr 90px; gap: var(--space-2); font-size: 11px; }
+  .specialists-col-tier, .specialists-col-stats, .specialists-col-runes, .specialists-col-items { display: none; }
+  .specialists-row.specialists-header { display: none; }
+}
+
 /* ---- Screen-capture panel on pick page ----------------------------- */
 .capture-panel {
   background: var(--bg-surface);
