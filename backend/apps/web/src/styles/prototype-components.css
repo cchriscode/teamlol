@@ -3480,6 +3480,65 @@
   border-top: 1px solid var(--border-subtle);
 }
 
+/* ---- Screen-capture panel on pick page ----------------------------- */
+.capture-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.capture-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+.capture-panel-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 0; }
+.capture-progress { font-size: 11px; color: var(--text-tertiary); }
+.capture-error {
+  font-size: 12px;
+  color: var(--color-loss);
+  background: var(--color-loss-soft);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+}
+.capture-instruction {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 8px 10px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+}
+.capture-instruction strong { color: var(--color-warning); font-weight: 600; }
+.capture-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 60vh;
+  width: auto;
+  height: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+}
+.capture-detections {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-1) var(--space-3);
+  font-size: 11px;
+}
+.capture-detection-row {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dashed var(--border-subtle);
+  padding: 2px 0;
+}
+.capture-detection-label { color: var(--text-tertiary); }
+.capture-detection-result { color: var(--text-primary); font-feature-settings: var(--font-mono-features); }
+
 .match-lp-delta {
   display: inline-block;
   font-size: 11px;

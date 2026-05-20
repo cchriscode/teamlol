@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChampionIcon } from '@/components/atoms/champion-icon';
 import { createPickEngine } from '@/lib/pick-engine';
 import type { PickData, DraftState, SlotState, Lane } from '@/lib/pick-types';
+import { CapturePanel } from './capture-panel';
 
 const ALL_LANES: Lane[] = ['top', 'jungle', 'mid', 'adc', 'support'];
 const LANE_KR: Record<string, string> = { top: '탑', jungle: '정글', mid: '미드', adc: '원딜', support: '서폿' };
@@ -49,13 +50,15 @@ function initialState(): DraftState {
 
 interface Props {
   initialData: PickData;
+  championKeys: string[];
+  ddragonVersion: string;
 }
 
 type ModalTarget =
   | { kind: 'pick'; side: 'my' | 'enemy'; idx: number }
   | { kind: 'ban';  side: 'my' | 'enemy'; idx: number };
 
-export function PickRecommendApp({ initialData }: Props) {
+export function PickRecommendApp({ initialData, championKeys, ddragonVersion }: Props) {
   const data = useMemo(() => {
     // pick-engine expects several helper functions on PickData. JSON
     // serialization on the server drops them; re-attach here so the engine
@@ -182,6 +185,13 @@ export function PickRecommendApp({ initialData }: Props) {
           <button type="button" className={`side-toggle-btn${state.mySide === 'red'  ? ' active' : ''}`} onClick={() => setSide('red')}>레드팀</button>
         </div>
       </header>
+
+      <CapturePanel
+        championKeys={championKeys}
+        ddragonVersion={ddragonVersion}
+        setPick={setPick}
+        setBan={setBan}
+      />
 
       {/* Pick order strip */}
       <div className="pick-order-strip">
