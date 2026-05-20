@@ -16,6 +16,7 @@ import { aggregateChampionPower } from './champion-power.js';
 import { snapshotRankHistory } from './rank-history.js';
 import { processDeletions } from './process-deletions.js';
 import { pollLpSnapshots } from './lp-poll.js';
+import { ladderSeed } from './ladder-seed.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -48,6 +49,10 @@ export function startAggregators() {
     // and calls LEAGUE-V4 → upsert appends to lp_snapshots automatically.
     // Builds the timeline required for per-match "+15 LP" display.
     { name: 'lpPoll',    intervalMs: 3 * 60 * 1000,  run: () => pollLpSnapshots() },
+    // Wider ladder seed — once a day refreshes Diamond + Emerald active
+    // players into the BFS queue. Multiplies the puuid pool ~3-5× so
+    // natural BFS reaches niche champions in higher brackets faster.
+    { name: 'ladderSeed', intervalMs: DAY_MS,        run: () => ladderSeed() },
   ];
 
   for (const agg of all) {
