@@ -12,10 +12,11 @@
 //   App:    100 req / 2s, 20000 req / 10min
 //   Method: varies, /matches/by-puuid is 1500 / 10s in our region usually.
 //
-// Dev/personal keys (Riot's actual policy):
-//   Dev:      20 / 1s, 100 / 2min   → sustained ~0.83 req/s
-//   Personal: 30 / 1s, 1500 / 2min  → sustained ~12.5 req/s (varies by approval)
-//   Prod:    100 / 1s, 20000 / 10min → sustained ~33 req/s
+// Dev/personal/prod keys (Riot's actual published policy):
+//   Dev:      20 / 1s, 100 / 2min      → sustained ~0.83 req/s. Expires 24h.
+//   Personal: 20 / 1s, 100 / 2min      → identical rate limits to dev; the
+//                                        win is a 1-year expiry, not speed.
+//   Prod:    500 / 10s, 30000 / 10min  → sustained ~50 req/s. Negotiated.
 
 import Bottleneck from 'bottleneck';
 
@@ -24,8 +25,8 @@ export type KeyTier = 'dev' | 'personal' | 'prod';
 interface AppLimit { perSecond: number; longWindow: number; longSeconds: number; }
 const APP_LIMITS: Record<KeyTier, AppLimit> = {
   dev:      { perSecond: 20,  longWindow: 100,   longSeconds: 120 },   // 100 / 2 min
-  personal: { perSecond: 30,  longWindow: 1500,  longSeconds: 120 },   // 1500 / 2 min
-  prod:     { perSecond: 100, longWindow: 20000, longSeconds: 600 },   // 20000 / 10 min
+  personal: { perSecond: 20,  longWindow: 100,   longSeconds: 120 },   // same as dev
+  prod:     { perSecond: 50,  longWindow: 30000, longSeconds: 600 },   // 30k / 10 min
 };
 
 export interface RateLimitOptions {
