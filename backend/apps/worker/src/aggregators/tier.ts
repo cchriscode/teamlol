@@ -139,6 +139,10 @@ export async function aggregateTier(opts: TierAggregateOptions = {}): Promise<{
   // Each match has 10 ban entries (5 per team). We attribute each ban to the
   // tier of the picker via team_id → puuid → tier. If puuid isn't known, the
   // ban falls into the NULL tier bucket.
+  // Pre-compute each team's highest-tier participant ONCE per (match, team),
+  // then join bans against it. The prior correlated subquery rescanned
+  // participants per ban row (10 bans × N matches), which scaled poorly as
+  // match_participants grew past 1M rows.
   const banRows = await db.execute(sql`
     WITH player_tier AS (
       SELECT DISTINCT ON (puuid) puuid, tier
@@ -146,42 +150,38 @@ export async function aggregateTier(opts: TierAggregateOptions = {}): Promise<{
       WHERE queue_type = 'RANKED_SOLO_5x5'
       ORDER BY puuid, refreshed_at DESC
     ),
+    team_max_tier AS (
+      SELECT mp.match_id, mp.team,
+             (ARRAY_AGG(pt.tier ORDER BY
+               CASE pt.tier
+                 WHEN 'CHALLENGER' THEN 10 WHEN 'GRANDMASTER' THEN 9 WHEN 'MASTER' THEN 8
+                 WHEN 'DIAMOND' THEN 7 WHEN 'EMERALD' THEN 6 WHEN 'PLATINUM' THEN 5
+                 WHEN 'GOLD' THEN 4 WHEN 'SILVER' THEN 3 WHEN 'BRONZE' THEN 2
+                 WHEN 'IRON' THEN 1 ELSE 0 END DESC NULLS LAST
+             ) FILTER (WHERE pt.tier IS NOT NULL))[1] AS tier
+      FROM match_participants mp
+      JOIN matches m         ON m.match_id = mp.match_id
+      LEFT JOIN player_tier pt ON pt.puuid = mp.puuid
+      WHERE m.patch = ${patch} AND m.queue_id = ${queueId}
+      GROUP BY mp.match_id, mp.team
+    ),
     ban_pairs AS (
       SELECT
-        ((bans_obj ->> 'championId')::int)              AS champion_id,
-        ((team_obj ->> 'teamId')::int)                  AS team_id,
-        m.match_id                                      AS match_id
+        ((bans_obj ->> 'championId')::int) AS champion_id,
+        ((team_obj ->> 'teamId')::int)     AS team_id,
+        m.match_id                         AS match_id
       FROM matches m,
            LATERAL jsonb_array_elements(m.raw_detail -> 'info' -> 'teams') AS team_obj,
            LATERAL jsonb_array_elements(team_obj -> 'bans') AS bans_obj
       WHERE m.patch = ${patch} AND m.queue_id = ${queueId}
-    ),
-    ban_with_tier AS (
-      -- Attribute each ban to the average tier of its team's participants.
-      -- Since a team has 5 players, we count one ban per team-banner; we use
-      -- the team's HIGHEST-tier participant as the bracket key (matches lol.ps
-      -- "this ban happened in a Diamond+ game" semantics).
-      SELECT bp.champion_id,
-             (
-               SELECT pt.tier
-               FROM match_participants mp
-               LEFT JOIN player_tier pt ON pt.puuid = mp.puuid
-               WHERE mp.match_id = bp.match_id
-                 AND mp.team = (CASE WHEN bp.team_id = 100 THEN 'blue' ELSE 'red' END)
-                 AND pt.tier IS NOT NULL
-               ORDER BY CASE pt.tier
-                 WHEN 'CHALLENGER' THEN 10 WHEN 'GRANDMASTER' THEN 9 WHEN 'MASTER' THEN 8
-                 WHEN 'DIAMOND' THEN 7 WHEN 'EMERALD' THEN 6 WHEN 'PLATINUM' THEN 5
-                 WHEN 'GOLD' THEN 4 WHEN 'SILVER' THEN 3 WHEN 'BRONZE' THEN 2
-                 WHEN 'IRON' THEN 1 ELSE 0 END DESC
-               LIMIT 1
-             ) AS tier
-      FROM ban_pairs bp
-      WHERE bp.champion_id > 0
     )
-    SELECT champion_id AS "championId", tier, COUNT(*)::int AS bans
-    FROM ban_with_tier
-    GROUP BY champion_id, tier
+    SELECT bp.champion_id AS "championId", tmt.tier, COUNT(*)::int AS bans
+    FROM ban_pairs bp
+    LEFT JOIN team_max_tier tmt
+      ON tmt.match_id = bp.match_id
+     AND tmt.team = CASE WHEN bp.team_id = 100 THEN 'blue' ELSE 'red' END
+    WHERE bp.champion_id > 0
+    GROUP BY bp.champion_id, tmt.tier
   `) as unknown as BanCountRow[];
 
   // 4) For each requested bracket, aggregate + UPSERT.

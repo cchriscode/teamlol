@@ -17,6 +17,7 @@ import { snapshotRankHistory } from './rank-history.js';
 import { processDeletions } from './process-deletions.js';
 import { pollLpSnapshots } from './lp-poll.js';
 import { ladderSeed } from './ladder-seed.js';
+import { pruneLpSnapshots } from './lp-retention.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -53,6 +54,10 @@ export function startAggregators() {
     // players into the BFS queue. Multiplies the puuid pool ~3-5× so
     // natural BFS reaches niche champions in higher brackets faster.
     { name: 'ladderSeed', intervalMs: DAY_MS,        run: () => ladderSeed() },
+    // Tiered lp_snapshots retention — deletes >1y rows and downsamples
+    // 90d-1y to weekly. Bounded per run so a backlog can't thrash the
+    // table; convergence over a few days is fine.
+    { name: 'lpRetention', intervalMs: DAY_MS,       run: () => pruneLpSnapshots() },
   ];
 
   for (const agg of all) {

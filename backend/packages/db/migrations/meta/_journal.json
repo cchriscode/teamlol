@@ -78,6 +78,13 @@
       "when": 1779400000000,
       "tag": "0010_lp_snapshots",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1779500000000,
+      "tag": "0011_home_indexes",
+      "breakpoints": true
     }
   ]
 }
