@@ -8,7 +8,7 @@
 // threshold counts as a confident match; empirically <12 = high confidence,
 // 12-20 = maybe, >20 = no match.
 
-import { computePHash, hashDistance, type PHash } from './phash.js';
+import { computePHash, hashDistance, type PHash } from './phash';
 
 const CACHE_KEY = 'tlol_champ_phashes_v1';
 const IDB_NAME = 'teamlol-capture';
