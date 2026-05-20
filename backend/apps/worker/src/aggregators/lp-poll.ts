@@ -23,16 +23,18 @@ const BATCH = 50;
 export async function pollLpSnapshots(): Promise<{ polled: number; failed: number }> {
   const log = logger.child({ aggregator: 'lp-poll' });
 
-  // Pick puuids whose league_entries hasn't been refreshed recently. We
-  // join through accounts so we get the region (needed for the API call)
-  // and we skip blocked puuids (GDPR deletions).
+  // Pick puuids whose league_entries hasn't been refreshed recently.
+  // INNER JOIN to league_entries: only puuids known to have a solo entry
+  // at some point — skips the "ingested via BFS but never finished
+  // placements / decayed inactive" accounts that would otherwise burn
+  // most of our Riot quota on 404 entriesByPuuid responses.
   const rows = await db.execute(sql`
     SELECT a.puuid, a.region
     FROM accounts a
+    JOIN league_entries le ON le.puuid = a.puuid AND le.queue_type = 'RANKED_SOLO_5x5'
     LEFT JOIN blocked_puuids b ON b.puuid = a.puuid
-    LEFT JOIN league_entries le ON le.puuid = a.puuid AND le.queue_type = 'RANKED_SOLO_5x5'
     WHERE b.puuid IS NULL
-    ORDER BY le.refreshed_at ASC NULLS FIRST
+    ORDER BY le.refreshed_at ASC
     LIMIT ${BATCH}
   `);
   const candidates = rows as unknown as Array<{ puuid: string; region: string }>;
