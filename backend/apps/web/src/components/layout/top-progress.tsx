@@ -4,18 +4,47 @@
 // style) so users know a navigation is in flight rather than the page
 // being frozen.
 //
-// How it works:
-//   - Anchor-click listener flips state to "loading" — bar fades in and
-//     animates 0 → 70% width over several seconds (curve suggests progress
-//     without ever reaching 100%, which is dishonest until done)
-//   - usePathname / useSearchParams effect fires after the new route
-//     mounts → snap to 100% briefly, then fade out
-//   - Ignores cross-origin links, target=_blank, and modifier-key clicks
+// Triggers:
+//   1. Anchor-click listener — fires immediately on <a href> clicks
+//   2. history.pushState / replaceState patch — catches router.push()
+//      from autocomplete suggestions, form submits, and any other
+//      programmatic navigation
+//   3. popstate — back/forward buttons
+//
+// Completion:
+//   - usePathname / useSearchParams effect snaps to 100% then fades when
+//     the new route mounts.
 //
 // Pure CSS animation — no nprogress dependency, no rAF loop.
 
 import { useEffect, useRef, useState, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+
+// Module-level flag so the history patch only runs once across mounts.
+let historyPatched = false;
+const subscribers = new Set<() => void>();
+
+function notifyNavStart() {
+  for (const fn of subscribers) {
+    try { fn(); } catch { /* ignore */ }
+  }
+}
+
+function patchHistoryOnce() {
+  if (historyPatched || typeof window === 'undefined') return;
+  historyPatched = true;
+  const origPush = window.history.pushState.bind(window.history);
+  const origReplace = window.history.replaceState.bind(window.history);
+  window.history.pushState = function (...args: Parameters<typeof origPush>) {
+    notifyNavStart();
+    return origPush(...args);
+  };
+  window.history.replaceState = function (...args: Parameters<typeof origReplace>) {
+    notifyNavStart();
+    return origReplace(...args);
+  };
+  window.addEventListener('popstate', notifyNavStart);
+}
 
 type Phase = 'idle' | 'loading' | 'done';
 
@@ -40,10 +69,18 @@ function TopProgressInner() {
     // skip — no bar to show is better than a confusing flash.
   }, [pathname, search, phase]);
 
-  // Anchor click → start loading. Captures bubbling clicks so the bar
-  // appears immediately, before the browser starts the navigation.
+  // Anchor click + programmatic navigation (router.push from autocomplete,
+  // form submits, etc.). The history patch is a one-time module-level
+  // monkeypatch; we just subscribe to its notifications here.
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const onStart = () => {
+      if (fadeTimer.current) clearTimeout(fadeTimer.current);
+      setPhase('loading');
+    };
+    patchHistoryOnce();
+    subscribers.add(onStart);
+
+    const clickHandler = (e: MouseEvent) => {
       if (e.defaultPrevented) return;
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       if (e.button !== 0) return;
@@ -57,12 +94,14 @@ function TopProgressInner() {
       if (url.origin !== window.location.origin) return;
       const cur = `${window.location.pathname}?${window.location.search}`;
       const nxt = `${url.pathname}?${url.search}`;
-      if (cur === nxt) return;     // same page = no nav
-      if (fadeTimer.current) clearTimeout(fadeTimer.current);
-      setPhase('loading');
+      if (cur === nxt) return;
+      onStart();
     };
-    document.addEventListener('click', handler, true);
-    return () => document.removeEventListener('click', handler, true);
+    document.addEventListener('click', clickHandler, true);
+    return () => {
+      subscribers.delete(onStart);
+      document.removeEventListener('click', clickHandler, true);
+    };
   }, []);
 
   useEffect(() => () => { if (fadeTimer.current) clearTimeout(fadeTimer.current); }, []);
