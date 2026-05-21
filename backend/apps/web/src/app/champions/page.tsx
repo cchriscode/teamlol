@@ -17,7 +17,7 @@ export default async function ChampionsRoot({
   searchParams: Promise<{ bracket?: string; lane?: string }>;
 }) {
   const sp = await searchParams;
-  const bracketSlug = BRACKET_TO_SLUG[sp.bracket ?? ''] ?? 'diamond-plus';
+  const bracketSlug = BRACKET_TO_SLUG[sp.bracket ?? ''] ?? 'emerald-plus';
   const lane = sp.lane ?? 'all';
   redirect(`/champions/${bracketSlug}/${encodeURIComponent(lane)}`);
 }

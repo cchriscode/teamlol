@@ -93,7 +93,7 @@ export default async function ChampionDetailPage({ params, searchParams }: PageP
   if (!ddChamp) notFound();
 
   const lane: Lane = (LANES.find((l) => l.key === sp.lane)?.key ?? 'mid');
-  const bracket: Bracket = (BRACKETS.find((b) => b.key === sp.bracket)?.key ?? 'diamond+');
+  const bracket: Bracket = (BRACKETS.find((b) => b.key === sp.bracket)?.key ?? 'emerald+');
 
   const [data, specialists, version] = await Promise.all([
     apiGet<DetailResponse>(
