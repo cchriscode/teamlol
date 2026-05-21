@@ -20,19 +20,22 @@ const LANES: Array<{ key: Lane | 'all'; label: string }> = [
   { key: 'support', label: '서폿'  },
 ];
 
-const BRACKETS: Array<{ key: Bracket; label: string }> = [
-  { key: 'emerald+',   label: '에메랄드+'    },
-  { key: 'diamond+',   label: '다이아몬드+'  },
-  { key: 'master+',    label: '마스터+'      },
-  { key: 'gm+',        label: '그랜드마스터+' },
-  { key: 'challenger', label: '챌린저'       },
+// URL slug ↔ bracket key. The `+` in the canonical bracket keys
+// (`diamond+`, `master+`...) breaks Next.js path matching when the
+// browser/CDN encodes it as `%2B`, so the URL form uses `-plus` suffixes
+// and we map back to the canonical key for API calls + display lookup.
+const BRACKETS: Array<{ slug: string; key: Bracket; label: string }> = [
+  { slug: 'emerald-plus',  key: 'emerald+',   label: '에메랄드+'    },
+  { slug: 'diamond-plus',  key: 'diamond+',   label: '다이아몬드+'  },
+  { slug: 'master-plus',   key: 'master+',    label: '마스터+'      },
+  { slug: 'gm-plus',       key: 'gm+',        label: '그랜드마스터+' },
+  { slug: 'challenger',    key: 'challenger', label: '챌린저'       },
 ];
 
 // 5 brackets × 6 lane choices = 30 static paths. All prebuilt at deploy.
-// Bracket has '+' in it — Next decodes %2B in path params automatically.
 export function generateStaticParams() {
   const out: Array<{ bracket: string; lane: string }> = [];
-  for (const b of BRACKETS) for (const l of LANES) out.push({ bracket: b.key, lane: l.key });
+  for (const b of BRACKETS) for (const l of LANES) out.push({ bracket: b.slug, lane: l.key });
   return out;
 }
 
@@ -42,9 +45,10 @@ interface PageProps {
 
 export default async function ChampionsListPage({ params }: PageProps) {
   const { bracket: bracketParam, lane: laneParam } = await params;
-  const bracket = BRACKETS.find((b) => b.key === bracketParam)?.key;
+  const bracketEntry = BRACKETS.find((b) => b.slug === bracketParam);
   const lane = LANES.find((l) => l.key === laneParam)?.key;
-  if (!bracket || !lane) notFound();
+  if (!bracketEntry || !lane) notFound();
+  const bracket = bracketEntry.key;
 
   const [api, meta] = await Promise.all([
     apiGet<Parameters<typeof buildPickData>[0]>(
@@ -85,7 +89,7 @@ export default async function ChampionsListPage({ params }: PageProps) {
         <div className="filter-row">
           <span className="filter-label">라인</span>
           {LANES.map((l) => (
-            <Link key={l.key} href={`/champions/${encodeURIComponent(bracket)}/${l.key}`} className={`filter-chip${lane === l.key ? ' active' : ''}`}>
+            <Link key={l.key} href={`/champions/${bracketEntry.slug}/${l.key}`} className={`filter-chip${lane === l.key ? ' active' : ''}`}>
               {l.label}
             </Link>
           ))}
@@ -93,7 +97,7 @@ export default async function ChampionsListPage({ params }: PageProps) {
         <div className="filter-row">
           <span className="filter-label">티어</span>
           {BRACKETS.map((b) => (
-            <Link key={b.key} href={`/champions/${encodeURIComponent(b.key)}/${lane}`} className={`filter-chip${bracket === b.key ? ' active' : ''}`}>
+            <Link key={b.slug} href={`/champions/${b.slug}/${lane}`} className={`filter-chip${bracket === b.key ? ' active' : ''}`}>
               {b.label}
             </Link>
           ))}

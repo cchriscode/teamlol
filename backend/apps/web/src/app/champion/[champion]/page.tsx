@@ -143,7 +143,7 @@ export default async function ChampionDetailPage({ params, searchParams }: PageP
           {LANES.map((l) => (
             <Link
               key={l.key}
-              href={`/champions/${encodeURIComponent(champion)}?lane=${l.key}&bracket=${encodeURIComponent(bracket)}`}
+              href={`/champion/${encodeURIComponent(champion)}?lane=${l.key}&bracket=${encodeURIComponent(bracket)}`}
               className={`filter-chip${lane === l.key ? ' active' : ''}`}
             >
               {l.label}
@@ -155,7 +155,7 @@ export default async function ChampionDetailPage({ params, searchParams }: PageP
           {BRACKETS.map((b) => (
             <Link
               key={b.key}
-              href={`/champions/${encodeURIComponent(champion)}?lane=${lane}&bracket=${encodeURIComponent(b.key)}`}
+              href={`/champion/${encodeURIComponent(champion)}?lane=${lane}&bracket=${encodeURIComponent(b.key)}`}
               className={`filter-chip${bracket === b.key ? ' active' : ''}`}
             >
               {b.label}
