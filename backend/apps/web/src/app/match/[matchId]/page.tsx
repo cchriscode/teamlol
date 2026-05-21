@@ -49,18 +49,21 @@ export async function generateMetadata({ params }: PageProps) {
 function laneKr(l: string) {
   return ({ top: '탑', jungle: '정글', mid: '미드', adc: '원딜', support: '서폿' } as Record<string, string>)[l] ?? l;
 }
-function timeAgo(ms: number): string {
-  const sec = Math.floor((Date.now() - ms) / 1000);
-  if (sec < 60) return `${sec}초 전`;
-  const m = Math.floor(sec / 60); if (m < 60) return `${m}분 전`;
-  const h = Math.floor(m / 60); if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
+// Absolute timestamp instead of relative — Date.now() in a server
+// component opts the whole page out of static rendering. Match pages are
+// immutable (once a game ends nothing changes), so an absolute date is
+// actually clearer too.
+function formatMatchDate(ms: number): string {
+  return new Date(ms).toLocaleString('ko-KR', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  });
 }
 
 export default async function MatchDetailPage({ params }: PageProps) {
   const { matchId } = await params;
   const [data, meta, version] = await Promise.all([
-    apiGet<MatchDetail>(`/api/match/${matchId}`).catch((e) => {
+    apiGet<MatchDetail>(`/api/match/${matchId}`, { next: { revalidate: 86400 } }).catch((e) => {
       if (e instanceof ApiError && e.status === 404) return null;
       throw e;
     }),
@@ -91,7 +94,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
         <div>
           <h1 className="page-title">매치 상세</h1>
           <div className="page-subtitle">
-            패치 {data.patch} · 솔로랭크 · {minutes}분 {seconds}초 · {timeAgo(data.gameCreation)}
+            패치 {data.patch} · 솔로랭크 · {minutes}분 {seconds}초 · {formatMatchDate(data.gameCreation)}
           </div>
         </div>
       </header>
