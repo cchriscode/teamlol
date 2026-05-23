@@ -24,8 +24,12 @@ export const env = {
   RIOT_API_KEY: required('RIOT_API_KEY'),
   DATABASE_URL: required('DATABASE_URL'),
   REDIS_URL: required('REDIS_URL'),
-  WORKER_MATCH_ID_CONCURRENCY: num('WORKER_MATCH_ID_CONCURRENCY', 4),
-  WORKER_MATCH_DETAIL_CONCURRENCY: num('WORKER_MATCH_DETAIL_CONCURRENCY', 8),
+  // Personal Riot key sustains ~0.83 req/sec (100/2min). Each puuid job
+  // makes ~5 API calls and each match-detail ~1.5 — total concurrency is
+  // sized so the bottleneck reservoir wait stays under the job timeout
+  // under sustained load. Bump these once a Production key is approved.
+  WORKER_MATCH_ID_CONCURRENCY: num('WORKER_MATCH_ID_CONCURRENCY', 2),
+  WORKER_MATCH_DETAIL_CONCURRENCY: num('WORKER_MATCH_DETAIL_CONCURRENCY', 4),
   SEED_REGION: process.env.SEED_REGION ?? 'kr',
   SEED_BRACKET: process.env.SEED_BRACKET ?? 'diamond+',
   LOG_LEVEL: process.env.LOG_LEVEL ?? 'info',

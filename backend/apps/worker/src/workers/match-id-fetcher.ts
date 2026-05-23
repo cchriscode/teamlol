@@ -21,10 +21,11 @@ import { filterUnknownMatchIds, upsertAccountStub, upsertAccountFull, upsertLeag
 
 const RANKED_QUEUES = [QUEUE_ID.SOLO, QUEUE_ID.FLEX] as readonly number[];
 
-// Hard ceiling per puuid job. Deep-collect with 5 pages × dev-key throttling
-// shouldn't exceed this. If it does, throw to release the lock + concurrency
-// slot rather than silently hanging.
-const JOB_TIMEOUT_MS = 90_000; // 90s — under the 120s lockDuration
+// Hard ceiling per puuid job. With personal-key throttling, a job can spend
+// 60-120s in the bottleneck reservoir before its calls fire. Timeout must be
+// > expected reservoir wait + actual work time, and < lockDuration so the
+// finally clearTimeout runs before BullMQ steals the lock.
+const JOB_TIMEOUT_MS = 180_000; // 180s — under the 200s lockDuration
 
 function withJobTimeout<T>(p: Promise<T>, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -135,8 +136,9 @@ export function startMatchIdFetcher() {
     {
       connection: redis,
       concurrency: env.WORKER_MATCH_ID_CONCURRENCY,
-      // Generous: dev-key throttling can stretch a single job past the default 30s lock.
-      lockDuration: 120_000,
+      // Generous: personal-key throttling can stretch a job past the default
+      // 30s lock. Must be > JOB_TIMEOUT_MS so we throw + release naturally.
+      lockDuration: 200_000,
       stalledInterval: 60_000,
     },
   );

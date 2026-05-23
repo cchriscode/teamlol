@@ -22,10 +22,10 @@ import { persistMatch, filterUnknownPuuids } from '../persist/match.js';
 // Hard ceiling on a single job. If the handler hasn't returned by then,
 // throw so BullMQ moves on (retry per attempts policy) instead of holding
 // the lock forever and blocking the concurrency slot.
-// Tight ceiling: 2 parallel Riot fetches × 30s timeout + DB write should be
-// well under 60s. If the handler exceeds this, something is actually stuck
-// (Bottleneck deadlock, DB hang). Fail fast → free the slot.
-const JOB_TIMEOUT_MS = 60_000;
+// Personal-key throttling: a match-detail job can wait in the bottleneck
+// reservoir behind queued puuid-job calls. Timeout must be > expected
+// reservoir wait. Bump back down once a Production key is approved.
+const JOB_TIMEOUT_MS = 120_000;
 
 function withJobTimeout<T>(label: string, runner: (signal: AbortSignal) => Promise<T>): Promise<T> {
   const ctrl = new AbortController();
@@ -103,11 +103,11 @@ export function startMatchDetailFetcher() {
     {
       connection: redis,
       concurrency: env.WORKER_MATCH_DETAIL_CONCURRENCY,
-      // Tight: handler has 60s job-timeout, so a job that exceeds 90s without
-      // renewing its lock is genuinely stuck. Stalled-detection at 30s lets
-      // BullMQ reclaim the slot quickly instead of waiting 10 min for lock TTL.
-      lockDuration: 90_000,
-      stalledInterval: 30_000,
+      // Must be > JOB_TIMEOUT_MS so the handler can throw + finally before
+      // BullMQ stalls the lock. With personal-key throttling, 60s wasn't
+      // enough.
+      lockDuration: 140_000,
+      stalledInterval: 60_000,
     },
   );
 
