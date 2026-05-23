@@ -9,6 +9,7 @@ import { riot } from '../riot-client.js';
 import { logger } from '../logger.js';
 import { Region } from '@lol-tracker/shared';
 import { enqueuePuuid } from '../queues.js';
+import { RiotApiError } from '@lol-tracker/riot';
 
 type Division = 'I' | 'II' | 'III' | 'IV';
 
@@ -94,7 +95,8 @@ export async function seedFromLadder(opts: LadderSeedOptions): Promise<{
   for (const { name: tier, pages } of tiers) {
     let tierCount = 0;
     for (const div of divisions) {
-      for (let page = 1; page <= pages; page++) {
+      let page = 1;
+      while (page <= pages) {
         try {
           const entries = await riot.league.entriesByDivision(opts.region, queue, tier, div, page);
           if (!entries || entries.length === 0) break;        // past last page for this division
@@ -105,9 +107,19 @@ export async function seedFromLadder(opts: LadderSeedOptions): Promise<{
             tierCount += 1;
             totalEnqueued += 1;
           }
+          page += 1;
         } catch (err) {
-          log.warn({ tier, div, page, err: (err as Error).message }, 'ladder seed page failed');
-          break;     // stop drilling this division on error
+          // On 429: rate limiter already noted the wait via Retry-After.
+          // Sleep briefly + retry the SAME page (don't lose entries). On any
+          // other error: skip page and continue (loses one page, not the
+          // whole division).
+          if (err instanceof RiotApiError && err.status === 429) {
+            log.warn({ tier, div, page }, 'ladder seed 429 — sleeping 5s and retrying same page');
+            await new Promise((r) => setTimeout(r, 5000));
+            continue;       // retry same page
+          }
+          log.warn({ tier, div, page, err: (err as Error).message }, 'ladder seed page failed, skipping');
+          page += 1;        // skip just this page
         }
       }
     }
