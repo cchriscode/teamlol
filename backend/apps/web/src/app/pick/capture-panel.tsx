@@ -20,26 +20,14 @@ import { ensureOcrLoaded, ocrLane } from '@/lib/screen-capture/lane-ocr';
 import { autoCalibrate, type AutoCalProgress } from '@/lib/screen-capture/auto-calibrate';
 import type { SlotState } from '@/lib/pick-types';
 
-// v3: lane slots changed from icon pHash to OCR text — required wider crop +
-// different click target ("상단 (탑)" text, not a lane icon). Old v2 coords
-// are incompatible, so we bump the key and force re-calibration.
-const STORAGE_KEY = 'tlol_capture_slots_v3';
-// Hamming distance threshold below which a match is considered confident.
-// Bans need a looser threshold than picks: LoL renders ban icons smaller
-// + with a darker tint / overlay, so the cropped region's pHash typically
-// sits 16-22 from the clean ddragon reference even on the correct champ.
+// v4: removed manual click-to-calibrate; auto-calibrate is the only path
+// now. Old v2/v3 stored slots have incompatible kinds/sizes, so the key
+// bump forces a fresh detection.
+const STORAGE_KEY = 'tlol_capture_slots_v4';
+// Hamming distance threshold below which a per-tick match counts. Bans
+// look noisier (X overlay / darker tint) so they get a looser threshold.
 const CONFIDENCE_DISTANCE = 14;
 const BAN_CONFIDENCE_DISTANCE = 22;
-// Side of the cropped region around each calibration click (in source pixels).
-// Bans use a smaller box because the on-screen icon itself is smaller; a
-// 32px half-box grabs surrounding UI chrome and dilutes the pHash.
-const SLOT_HALF_SIZE = 32;
-const BAN_HALF_SIZE = 20;
-// Lane labels are short Korean text strings — give the OCR crop a wide,
-// short rectangle (covers "상단 (탑)" comfortably without grabbing
-// adjacent slot content).
-const LANE_HALF_WIDTH = 60;
-const LANE_HALF_HEIGHT = 14;
 
 type SlotKind = 'myPick' | 'enemyPick' | 'myBan' | 'enemyBan' | 'myLane';
 interface SlotRect {
@@ -49,12 +37,11 @@ interface SlotRect {
   label: string;
 }
 
-// Order: our 5 picks → our 5 lanes → enemy 5 picks → 5 our bans → 5 enemy bans.
-// Lanes are clustered right after picks so the user calibrates them while
-// looking at the same side of the screen.
+// Canonical display order for the detections panel + label lookups when
+// merging the auto-cal result into our SlotRect shape.
 const SLOT_PLAN: Array<{ kind: SlotKind; idx: number; label: string }> = [
   ...Array.from({ length: 5 }, (_, i) => ({ kind: 'myPick' as const,    idx: i, label: `우리 픽 ${i + 1}` })),
-  ...Array.from({ length: 5 }, (_, i) => ({ kind: 'myLane' as const,    idx: i, label: `우리 ${i + 1}번 라인 텍스트 (예: 상단 (탑))` })),
+  ...Array.from({ length: 5 }, (_, i) => ({ kind: 'myLane' as const,    idx: i, label: `우리 ${i + 1}번 라인` })),
   ...Array.from({ length: 5 }, (_, i) => ({ kind: 'enemyPick' as const, idx: i, label: `적 픽 ${i + 1}` })),
   ...Array.from({ length: 5 }, (_, i) => ({ kind: 'myBan' as const,     idx: i, label: `우리 밴 ${i + 1}` })),
   ...Array.from({ length: 5 }, (_, i) => ({ kind: 'enemyBan' as const,  idx: i, label: `적 밴 ${i + 1}` })),
@@ -71,7 +58,6 @@ interface Props {
 export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, setTeamSlot }: Props) {
   const [session, setSession] = useState<CaptureSession | null>(null);
   const [slots, setSlots] = useState<SlotRect[]>(() => loadSlots());
-  const [calibratingIdx, setCalibratingIdx] = useState<number>(slots.length);   // points at next slot to calibrate
   const [hashStatus, setHashStatus] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [detections, setDetections] = useState<Record<string, MatchResult | null>>({});
@@ -106,27 +92,32 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
   // Tracks lane OCR jobs in flight per slot so the 2s tick doesn't pile
   // up tesseract calls on slots whose previous OCR hasn't returned yet.
   const ocrInFlight = useRef<Set<string>>(new Set());
+  // Best distance seen so far per slot — prevents a transient bad match
+  // (e.g., during a champion-swap animation) from clobbering a correct
+  // earlier detection. A new match must be strictly better (or close to
+  // the prior best) to overwrite.
+  const slotBest = useRef<Map<string, number>>(new Map());
 
-  // Detection loop once all slots are calibrated.
+  // Detection loop — runs as soon as any slots exist (auto-cal may yield
+  // a partial layout if some regions had no champ candidates yet).
   useEffect(() => {
-    if (!session || slots.length < SLOT_PLAN.length) return;
+    if (!session || slots.length === 0) return;
     const id = setInterval(() => {
       const next: Record<string, MatchResult | null> = {};
+      // Pass 1: pHash every non-lane slot, collect candidates.
+      const candidates: Array<{ slot: SlotRect; match: MatchResult }> = [];
       for (const slot of slots) {
         const cropped = session.cropFrame({ x: slot.x, y: slot.y, w: slot.w, h: slot.h });
         if (!cropped) { next[slotKey(slot)] = null; continue; }
         if (slot.kind === 'myLane') {
-          // OCR is async — fire-and-forget so the rest of the tick's pHash
-          // work doesn't wait. Skip if a previous OCR for this slot is
-          // still running.
+          // OCR async — fire-and-forget. Skip if previous OCR for this slot
+          // is still running so we don't pile up tesseract calls.
           const key = slotKey(slot);
           if (!ocrInFlight.current.has(key)) {
             ocrInFlight.current.add(key);
             ocrLane(cropped).then((res) => {
               ocrInFlight.current.delete(key);
               if (res.lane) setTeamSlot('my', slot.idx, { lane: res.lane });
-              // Surface raw OCR text in the detections panel so users can
-              // diagnose mis-reads (e.g., crop too small / wrong area).
               setDetections((prev) => ({
                 ...prev,
                 [key]: { championKey: res.lane ?? (res.rawText || '—'), distance: res.lane ? 0 : -1 },
@@ -140,13 +131,39 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
         next[slotKey(slot)] = top ?? null;
         const isBan = slot.kind === 'myBan' || slot.kind === 'enemyBan';
         const threshold = isBan ? BAN_CONFIDENCE_DISTANCE : CONFIDENCE_DISTANCE;
-        if (top && top.distance <= threshold) {
-          if (slot.kind === 'myPick')     setPick('my',    slot.idx, top.championKey);
-          if (slot.kind === 'enemyPick')  setPick('enemy', slot.idx, top.championKey);
-          if (slot.kind === 'myBan')      setBan('my',     slot.idx, top.championKey);
-          if (slot.kind === 'enemyBan')   setBan('enemy',  slot.idx, top.championKey);
+        if (top && top.distance <= threshold) candidates.push({ slot, match: top });
+      }
+
+      // Pass 2: dedupe — LoL forbids the same champion appearing in two
+      // slots across the whole game (10 picks + 10 bans). If pHash matched
+      // the same champ to multiple slots, keep only the one with the lowest
+      // distance; others are rejected (likely a transient or wrong match).
+      const bestByChamp = new Map<string, typeof candidates[number]>();
+      for (const c of candidates) {
+        const prev = bestByChamp.get(c.match.championKey);
+        if (!prev || c.match.distance < prev.match.distance) {
+          bestByChamp.set(c.match.championKey, c);
         }
       }
+      const accepted = new Set(bestByChamp.values());
+
+      // Pass 3: apply, with "don't downgrade" guard. A slot that already
+      // recorded a better distance keeps its previous champion — protects
+      // against animation-frame mid-transition crops.
+      for (const c of candidates) {
+        if (!accepted.has(c)) continue;
+        const key = slotKey(c.slot);
+        const priorBest = slotBest.current.get(key);
+        // Tolerance: allow re-detection within +2 distance of prior best
+        // so small noise doesn't latch a slot permanently.
+        if (priorBest !== undefined && c.match.distance > priorBest + 2) continue;
+        slotBest.current.set(key, Math.min(priorBest ?? Infinity, c.match.distance));
+        if (c.slot.kind === 'myPick')     setPick('my',    c.slot.idx, c.match.championKey);
+        if (c.slot.kind === 'enemyPick')  setPick('enemy', c.slot.idx, c.match.championKey);
+        if (c.slot.kind === 'myBan')      setBan('my',     c.slot.idx, c.match.championKey);
+        if (c.slot.kind === 'enemyBan')   setBan('enemy',  c.slot.idx, c.match.championKey);
+      }
+
       // Lane entries are merged in via the async OCR callback above — only
       // overwrite non-lane slots here so we don't clobber in-flight OCR state.
       setDetections((prev) => {
@@ -177,46 +194,6 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
     setSession(null);
   }, [session]);
 
-  // Calibration click handler — converts canvas click coords back to source
-  // pixel coords and stores a rect centered on the click.
-  const onPreviewClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!session) return;
-    if (calibratingIdx >= SLOT_PLAN.length) return;
-    const canvas = previewRef.current;
-    if (!canvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    const cx = ((e.clientX - rect.left) / rect.width) * canvas.width;
-    const cy = ((e.clientY - rect.top) / rect.height) * canvas.height;
-    const plan = SLOT_PLAN[calibratingIdx];
-    // Picks ~50-80px square; bans ~35-45px square; lane TEXT is a wide+short
-    // rectangle (covers e.g. "상단 (탑)"). Pick crop dimensions per kind so
-    // OCR/pHash gets a tight crop and not surrounding UI noise.
-    let halfW: number, halfH: number;
-    if (plan.kind === 'myLane')                                   { halfW = LANE_HALF_WIDTH; halfH = LANE_HALF_HEIGHT; }
-    else if (plan.kind === 'myBan' || plan.kind === 'enemyBan')   { halfW = BAN_HALF_SIZE;  halfH = BAN_HALF_SIZE; }
-    else                                                          { halfW = SLOT_HALF_SIZE; halfH = SLOT_HALF_SIZE; }
-    const newSlot: SlotRect = {
-      kind: plan.kind, idx: plan.idx, label: plan.label,
-      x: Math.max(0, Math.round(cx - halfW)),
-      y: Math.max(0, Math.round(cy - halfH)),
-      w: halfW * 2,
-      h: halfH * 2,
-    };
-    const updated = [...slots, newSlot];
-    setSlots(updated);
-    setCalibratingIdx(calibratingIdx + 1);
-    saveSlots(updated);
-    void dpr;     // currently unused but retained for HiDPI tuning
-  }, [session, slots, calibratingIdx]);
-
-  const resetCalibration = useCallback(() => {
-    setSlots([]);
-    setCalibratingIdx(0);
-    saveSlots([]);
-    setDetections({});
-  }, []);
-
   const [autoCalState, setAutoCalState] = useState<{ running: boolean; progress: AutoCalProgress | null; error: string | null }>(
     { running: false, progress: null, error: null }
   );
@@ -227,27 +204,47 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
     try {
       const result = await autoCalibrate(session, (p) => setAutoCalState((s) => ({ ...s, progress: p })));
       if (result.slots.length === 0) {
-        setAutoCalState({ running: false, progress: null, error: '챔프가 감지되지 않았습니다. 픽/벤이 일부라도 진행된 뒤에 다시 시도하세요.' });
+        setAutoCalState({ running: false, progress: null, error: '챔프가 감지되지 않았습니다. 픽/벤이 진행된 뒤에 다시 시도하세요.' });
         return;
       }
-      // Sort to match SLOT_PLAN order so the detection effect's slot
-      // iteration aligns with calibrating-mode UX expectations.
+      // Sort to match SLOT_PLAN order so detection-effect slot iteration
+      // stays aligned with the previous (manual) calibration flow.
       const ordered: SlotRect[] = [];
       for (const plan of SLOT_PLAN) {
         const match = result.slots.find((s) => s.kind === plan.kind && s.idx === plan.idx);
         if (match) ordered.push({ ...match, label: plan.label });
       }
       setSlots(ordered);
-      setCalibratingIdx(SLOT_PLAN.length);   // jump past calibration → detection mode
       saveSlots(ordered);
+      slotBest.current.clear();      // re-detection wipes the don't-downgrade memory
       setAutoCalState({ running: false, progress: null, error: null });
     } catch (e) {
       setAutoCalState({ running: false, progress: null, error: (e as Error)?.message ?? '자동 위치 찾기 실패' });
     }
   }, [session]);
 
-  const isCalibrating = calibratingIdx < SLOT_PLAN.length;
-  const currentPlan = isCalibrating ? SLOT_PLAN[calibratingIdx] : null;
+  const clearCalibration = useCallback(() => {
+    setSlots([]);
+    saveSlots([]);
+    setDetections({});
+    slotBest.current.clear();
+  }, []);
+
+  // Auto-trigger calibration shortly after capture starts so the user
+  // doesn't have to click anything when slots are empty. If it fails
+  // (no champ visible yet), the error banner shows the retry button.
+  const autoCalAttempted = useRef(false);
+  useEffect(() => {
+    if (!session) { autoCalAttempted.current = false; return; }
+    if (slots.length > 0) return;
+    if (autoCalAttempted.current) return;
+    autoCalAttempted.current = true;
+    // Small delay so the first video frame is definitely available.
+    const t = setTimeout(() => { void runAutoCalibrate(); }, 1500);
+    return () => clearTimeout(t);
+  }, [session, slots.length, runAutoCalibrate]);
+
+  const hasSlots = slots.length > 0;
 
   return (
     <div className="capture-panel">
@@ -259,19 +256,12 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
           </button>
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
-            {isCalibrating && (
-              <button type="button" onClick={runAutoCalibrate} disabled={autoCalState.running}>
-                {autoCalState.running ? '자동 위치 찾는 중...' : '자동 위치 찾기'}
-              </button>
-            )}
-            {!isCalibrating && (
-              <>
-                <button type="button" onClick={runAutoCalibrate} disabled={autoCalState.running}>
-                  {autoCalState.running ? '재검출 중...' : '자동 위치 재검출'}
-                </button>
-                <button type="button" onClick={resetCalibration}>수동 재설정</button>
-              </>
-            )}
+            <button type="button" onClick={runAutoCalibrate} disabled={autoCalState.running}>
+              {autoCalState.running
+                ? '검출 중...'
+                : hasSlots ? '위치 재검출' : '위치 검출'}
+            </button>
+            {hasSlots && <button type="button" onClick={clearCalibration}>초기화</button>}
             <button type="button" onClick={stop}>중지</button>
           </div>
         )}
@@ -294,30 +284,25 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
 
       {session && (
         <>
-          {isCalibrating && (
+          {!hasSlots && !autoCalState.running && (
             <div className="capture-instruction">
-              <strong>{currentPlan?.label}</strong> {currentPlan?.kind === 'myLane'
-                ? '의 텍스트 중심'
-                : '영역의 챔프 아이콘 중심'}을 미리보기에서 한 번 클릭하세요.
-              ({calibratingIdx + 1} / {SLOT_PLAN.length})
+              위치 검출 대기 중. 픽 또는 벤이 하나라도 진행된 뒤 <strong>위치 검출</strong>이 자동 실행됩니다.
               <div className="text-tertiary" style={{ marginTop: 6, fontSize: 11 }}>
-                또는 위의 <strong>자동 위치 찾기</strong> 클릭 (픽/벤이 일부라도 진행된 상태에서 권장).
+                감지가 안 되면 위 버튼으로 수동 재시도하세요.
               </div>
             </div>
           )}
-          {!isCalibrating && (
+          {hasSlots && (
             <div className="capture-instruction text-tertiary">
-              자동 감지 중 (2초마다). 슬롯 위치가 안 맞으면 "슬롯 재설정".
+              자동 감지 중 (2초마다). 슬롯 위치가 안 맞으면 <strong>위치 재검출</strong>.
             </div>
           )}
           <canvas
             ref={previewRef}
             className="capture-preview"
-            onClick={onPreviewClick}
-            style={{ cursor: isCalibrating ? 'crosshair' : 'default' }}
           />
 
-          {!isCalibrating && (
+          {hasSlots && (
             <div className="capture-detections">
               {slots.map((s) => {
                 const d = detections[slotKey(s)];
