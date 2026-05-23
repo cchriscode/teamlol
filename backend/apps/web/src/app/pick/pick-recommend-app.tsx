@@ -189,6 +189,7 @@ export function PickRecommendApp({ initialData, championKeys, ddragonVersion }: 
       <CapturePanel
         championKeys={championKeys}
         ddragonVersion={ddragonVersion}
+        getNameKr={data.nameKr}
         setPick={setPick}
         setBan={setBan}
         setTeamSlot={setTeamSlot}

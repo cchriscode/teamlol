@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { startCapture, type CaptureSession } from '@/lib/screen-capture/capture';
 import { ensureHashesLoaded, matchChampion, type MatchResult } from '@/lib/screen-capture/champion-matcher';
 import { ensureOcrLoaded, ocrLane } from '@/lib/screen-capture/lane-ocr';
+import { ensureNameOcrLoaded, ocrName, nameMatches } from '@/lib/screen-capture/name-ocr';
 import { detectSlots, type DetectProgress } from '@/lib/screen-capture/slot-detect';
 import { warmupOpenCv } from '@/lib/screen-capture/shape-detect';
 import type { SlotState } from '@/lib/pick-types';
@@ -52,12 +53,15 @@ const SLOT_PLAN: Array<{ kind: SlotKind; idx: number; label: string }> = [
 interface Props {
   championKeys: string[];
   ddragonVersion: string;
+  /** Lookup function for Korean champion name — used to verify pHash
+   *  matches against the OCR'd portrait label. */
+  getNameKr: (key: string) => string;
   setPick: (side: 'my' | 'enemy', idx: number, champion: string | undefined) => void;
   setBan:  (side: 'my' | 'enemy', idx: number, champion: string | undefined) => void;
   setTeamSlot: (side: 'my' | 'enemy', idx: number, patch: Partial<SlotState>) => void;
 }
 
-export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, setTeamSlot }: Props) {
+export function CapturePanel({ championKeys, ddragonVersion, getNameKr, setPick, setBan, setTeamSlot }: Props) {
   const [session, setSession] = useState<CaptureSession | null>(null);
   const [slots, setSlots] = useState<SlotRect[]>(() => loadSlots());
   const [hashStatus, setHashStatus] = useState<{ done: number; total: number } | null>(null);
@@ -94,6 +98,13 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
   // Tracks lane OCR jobs in flight per slot so the 2s tick doesn't pile
   // up tesseract calls on slots whose previous OCR hasn't returned yet.
   const ocrInFlight = useRef<Set<string>>(new Set());
+  // Same for name OCR (cross-validation).
+  const nameOcrInFlight = useRef<Set<string>>(new Set());
+  // Verified (slot → champion) pairs that passed name OCR cross-check.
+  // Avoids re-OCR'ing the same slot when the champion is stable.
+  const verifiedByChamp = useRef<Map<string, string>>(new Map());
+  // Mismatches per slot for the detection panel ⚠ indicator.
+  const [nameMismatch, setNameMismatch] = useState<Record<string, string>>({});
   // Best distance seen so far per slot — prevents a transient bad match
   // (e.g., during a champion-swap animation) from clobbering a correct
   // earlier detection. A new match must be strictly better (or close to
@@ -164,6 +175,42 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
         if (c.slot.kind === 'enemyPick')  setPick('enemy', c.slot.idx, c.match.championKey);
         if (c.slot.kind === 'myBan')      setBan('my',     c.slot.idx, c.match.championKey);
         if (c.slot.kind === 'enemyBan')   setBan('enemy',  c.slot.idx, c.match.championKey);
+
+        // Cross-validate via name OCR (picks only — bans don't render a
+        // name label). Only re-OCR when (slot, champ) changes — verified
+        // pairs are cached. Mismatches surface as ⚠ in the panel but
+        // don't auto-revert (OCR can fail on stylized fonts).
+        const isPick = c.slot.kind === 'myPick' || c.slot.kind === 'enemyPick';
+        if (isPick && !nameOcrInFlight.current.has(key) && verifiedByChamp.current.get(key) !== c.match.championKey) {
+          // Crop the name strip: right of the portrait, upper third (the
+          // name line sits above the lane line in the LoL UI).
+          const nameRect = {
+            x: c.slot.x + c.slot.w + 4,
+            y: c.slot.y + Math.round(c.slot.h * 0.10),
+            w: Math.max(80, c.slot.w * 3),
+            h: Math.max(20, Math.round(c.slot.h * 0.45)),
+          };
+          const nameCrop = session.cropFrame(nameRect);
+          if (nameCrop) {
+            nameOcrInFlight.current.add(key);
+            const expectedKey = c.match.championKey;
+            ocrName(nameCrop).then((text) => {
+              nameOcrInFlight.current.delete(key);
+              const expected = getNameKr(expectedKey);
+              if (!text) return;                      // OCR uncertain — leave alone
+              if (nameMatches(text, expected)) {
+                verifiedByChamp.current.set(key, expectedKey);
+                setNameMismatch((prev) => {
+                  if (!prev[key]) return prev;
+                  const { [key]: _, ...rest } = prev;
+                  return rest;
+                });
+              } else {
+                setNameMismatch((prev) => ({ ...prev, [key]: `phash=${expected} / ocr=${text}` }));
+              }
+            });
+          }
+        }
       }
 
       // Lane entries are merged in via the async OCR callback above — only
@@ -175,15 +222,17 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
       });
     }, 2000);
     return () => clearInterval(id);
-  }, [session, slots, setPick, setBan, setTeamSlot]);
+  }, [session, slots, setPick, setBan, setTeamSlot, getNameKr]);
 
   const start = useCallback(async () => {
     try {
       setError(null);
-      // Warm up Tesseract (~10MB kor.traineddata) and OpenCV (~7MB wasm)
+      // Warm up Tesseract (~10MB kor.traineddata; lane + name workers
+      // share the model file via browser cache) and OpenCV (~7MB wasm)
       // in parallel with the capture-permission dialog so they're ready
-      // by the time the user grants access. Auto-cal will await them.
+      // by the time the user grants access.
       void ensureOcrLoaded();
+      void ensureNameOcrLoaded();
       void warmupOpenCv();
       const s = await startCapture();
       setSession(s);
@@ -315,12 +364,18 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
           {hasSlots && (
             <div className="capture-detections">
               {slots.map((s) => {
-                const d = detections[slotKey(s)];
+                const key = slotKey(s);
+                const d = detections[key];
+                const mm = nameMismatch[key];
+                const verified = verifiedByChamp.current.get(key);
+                const isPickSlot = s.kind === 'myPick' || s.kind === 'enemyPick';
                 return (
-                  <div key={slotKey(s)} className="capture-detection-row">
+                  <div key={key} className="capture-detection-row">
                     <span className="capture-detection-label">{s.label}</span>
                     <span className="capture-detection-result">
                       {d ? `${d.championKey}  (d=${d.distance})` : '—'}
+                      {isPickSlot && d && verified === d.championKey && <span title="이름 OCR 일치"> ✓</span>}
+                      {isPickSlot && mm && <span title={mm} style={{ color: 'var(--color-warning)' }}> ⚠</span>}
                     </span>
                   </div>
                 );
