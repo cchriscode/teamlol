@@ -15,23 +15,30 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { startCapture, type CaptureSession } from '@/lib/screen-capture/capture';
-import { ensureHashesLoaded, ensureLaneHashesLoaded, matchChampion, matchLane, type MatchResult, type LaneKey } from '@/lib/screen-capture/champion-matcher';
+import { ensureHashesLoaded, matchChampion, type MatchResult } from '@/lib/screen-capture/champion-matcher';
+import { ensureOcrLoaded, ocrLane } from '@/lib/screen-capture/lane-ocr';
 import type { SlotState } from '@/lib/pick-types';
 
-const STORAGE_KEY = 'tlol_capture_slots_v2';
+// v3: lane slots changed from icon pHash to OCR text — required wider crop +
+// different click target ("상단 (탑)" text, not a lane icon). Old v2 coords
+// are incompatible, so we bump the key and force re-calibration.
+const STORAGE_KEY = 'tlol_capture_slots_v3';
 // Hamming distance threshold below which a match is considered confident.
 // Bans need a looser threshold than picks: LoL renders ban icons smaller
 // + with a darker tint / overlay, so the cropped region's pHash typically
 // sits 16-22 from the clean ddragon reference even on the correct champ.
 const CONFIDENCE_DISTANCE = 14;
 const BAN_CONFIDENCE_DISTANCE = 22;
-const LANE_CONFIDENCE_DISTANCE = 18;          // lane icons are tiny → slightly looser
 // Side of the cropped region around each calibration click (in source pixels).
 // Bans use a smaller box because the on-screen icon itself is smaller; a
 // 32px half-box grabs surrounding UI chrome and dilutes the pHash.
 const SLOT_HALF_SIZE = 32;
 const BAN_HALF_SIZE = 20;
-const LANE_HALF_SIZE = 14;                    // lane icons are much smaller
+// Lane labels are short Korean text strings — give the OCR crop a wide,
+// short rectangle (covers "상단 (탑)" comfortably without grabbing
+// adjacent slot content).
+const LANE_HALF_WIDTH = 60;
+const LANE_HALF_HEIGHT = 14;
 
 type SlotKind = 'myPick' | 'enemyPick' | 'myBan' | 'enemyBan' | 'myLane';
 interface SlotRect {
@@ -46,7 +53,7 @@ interface SlotRect {
 // looking at the same side of the screen.
 const SLOT_PLAN: Array<{ kind: SlotKind; idx: number; label: string }> = [
   ...Array.from({ length: 5 }, (_, i) => ({ kind: 'myPick' as const,    idx: i, label: `우리 픽 ${i + 1}` })),
-  ...Array.from({ length: 5 }, (_, i) => ({ kind: 'myLane' as const,    idx: i, label: `우리 ${i + 1}번 라인 아이콘` })),
+  ...Array.from({ length: 5 }, (_, i) => ({ kind: 'myLane' as const,    idx: i, label: `우리 ${i + 1}번 라인 텍스트 (예: 상단 (탑))` })),
   ...Array.from({ length: 5 }, (_, i) => ({ kind: 'enemyPick' as const, idx: i, label: `적 픽 ${i + 1}` })),
   ...Array.from({ length: 5 }, (_, i) => ({ kind: 'myBan' as const,     idx: i, label: `우리 밴 ${i + 1}` })),
   ...Array.from({ length: 5 }, (_, i) => ({ kind: 'enemyBan' as const,  idx: i, label: `적 밴 ${i + 1}` })),
@@ -95,6 +102,10 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
     return () => { cancelled = true; };
   }, [session]);
 
+  // Tracks lane OCR jobs in flight per slot so the 2s tick doesn't pile
+  // up tesseract calls on slots whose previous OCR hasn't returned yet.
+  const ocrInFlight = useRef<Set<string>>(new Set());
+
   // Detection loop once all slots are calibrated.
   useEffect(() => {
     if (!session || slots.length < SLOT_PLAN.length) return;
@@ -104,12 +115,23 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
         const cropped = session.cropFrame({ x: slot.x, y: slot.y, w: slot.w, h: slot.h });
         if (!cropped) { next[slotKey(slot)] = null; continue; }
         if (slot.kind === 'myLane') {
-          const lm = matchLane(cropped);
-          if (lm && lm.distance <= LANE_CONFIDENCE_DISTANCE) {
-            setTeamSlot('my', slot.idx, { lane: lm.lane });
+          // OCR is async — fire-and-forget so the rest of the tick's pHash
+          // work doesn't wait. Skip if a previous OCR for this slot is
+          // still running.
+          const key = slotKey(slot);
+          if (!ocrInFlight.current.has(key)) {
+            ocrInFlight.current.add(key);
+            ocrLane(cropped).then((res) => {
+              ocrInFlight.current.delete(key);
+              if (res.lane) setTeamSlot('my', slot.idx, { lane: res.lane });
+              // Surface raw OCR text in the detections panel so users can
+              // diagnose mis-reads (e.g., crop too small / wrong area).
+              setDetections((prev) => ({
+                ...prev,
+                [key]: { championKey: res.lane ?? (res.rawText || '—'), distance: res.lane ? 0 : -1 },
+              }));
+            });
           }
-          // Reuse MatchResult shape so the detection list renders uniformly.
-          next[slotKey(slot)] = lm ? { championKey: lm.lane, distance: lm.distance } : null;
           continue;
         }
         const matches = matchChampion(cropped, 1);
@@ -124,7 +146,13 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
           if (slot.kind === 'enemyBan')   setBan('enemy',  slot.idx, top.championKey);
         }
       }
-      setDetections(next);
+      // Lane entries are merged in via the async OCR callback above — only
+      // overwrite non-lane slots here so we don't clobber in-flight OCR state.
+      setDetections((prev) => {
+        const merged = { ...prev };
+        for (const [k, v] of Object.entries(next)) merged[k] = v;
+        return merged;
+      });
     }, 2000);
     return () => clearInterval(id);
   }, [session, slots, setPick, setBan, setTeamSlot]);
@@ -132,10 +160,10 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
   const start = useCallback(async () => {
     try {
       setError(null);
-      // Lane icons fetched lazily on first capture — failures here are
-      // tolerated (the per-icon try/catch in ensureLaneHashesLoaded
-      // skips broken ones, lane detection just won't match).
-      void ensureLaneHashesLoaded();
+      // Warm up Tesseract (downloads kor.traineddata on first run, ~10MB)
+      // in the background. Lane OCR will queue until ready; pHash detection
+      // for picks/bans starts immediately regardless.
+      void ensureOcrLoaded();
       const s = await startCapture();
       setSession(s);
     } catch (e) {
@@ -160,19 +188,19 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
     const cx = ((e.clientX - rect.left) / rect.width) * canvas.width;
     const cy = ((e.clientY - rect.top) / rect.height) * canvas.height;
     const plan = SLOT_PLAN[calibratingIdx];
-    // Lane icons ~20px, bans ~35-45px, picks ~50-80px in the client. Use
-    // a tighter box for smaller icons so the crop doesn't include adjacent
-    // UI chrome (which would dilute the pHash).
-    const half =
-      plan.kind === 'myLane'                              ? LANE_HALF_SIZE :
-      plan.kind === 'myBan' || plan.kind === 'enemyBan'   ? BAN_HALF_SIZE :
-      SLOT_HALF_SIZE;
+    // Picks ~50-80px square; bans ~35-45px square; lane TEXT is a wide+short
+    // rectangle (covers e.g. "상단 (탑)"). Pick crop dimensions per kind so
+    // OCR/pHash gets a tight crop and not surrounding UI noise.
+    let halfW: number, halfH: number;
+    if (plan.kind === 'myLane')                                   { halfW = LANE_HALF_WIDTH; halfH = LANE_HALF_HEIGHT; }
+    else if (plan.kind === 'myBan' || plan.kind === 'enemyBan')   { halfW = BAN_HALF_SIZE;  halfH = BAN_HALF_SIZE; }
+    else                                                          { halfW = SLOT_HALF_SIZE; halfH = SLOT_HALF_SIZE; }
     const newSlot: SlotRect = {
       kind: plan.kind, idx: plan.idx, label: plan.label,
-      x: Math.max(0, Math.round(cx - half)),
-      y: Math.max(0, Math.round(cy - half)),
-      w: half * 2,
-      h: half * 2,
+      x: Math.max(0, Math.round(cx - halfW)),
+      y: Math.max(0, Math.round(cy - halfH)),
+      w: halfW * 2,
+      h: halfH * 2,
     };
     const updated = [...slots, newSlot];
     setSlots(updated);
@@ -219,7 +247,9 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
         <>
           {isCalibrating && (
             <div className="capture-instruction">
-              <strong>{currentPlan?.label}</strong> 영역의 챔프 아이콘 중심을 미리보기에서 한 번 클릭하세요.
+              <strong>{currentPlan?.label}</strong> {currentPlan?.kind === 'myLane'
+                ? '의 텍스트 중심'
+                : '영역의 챔프 아이콘 중심'}을 미리보기에서 한 번 클릭하세요.
               ({calibratingIdx + 1} / {SLOT_PLAN.length})
             </div>
           )}
