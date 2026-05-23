@@ -17,13 +17,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { startCapture, type CaptureSession } from '@/lib/screen-capture/capture';
 import { ensureHashesLoaded, matchChampion, type MatchResult } from '@/lib/screen-capture/champion-matcher';
 import { ensureOcrLoaded, ocrLane } from '@/lib/screen-capture/lane-ocr';
-import { autoCalibrate, type AutoCalProgress } from '@/lib/screen-capture/auto-calibrate';
+import { detectSlots, type DetectProgress } from '@/lib/screen-capture/slot-detect';
+import { warmupOpenCv } from '@/lib/screen-capture/shape-detect';
 import type { SlotState } from '@/lib/pick-types';
 
-// v4: removed manual click-to-calibrate; auto-calibrate is the only path
-// now. Old v2/v3 stored slots have incompatible kinds/sizes, so the key
-// bump forces a fresh detection.
-const STORAGE_KEY = 'tlol_capture_slots_v4';
+// v5: position detection switched from sliding pHash to OpenCV shape
+// detection (HoughCircles + contour). Slot rect sizes are now derived
+// from detected portrait radius, not constants — old v4 rects had a
+// different shape so we invalidate them.
+const STORAGE_KEY = 'tlol_capture_slots_v5';
 // Hamming distance threshold below which a per-tick match counts. Bans
 // look noisier (X overlay / darker tint) so they get a looser threshold.
 const CONFIDENCE_DISTANCE = 14;
@@ -178,10 +180,11 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
   const start = useCallback(async () => {
     try {
       setError(null);
-      // Warm up Tesseract (downloads kor.traineddata on first run, ~10MB)
-      // in the background. Lane OCR will queue until ready; pHash detection
-      // for picks/bans starts immediately regardless.
+      // Warm up Tesseract (~10MB kor.traineddata) and OpenCV (~7MB wasm)
+      // in parallel with the capture-permission dialog so they're ready
+      // by the time the user grants access. Auto-cal will await them.
       void ensureOcrLoaded();
+      void warmupOpenCv();
       const s = await startCapture();
       setSession(s);
     } catch (e) {
@@ -194,7 +197,7 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
     setSession(null);
   }, [session]);
 
-  const [autoCalState, setAutoCalState] = useState<{ running: boolean; progress: AutoCalProgress | null; error: string | null }>(
+  const [autoCalState, setAutoCalState] = useState<{ running: boolean; progress: DetectProgress | null; error: string | null }>(
     { running: false, progress: null, error: null }
   );
 
@@ -202,13 +205,20 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
     if (!session) return;
     setAutoCalState({ running: true, progress: null, error: null });
     try {
-      const result = await autoCalibrate(session, (p) => setAutoCalState((s) => ({ ...s, progress: p })));
-      if (result.slots.length === 0) {
-        setAutoCalState({ running: false, progress: null, error: '챔프가 감지되지 않았습니다. 픽/벤이 진행된 뒤에 다시 시도하세요.' });
+      // Render the current video frame to a working canvas — shape
+      // detection needs a still HTMLCanvasElement (cv.imread), not the
+      // live video stream.
+      const work = document.createElement('canvas');
+      if (!session.drawFrame(work)) {
+        setAutoCalState({ running: false, progress: null, error: '캡처 프레임 준비 실패' });
         return;
       }
-      // Sort to match SLOT_PLAN order so detection-effect slot iteration
-      // stays aligned with the previous (manual) calibration flow.
+      const result = await detectSlots(work, (p) => setAutoCalState((s) => ({ ...s, progress: p })));
+      if (result.slots.length === 0) {
+        setAutoCalState({ running: false, progress: null, error: '슬롯이 감지되지 않았습니다. 챔프 셀렉 화면을 캡처했는지 확인하세요.' });
+        return;
+      }
+      // Sort to canonical display order for the detection panel.
       const ordered: SlotRect[] = [];
       for (const plan of SLOT_PLAN) {
         const match = result.slots.find((s) => s.kind === plan.kind && s.idx === plan.idx);
@@ -271,11 +281,11 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
         <div className="capture-progress">챔프 사진 준비 중... {hashStatus.done}/{hashStatus.total}</div>
       )}
 
-      {autoCalState.running && autoCalState.progress && (
+      {autoCalState.running && (
         <div className="capture-progress">
-          자동 위치 검색 — {autoCalState.progress.phase === 'scan'
-            ? `${autoCalState.progress.region} 영역 ${autoCalState.progress.done}/${autoCalState.progress.total}`
-            : autoCalState.progress.phase}
+          {autoCalState.progress
+            ? `자동 위치 검색 — ${autoCalState.progress.phase}${autoCalState.progress.region ? ` (${autoCalState.progress.region})` : ''}`
+            : 'OpenCV 로딩 중 (첫 사용 시 7MB 다운로드)...'}
         </div>
       )}
       {autoCalState.error && <div className="capture-error">{autoCalState.error}</div>}
@@ -286,9 +296,9 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
         <>
           {!hasSlots && !autoCalState.running && (
             <div className="capture-instruction">
-              위치 검출 대기 중. 픽 또는 벤이 하나라도 진행된 뒤 <strong>위치 검출</strong>이 자동 실행됩니다.
+              위치 검출 대기 중. 챔프 셀렉 화면이 보이면 자동 실행됩니다 (OpenCV 도형 검출).
               <div className="text-tertiary" style={{ marginTop: 6, fontSize: 11 }}>
-                감지가 안 되면 위 버튼으로 수동 재시도하세요.
+                빈 픽 슬롯도 원형 UI로 감지하므로 픽이 없어도 검출 가능합니다.
               </div>
             </div>
           )}
