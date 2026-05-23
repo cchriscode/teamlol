@@ -77,12 +77,20 @@ export async function autoCalibrate(
   const W = session.width;
   const H = session.height;
 
-  // Fractional regions — work across 1080p / 1440p / 4K at 16:9.
+  // Fractional regions — measured from the reference LoL champ-select
+  // screenshot at 16:9. Bans live in a small strip at the very top-left
+  // and top-right (above the pick columns), NOT a wide horizontal band.
+  // Pick columns hug the side edges and span ~9-84% vertically.
   const regions: Array<{ name: Region; threshold: number; rect: { x: number; y: number; w: number; h: number } }> = [
-    { name: 'myBan',     threshold: BAN_THRESHOLD,  rect: { x: 0,                    y: 0,                    w: Math.round(0.45 * W), h: Math.round(0.10 * H) } },
-    { name: 'enemyBan',  threshold: BAN_THRESHOLD,  rect: { x: Math.round(0.55 * W), y: 0,                    w: Math.round(0.45 * W), h: Math.round(0.10 * H) } },
-    { name: 'myPick',    threshold: PICK_THRESHOLD, rect: { x: 0,                    y: Math.round(0.07 * H), w: Math.round(0.15 * W), h: Math.round(0.85 * H) } },
-    { name: 'enemyPick', threshold: PICK_THRESHOLD, rect: { x: Math.round(0.85 * W), y: Math.round(0.07 * H), w: Math.round(0.15 * W), h: Math.round(0.85 * H) } },
+    // Top-left ban strip: ~18% wide × ~6% tall is tight enough to hit the 5
+    // ban icons without bleeding into the pick column below.
+    { name: 'myBan',     threshold: BAN_THRESHOLD,  rect: { x: 0,                    y: 0,                    w: Math.round(0.20 * W), h: Math.round(0.07 * H) } },
+    { name: 'enemyBan',  threshold: BAN_THRESHOLD,  rect: { x: Math.round(0.80 * W), y: 0,                    w: Math.round(0.20 * W), h: Math.round(0.07 * H) } },
+    // Pick columns: start just below the ban strip, end above the bottom
+    // skin row. 18% wide leaves room for the portrait+name area without
+    // pulling in the center splash art.
+    { name: 'myPick',    threshold: PICK_THRESHOLD, rect: { x: 0,                    y: Math.round(0.08 * H), w: Math.round(0.18 * W), h: Math.round(0.78 * H) } },
+    { name: 'enemyPick', threshold: PICK_THRESHOLD, rect: { x: Math.round(0.82 * W), y: Math.round(0.08 * H), w: Math.round(0.18 * W), h: Math.round(0.78 * H) } },
   ];
 
   const candidates: Candidate[] = [];
@@ -227,13 +235,14 @@ export async function autoCalibrate(
     });
   }
 
-  // Lane TEXT slots — derive from my-pick rects. The label "상단 (탑)" etc.
-  // sits to the right of each player's portrait at a fixed offset; tuned
-  // for the standard champ-select layout.
+  // Lane TEXT slots — derive from my-pick rects. The "상단 (탑)" label
+  // sits to the RIGHT of each portrait, on the second text line (below
+  // the player name). cy is biased down by ~60% of portrait height so the
+  // crop lands on the lane line, not the name line above it.
   const myPicks = slots.filter((s) => s.kind === 'myPick').sort((a, b) => a.idx - b.idx);
   for (const p of myPicks) {
-    const cx = p.x + p.w + LANE_HALF_W + 4;       // ~64px right of pick icon → text center
-    const cy = p.y + p.h / 2;
+    const cx = p.x + p.w + LANE_HALF_W + 4;       // just right of portrait → text center
+    const cy = p.y + Math.round(p.h * 0.60);      // below the name line
     slots.push({
       kind: 'myLane',
       idx: p.idx,
