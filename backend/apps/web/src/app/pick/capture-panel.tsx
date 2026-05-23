@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { startCapture, type CaptureSession } from '@/lib/screen-capture/capture';
 import { ensureHashesLoaded, matchChampion, type MatchResult } from '@/lib/screen-capture/champion-matcher';
 import { ensureOcrLoaded, ocrLane } from '@/lib/screen-capture/lane-ocr';
+import { autoCalibrate, type AutoCalProgress } from '@/lib/screen-capture/auto-calibrate';
 import type { SlotState } from '@/lib/pick-types';
 
 // v3: lane slots changed from icon pHash to OCR text — required wider crop +
@@ -216,6 +217,35 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
     setDetections({});
   }, []);
 
+  const [autoCalState, setAutoCalState] = useState<{ running: boolean; progress: AutoCalProgress | null; error: string | null }>(
+    { running: false, progress: null, error: null }
+  );
+
+  const runAutoCalibrate = useCallback(async () => {
+    if (!session) return;
+    setAutoCalState({ running: true, progress: null, error: null });
+    try {
+      const result = await autoCalibrate(session, (p) => setAutoCalState((s) => ({ ...s, progress: p })));
+      if (result.slots.length === 0) {
+        setAutoCalState({ running: false, progress: null, error: '챔프가 감지되지 않았습니다. 픽/벤이 일부라도 진행된 뒤에 다시 시도하세요.' });
+        return;
+      }
+      // Sort to match SLOT_PLAN order so the detection effect's slot
+      // iteration aligns with calibrating-mode UX expectations.
+      const ordered: SlotRect[] = [];
+      for (const plan of SLOT_PLAN) {
+        const match = result.slots.find((s) => s.kind === plan.kind && s.idx === plan.idx);
+        if (match) ordered.push({ ...match, label: plan.label });
+      }
+      setSlots(ordered);
+      setCalibratingIdx(SLOT_PLAN.length);   // jump past calibration → detection mode
+      saveSlots(ordered);
+      setAutoCalState({ running: false, progress: null, error: null });
+    } catch (e) {
+      setAutoCalState({ running: false, progress: null, error: (e as Error)?.message ?? '자동 위치 찾기 실패' });
+    }
+  }, [session]);
+
   const isCalibrating = calibratingIdx < SLOT_PLAN.length;
   const currentPlan = isCalibrating ? SLOT_PLAN[calibratingIdx] : null;
 
@@ -229,8 +259,18 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
           </button>
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
+            {isCalibrating && (
+              <button type="button" onClick={runAutoCalibrate} disabled={autoCalState.running}>
+                {autoCalState.running ? '자동 위치 찾는 중...' : '자동 위치 찾기'}
+              </button>
+            )}
             {!isCalibrating && (
-              <button type="button" onClick={resetCalibration}>슬롯 재설정</button>
+              <>
+                <button type="button" onClick={runAutoCalibrate} disabled={autoCalState.running}>
+                  {autoCalState.running ? '재검출 중...' : '자동 위치 재검출'}
+                </button>
+                <button type="button" onClick={resetCalibration}>수동 재설정</button>
+              </>
             )}
             <button type="button" onClick={stop}>중지</button>
           </div>
@@ -240,6 +280,15 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
       {hashStatus && hashStatus.done < hashStatus.total && (
         <div className="capture-progress">챔프 사진 준비 중... {hashStatus.done}/{hashStatus.total}</div>
       )}
+
+      {autoCalState.running && autoCalState.progress && (
+        <div className="capture-progress">
+          자동 위치 검색 — {autoCalState.progress.phase === 'scan'
+            ? `${autoCalState.progress.region} 영역 ${autoCalState.progress.done}/${autoCalState.progress.total}`
+            : autoCalState.progress.phase}
+        </div>
+      )}
+      {autoCalState.error && <div className="capture-error">{autoCalState.error}</div>}
 
       {error && <div className="capture-error">{error}</div>}
 
@@ -251,6 +300,9 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
                 ? '의 텍스트 중심'
                 : '영역의 챔프 아이콘 중심'}을 미리보기에서 한 번 클릭하세요.
               ({calibratingIdx + 1} / {SLOT_PLAN.length})
+              <div className="text-tertiary" style={{ marginTop: 6, fontSize: 11 }}>
+                또는 위의 <strong>자동 위치 찾기</strong> 클릭 (픽/벤이 일부라도 진행된 상태에서 권장).
+              </div>
             </div>
           )}
           {!isCalibrating && (
