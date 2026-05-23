@@ -20,10 +20,17 @@ import type { SlotState } from '@/lib/pick-types';
 
 const STORAGE_KEY = 'tlol_capture_slots_v2';
 // Hamming distance threshold below which a match is considered confident.
+// Bans need a looser threshold than picks: LoL renders ban icons smaller
+// + with a darker tint / overlay, so the cropped region's pHash typically
+// sits 16-22 from the clean ddragon reference even on the correct champ.
 const CONFIDENCE_DISTANCE = 14;
+const BAN_CONFIDENCE_DISTANCE = 22;
 const LANE_CONFIDENCE_DISTANCE = 18;          // lane icons are tiny → slightly looser
 // Side of the cropped region around each calibration click (in source pixels).
+// Bans use a smaller box because the on-screen icon itself is smaller; a
+// 32px half-box grabs surrounding UI chrome and dilutes the pHash.
 const SLOT_HALF_SIZE = 32;
+const BAN_HALF_SIZE = 20;
 const LANE_HALF_SIZE = 14;                    // lane icons are much smaller
 
 type SlotKind = 'myPick' | 'enemyPick' | 'myBan' | 'enemyBan' | 'myLane';
@@ -108,7 +115,9 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
         const matches = matchChampion(cropped, 1);
         const top = matches[0];
         next[slotKey(slot)] = top ?? null;
-        if (top && top.distance <= CONFIDENCE_DISTANCE) {
+        const isBan = slot.kind === 'myBan' || slot.kind === 'enemyBan';
+        const threshold = isBan ? BAN_CONFIDENCE_DISTANCE : CONFIDENCE_DISTANCE;
+        if (top && top.distance <= threshold) {
           if (slot.kind === 'myPick')     setPick('my',    slot.idx, top.championKey);
           if (slot.kind === 'enemyPick')  setPick('enemy', slot.idx, top.championKey);
           if (slot.kind === 'myBan')      setBan('my',     slot.idx, top.championKey);
@@ -151,9 +160,13 @@ export function CapturePanel({ championKeys, ddragonVersion, setPick, setBan, se
     const cx = ((e.clientX - rect.left) / rect.width) * canvas.width;
     const cy = ((e.clientY - rect.top) / rect.height) * canvas.height;
     const plan = SLOT_PLAN[calibratingIdx];
-    // Lane icons are ~20px in the client; champ icons are ~50-80px. Use
-    // a smaller box for lane to avoid grabbing adjacent UI chrome.
-    const half = plan.kind === 'myLane' ? LANE_HALF_SIZE : SLOT_HALF_SIZE;
+    // Lane icons ~20px, bans ~35-45px, picks ~50-80px in the client. Use
+    // a tighter box for smaller icons so the crop doesn't include adjacent
+    // UI chrome (which would dilute the pHash).
+    const half =
+      plan.kind === 'myLane'                              ? LANE_HALF_SIZE :
+      plan.kind === 'myBan' || plan.kind === 'enemyBan'   ? BAN_HALF_SIZE :
+      SLOT_HALF_SIZE;
     const newSlot: SlotRect = {
       kind: plan.kind, idx: plan.idx, label: plan.label,
       x: Math.max(0, Math.round(cx - half)),
