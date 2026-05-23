@@ -44,6 +44,12 @@ export const matchIdEvents = new QueueEvents(QUEUE_NAMES.MATCH_ID, connection);
 
 // ---- Convenience enqueuers -------------------------------------------
 export function enqueuePuuid(job: PuuidJob, opts?: JobsOptions) {
+  // Dedup background jobs by (puuid, reason). When match-detail-fetcher
+  // discovers the same puuid across many matches, or ladder-seed re-pulls a
+  // ladder we already queued, BullMQ silently returns the existing job
+  // instead of ballooning the queue with duplicates. User-triggered work
+  // (search/refresh) bypasses dedup so the UI always re-queues.
+  const dedupable = job.reason === 'seed' || job.reason === 'bfs' || job.reason === 'rank-only';
   return puuidQueue.add('puuid', job, {
     priority: priorityFor(job.reason),
     // Hangs are not transient — retrying many times wastes slots. Fail fast.
@@ -51,6 +57,7 @@ export function enqueuePuuid(job: PuuidJob, opts?: JobsOptions) {
     backoff: { type: 'exponential', delay: 5_000 },
     removeOnComplete: { age: 3600, count: 10_000 },
     removeOnFail: { age: 24 * 3600 },
+    ...(dedupable ? { jobId: `puuid__${job.reason}__${job.puuid}` } : {}),
     ...opts,
   });
 }

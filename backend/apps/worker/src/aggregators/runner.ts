@@ -50,10 +50,11 @@ export function startAggregators() {
     // and calls LEAGUE-V4 → upsert appends to lp_snapshots automatically.
     // Builds the timeline required for per-match "+15 LP" display.
     { name: 'lpPoll',    intervalMs: 3 * 60 * 1000,  run: () => pollLpSnapshots() },
-    // Wider ladder seed — once a day refreshes Diamond + Emerald active
-    // players into the BFS queue. Multiplies the puuid pool ~3-5× so
-    // natural BFS reaches niche champions in higher brackets faster.
-    { name: 'ladderSeed', intervalMs: DAY_MS,        run: () => ladderSeed() },
+    // Wider ladder seed — every 6h refreshes Diamond/Emerald/Platinum solo
+    // + Diamond/Emerald flex active players into the BFS queue. Combined
+    // with jobId dedup in enqueuePuuid, re-runs are cheap (existing jobs
+    // skip) so the cadence just catches newly-active players faster.
+    { name: 'ladderSeed', intervalMs: 6 * HOUR_MS,   run: () => ladderSeed() },
     // Tiered lp_snapshots retention — deletes >1y rows and downsamples
     // 90d-1y to weekly. Bounded per run so a backlog can't thrash the
     // table; convergence over a few days is fine.
