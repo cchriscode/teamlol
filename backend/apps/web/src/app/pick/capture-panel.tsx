@@ -83,9 +83,15 @@ export function CapturePanel({ championKeys, ddragonVersion, getNameKr, setPick,
   // Live preview redraw — pulled on rAF so the user sees the LoL window
   // tick in real time. Overlays detected slot boxes (debug aid — lets
   // the user verify auto-cal worked before champ phase fills in).
+  // Aspect ratio is set explicitly via CSS aspect-ratio so the canvas
+  // never stretches when CSS width/height constraints fight each other.
   useEffect(() => {
     if (!session) return;
     let cancelled = false;
+    const previewCanvas = previewRef.current;
+    if (previewCanvas) {
+      previewCanvas.style.aspectRatio = `${session.width} / ${session.height}`;
+    }
     const loop = () => {
       if (cancelled) return;
       const canvas = previewRef.current;
