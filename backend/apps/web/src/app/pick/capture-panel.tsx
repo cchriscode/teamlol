@@ -182,13 +182,18 @@ export function CapturePanel({ championKeys, ddragonVersion, getNameKr, setPick,
         // don't auto-revert (OCR can fail on stylized fonts).
         const isPick = c.slot.kind === 'myPick' || c.slot.kind === 'enemyPick';
         if (isPick && !nameOcrInFlight.current.has(key) && verifiedByChamp.current.get(key) !== c.match.championKey) {
-          // Crop the name strip: right of the portrait, upper third (the
-          // name line sits above the lane line in the LoL UI).
+          // Crop the name strip. My team renders portrait on the LEFT
+          // with name/lane TEXT to the right; enemy team mirrors this
+          // (portrait right, text left). Y stays on the upper third
+          // where the name line sits (above the lane line).
+          const stripW = Math.max(80, c.slot.w * 3);
+          const stripH = Math.max(20, Math.round(c.slot.h * 0.45));
+          const isMy = c.slot.kind === 'myPick';
           const nameRect = {
-            x: c.slot.x + c.slot.w + 4,
+            x: isMy ? c.slot.x + c.slot.w + 4 : Math.max(0, c.slot.x - 4 - stripW),
             y: c.slot.y + Math.round(c.slot.h * 0.10),
-            w: Math.max(80, c.slot.w * 3),
-            h: Math.max(20, Math.round(c.slot.h * 0.45)),
+            w: stripW,
+            h: stripH,
           };
           const nameCrop = session.cropFrame(nameRect);
           if (nameCrop) {

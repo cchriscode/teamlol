@@ -11,6 +11,12 @@
 
 import { ensureOpenCv, type OpenCV } from './opencv-loader';
 
+// Runtime cv namespace is untyped (we load via <script>, not via the
+// @techstark types). Local aliases keep the surface area small.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type CvMat = any;
+type CvSize = any;
+
 export type DetectRegion = 'myPick' | 'enemyPick' | 'myBan' | 'enemyBan';
 
 export interface CircleHit {
