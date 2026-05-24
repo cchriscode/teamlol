@@ -81,19 +81,36 @@ export function CapturePanel({ championKeys, ddragonVersion, getNameKr, setPick,
   }, [championKeys, ddragonVersion]);
 
   // Live preview redraw — pulled on rAF so the user sees the LoL window
-  // tick in real time while calibrating.
+  // tick in real time. Overlays detected slot boxes (debug aid — lets
+  // the user verify auto-cal worked before champ phase fills in).
   useEffect(() => {
     if (!session) return;
     let cancelled = false;
     const loop = () => {
       if (cancelled) return;
       const canvas = previewRef.current;
-      if (canvas) session.drawFrame(canvas);
+      if (canvas && session.drawFrame(canvas)) {
+        if (slots.length > 0) {
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.lineWidth = 2;
+            for (const s of slots) {
+              ctx.strokeStyle =
+                s.kind === 'myPick'    ? 'rgba(74,144,226,0.9)' :
+                s.kind === 'enemyPick' ? 'rgba(226,92,92,0.9)'  :
+                s.kind === 'myBan'     ? 'rgba(74,144,226,0.5)' :
+                s.kind === 'enemyBan'  ? 'rgba(226,92,92,0.5)'  :
+                                         'rgba(232,179,57,0.8)'; // lane
+              ctx.strokeRect(s.x, s.y, s.w, s.h);
+            }
+          }
+        }
+      }
       requestAnimationFrame(loop);
     };
     loop();
     return () => { cancelled = true; };
-  }, [session]);
+  }, [session, slots]);
 
   // Tracks lane OCR jobs in flight per slot so the 2s tick doesn't pile
   // up tesseract calls on slots whose previous OCR hasn't returned yet.
@@ -294,19 +311,26 @@ export function CapturePanel({ championKeys, ddragonVersion, getNameKr, setPick,
     slotBest.current.clear();
   }, []);
 
-  // Auto-trigger calibration shortly after capture starts so the user
-  // doesn't have to click anything when slots are empty. If it fails
-  // (no champ visible yet), the error banner shows the retry button.
-  const autoCalAttempted = useRef(false);
+  // Auto-trigger calibration after capture starts AND auto-retry every 5s
+  // while the user is still in champ select with no slots detected. Caps
+  // at 12 attempts (~1 minute) so a long idle on a non-LoL window doesn't
+  // spin OpenCV forever. Manual "위치 검출" button resets the counter.
+  const autoRetryRef = useRef<{ attempts: number; timer: ReturnType<typeof setTimeout> | null }>({ attempts: 0, timer: null });
   useEffect(() => {
-    if (!session) { autoCalAttempted.current = false; return; }
-    if (slots.length > 0) return;
-    if (autoCalAttempted.current) return;
-    autoCalAttempted.current = true;
-    // Small delay so the first video frame is definitely available.
-    const t = setTimeout(() => { void runAutoCalibrate(); }, 1500);
-    return () => clearTimeout(t);
-  }, [session, slots.length, runAutoCalibrate]);
+    const state = autoRetryRef.current;
+    if (state.timer) { clearTimeout(state.timer); state.timer = null; }
+    if (!session) { state.attempts = 0; return; }
+    if (slots.length > 0) { state.attempts = 0; return; }
+    if (state.attempts >= 12) return;
+    const delay = state.attempts === 0 ? 1500 : 5000;
+    state.timer = setTimeout(() => {
+      state.attempts += 1;
+      void runAutoCalibrate();
+    }, delay);
+    return () => {
+      if (state.timer) { clearTimeout(state.timer); state.timer = null; }
+    };
+  }, [session, slots.length, runAutoCalibrate, autoCalState.error]);
 
   const hasSlots = slots.length > 0;
 
@@ -338,11 +362,22 @@ export function CapturePanel({ championKeys, ddragonVersion, getNameKr, setPick,
       {autoCalState.running && (
         <div className="capture-progress">
           {autoCalState.progress
-            ? `자동 위치 검색 — ${autoCalState.progress.phase}${autoCalState.progress.region ? ` (${autoCalState.progress.region})` : ''}`
-            : 'OpenCV 로딩 중 (첫 사용 시 7MB 다운로드)...'}
+            ? `자동 위치 검색 — ${phaseLabel(autoCalState.progress.phase)}${autoCalState.progress.region ? ` (${autoCalState.progress.region})` : ''}`
+            : autoRetryRef.current.attempts <= 1
+              ? 'OpenCV·OCR 로딩 중... (첫 사용 시 ~17MB 다운로드, 캐시 후 즉시)'
+              : '재시도 중...'}
         </div>
       )}
-      {autoCalState.error && <div className="capture-error">{autoCalState.error}</div>}
+      {autoCalState.error && (
+        <div className="capture-error">
+          {autoCalState.error}
+          {autoRetryRef.current.attempts < 12 && session && !hasSlots && (
+            <span style={{ marginLeft: 8, opacity: 0.7 }}>
+              (5초 후 재시도 — {autoRetryRef.current.attempts}/12)
+            </span>
+          )}
+        </div>
+      )}
 
       {error && <div className="capture-error">{error}</div>}
 
@@ -394,6 +429,15 @@ export function CapturePanel({ championKeys, ddragonVersion, getNameKr, setPick,
 }
 
 function slotKey(s: SlotRect): string { return `${s.kind}-${s.idx}`; }
+
+function phaseLabel(phase: DetectProgress['phase']): string {
+  switch (phase) {
+    case 'picks': return '픽 원 검출';
+    case 'bans':  return '벤 사각 검출';
+    case 'lanes': return '라인 영역 계산';
+    case 'done':  return '완료';
+  }
+}
 
 function loadSlots(): SlotRect[] {
   if (typeof window === 'undefined') return [];
