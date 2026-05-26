@@ -6,7 +6,9 @@ import { getDdragonVersion } from '@/lib/ddragon-version';
 import { slugFromRiotId } from '@/lib/riot-id';
 
 export const revalidate = 600;
-export const dynamicParams = false;
+// Render on first request, cache for revalidate. Pre-rendering at build
+// hit the same tunnel-timeout failure mode as /champions/[bracket]/[lane].
+export const dynamicParams = true;
 
 interface LeaderboardEntry {
   rank: number;
@@ -41,10 +43,10 @@ const TIERS = [
   { key: 'master',      label: '마스터',     cls: 'tier-master' },
 ];
 
-// Only solo queue + KR for now; if region/queue become user-selectable
-// later, expand the cartesian product here.
+// Empty list = no build-time prerender; pages render on first request and
+// cache per `revalidate`. Solo + KR only for now, but the route is open.
 export function generateStaticParams() {
-  return TIERS.map((t) => ({ tier: t.key }));
+  return [];
 }
 
 interface PageProps { params: Promise<{ tier: string }>; }

@@ -9,7 +9,13 @@ import { laneKr } from '@/lib/display';
 import type { Lane, Bracket } from '@/lib/types';
 
 export const revalidate = 600;
-export const dynamicParams = false;     // 404 anything outside generated set
+// Paths render on-demand (first request prerenders + caches for 600s).
+// We previously pre-rendered all 30 combinations at build, but that
+// required the Cloudflare tunnel to the user's local API to be alive
+// AND respond within 60s for every path — neither was reliable, so
+// Vercel builds kept timing out. Empty generateStaticParams keeps
+// build-time API calls out of the critical path.
+export const dynamicParams = true;
 
 const LANES: Array<{ key: Lane | 'all'; label: string }> = [
   { key: 'all',     label: '전체'  },
@@ -32,11 +38,12 @@ const BRACKETS: Array<{ slug: string; key: Bracket; label: string }> = [
   { slug: 'challenger',    key: 'challenger', label: '챌린저'       },
 ];
 
-// 5 brackets × 6 lane choices = 30 static paths. All prebuilt at deploy.
+// Empty list = no build-time prerender. Combined with dynamicParams=true,
+// each (bracket, lane) renders on first request and caches via the
+// `revalidate` setting above. Avoids depending on the tunnel during
+// `next build`.
 export function generateStaticParams() {
-  const out: Array<{ bracket: string; lane: string }> = [];
-  for (const b of BRACKETS) for (const l of LANES) out.push({ bracket: b.slug, lane: l.key });
-  return out;
+  return [];
 }
 
 interface PageProps {
