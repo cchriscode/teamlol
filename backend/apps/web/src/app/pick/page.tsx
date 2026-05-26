@@ -5,6 +5,7 @@ import { buildPickData } from './build-pick-data';
 import { PickRecommendApp } from './pick-recommend-app';
 
 export const revalidate = 600;
+export const dynamic = 'force-dynamic'; // skip build-time prerender (tunnel-dependent fetch)
 export const metadata = { title: '픽 추천 — TeamLOL' };
 
 export default async function PickPage() {

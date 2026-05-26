@@ -5,7 +5,12 @@ import { ChampionIcon } from '@/components/atoms/champion-icon';
 import { getChampionMeta } from '@/lib/champion-meta';
 import { slugFromRiotId } from '@/lib/riot-id';
 
-export const revalidate = 300;
+// Render on each request — build-time prerender kept timing out fetching
+// the user's local API via the Cloudflare tunnel. force-dynamic skips
+// the build-time fetch entirely; the per-call fetch() still respects
+// its own next:{revalidate} cache headers, so request bursts share a
+// cached response within the API client.
+export const dynamic = 'force-dynamic';
 
 interface PopularEntry { riot_id: string; n: number; puuid: string; region: string; }
 interface PopularResp { windowHours: number; generatedAt: string; entries: PopularEntry[]; }

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { apiGet } from '@/lib/api';
 
 export const revalidate = 21600; // 6h — matches API cache
+export const dynamic = 'force-dynamic'; // skip build-time prerender (tunnel-dependent fetch)
 export const metadata = { title: '패치 노트 — TeamLOL' };
 
 interface PatchSummary {
